@@ -1,0 +1,47 @@
+{
+ "you": [
+  "I'm wild!",
+  "Any gem you like!",
+  "Count me in!"
+ ],
+ "pickpocket": [
+  "Finders keepers!",
+  "Mine now!",
+  "Didn't see that coming!"
+ ],
+ "trickster": [
+  "Let's make a deal!",
+  "Fair trade... ish!",
+  "Swapsies!"
+ ],
+ "boss": [
+  "Empty those pockets!",
+  "Pay up, pal!",
+  "Time to settle up."
+ ],
+ "mastermind": [
+  "All according to plan.",
+  "The whole set? Don't mind if I do.",
+  "Checkmate."
+ ],
+ "bouncer": [
+  "Not on my watch!",
+  "Nope. Blocked.",
+  "You're not getting past me."
+ ],
+ "illusionist": [
+  "Right back at you!",
+  "Mirror, mirror!",
+  "Now you see it..."
+ ],
+ "trapper": [
+  "Gotcha!",
+  "Caught you red-handed!",
+  "Snap!"
+ ],
+ "locksmith": [
+  "Click! It's open.",
+  "No lock can stop me.",
+  "Let's see what's inside."
+ ]
+}

@@ -1,0 +1,52 @@
+{
+  "generator": "Built-in image_gen; export sized with macOS sips",
+  "assets": [
+    {
+      "file": "loot-mouse.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "value": 1,
+      "prompt": "Edit this collectible animal token to create the matching mouse character. Keep the exact copper rim, ivory disk, composition, lighting, painting style and transparent outside unchanged. Inside the rim replace the raccoon with a small friendly gray field mouse: big round pink ears, small slender snout with pink nose, fine whiskers, cream cheeks, bright brown eyes, soft gray fur and a little navy blue scarf. Head and shoulders only. All anatomy inside rim. No text, numbers, accessories, scenery or shadows outside coin. Square PNG 512x512, transparent background outside circular token."
+    },
+    {
+      "file": "loot-raccoon.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "value": 2,
+      "prompt": "A cute original raccoon portrait on a round copper collectible token for a family tabletop game. Gray raccoon with rounded ears, distinctive natural black eye markings and a fluffy pale muzzle, warm expressive eyes, small cheerful smile, little teal scarf. Head and shoulders in full-color softly shaded storybook enamel illustration. Straight-on round medallion with a substantial beveled antique copper rim, one thin inner ring, and warm ivory enamel center. Warm upper-left lighting, refined polished materials, crisp silhouette recognizable at small size. Keep all animal parts within the rim. No lettering, numbers, words, watermark, scenery or extra objects. Single circular coin fills 84% of a square 512x512 canvas with generous transparent padding. Actual transparent background outside token, no external shadow."
+    },
+    {
+      "file": "loot-fox.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "value": 3,
+      "prompt": "Create the FOX member of this matching collectible game-token set by editing the reference. Preserve the identical round copper coin rim, ivory interior, front-on view, scale, lighting, illustration detail and true transparent exterior. Replace ONLY the raccoon portrait and scarf with a cute red fox: russet-orange fur, large pointed triangular ears with dark tips, creamy white cheeks and chest, slender pointed muzzle, dark nose, bright amber eyes, sly friendly smile, small burgundy scarf. Same polished softly shaded storybook illustration, head and shoulders contained inside rim. Distinctly a fox, not a raccoon or cat. No lettering, numbers, watermark, extra items or exterior shadow. Square 512x512 PNG with transparent background outside coin."
+    },
+    {
+      "file": "loot-owl.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "value": 4,
+      "prompt": "Create the OWL member of this matching collectible game-token set by editing the reference. Preserve identical round copper rim, warm ivory interior, front-on view, scale, lighting, illustration finish and actual transparent exterior. Replace ONLY the raccoon portrait and scarf with a cute tawny owl: round feathered head, subtle ear tufts, large round golden eyes, cream facial disks, small dark hooked beak, brown and cream patterned chest feathers, small deep sapphire-blue scarf. Thoughtful alert friendly expression. Same polished softly shaded storybook illustration, head and shoulders inside the rim. Definitely a bird with feathers and beak, no mammal muzzle, no teeth. No text, numbers, watermark, extra objects or exterior shadow. Square 512x512 transparent PNG."
+    },
+    {
+      "file": "loot-magpie.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "value": 5,
+      "prompt": "Create the MAGPIE member of this matching collectible game-token set by editing the reference. Preserve identical round copper rim, warm ivory interior, front-on view, scale, lighting, illustration finish and actual transparent exterior. Replace ONLY raccoon portrait and scarf with a cute recognizable black-billed magpie: sleek black head, bright intelligent dark eye, slender pointed BLACK beak shown in slight three-quarter view, white shoulders and belly, subtle iridescent teal-blue-black wing feathers. Little plum-purple scarf. One tiny shiny gold ring held gently at tip of beak, no extra objects. Same polished softly shaded storybook illustration, bird head and upper body contained in rim. No ear tufts or owl facial disks, no mammalian features. No text, numbers, watermark or exterior shadow. Square 512x512 transparent PNG."
+    },
+    {
+      "file": "frame-money.png",
+      "width": 600,
+      "height": 840,
+      "transparent": true,
+      "prompt": "Edit this supplied empty card frame to create the matching MONEY / LOOT variant. Preserve its exact geometry, thin border width, rounded rectangular silhouette, ivory cardstock perimeter, tiny diamond corner accents and empty transparent center. Replace the gold metal edging and narrow amber accent stripe with polished warm COPPER metal, reddish rose-brown copper with gentle warm highlights, visually distinct from yellow gold. This is an empty border overlay, not a complete card. Keep ALL exterior corners and ALL center transparent, true alpha. No text, letters, numerals, title panels, icons, characters, extra ornaments, shadows or background. Same premium tabletop material finish, clean border. Portrait PNG 600x840, 5:7 aspect ratio, frame reaches canvas edges."
+    }
+  ]
+}

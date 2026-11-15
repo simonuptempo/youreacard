@@ -1,0 +1,110 @@
+{
+  "generator": "Built-in image_gen; exported to requested dimensions with macOS sips",
+  "assets": [
+    {
+      "file": "treasure-ruby.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Output PNG 512x512. One large centered ruby gemstone, rich crimson faceted hexagonal-cut jewel with luminous red facets and tiny restrained specular highlights. Isolated single object, no pedestal, no decorative border, no floor shadow. Occupy 78% of square canvas. True transparent background."
+    },
+    {
+      "file": "treasure-emerald.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Output PNG 512x512. One large centered emerald gemstone, emerald-cut elongated octagonal silhouette, rich emerald green with beautifully faceted beveled edges and tiny restrained highlights. Isolated single object, no pedestal, no decorative border, no floor shadow. Occupy 78% of square canvas. True transparent background."
+    },
+    {
+      "file": "treasure-sapphire.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Output PNG 512x512. One large centered sapphire gemstone, distinctive diamond/rhombus silhouette, deep royal blue luminous faceted jewel. Isolated single object, no pedestal, no decorative border, no floor shadow. Occupy 78% of square canvas. True transparent background."
+    },
+    {
+      "file": "treasure-gold.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Output PNG 512x512. One large centered gold coin viewed nearly straight on with a small visible thick bevel, antique gold rim with fine milled edge, embossed simple four-point star emblem, no numbers or letters. Isolated single object, no pedestal, no decorative border, no floor shadow. Occupy 78% of square canvas. True transparent background."
+    },
+    {
+      "file": "treasure-pearl.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Output PNG 512x512. One large centered spherical ivory pearl, luminous creamy nacre with subtle pink and blue iridescence, soft shading makes the spherical form clear even on light card stock. Single pearl only, no shell, no jewelry setting, no pedestal, no decorative border, no floor shadow. Occupy 72% of square canvas. True transparent background."
+    },
+    {
+      "file": "treasure-crown.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Output PNG 512x512. One large centered elegant antique gold crown, clear three-point royal silhouette with small ruby, sapphire and emerald insets, softly shaded dimensional metal and restrained highlights. No velvet pillow, no pedestal, no decorative border, no floor shadow. Occupy 80% width of square canvas. True transparent background."
+    },
+    {
+      "file": "card-back.png",
+      "width": 600,
+      "height": 840,
+      "transparent": false,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Asset: playing card BACK, portrait aspect 5:7, output 600x840 PNG. Flat orthographic full-bleed printed graphic filling the entire canvas edge to edge, not a product mockup, no perspective, no external background, no cast shadows, no transparency. Deep midnight navy ink with restrained thin antique-brass double-line frame inset 4%, small geometric corner flourishes and subtle repeating interlocked diamond linework. A bold central gold four-point diamond/star medallion within a clean circular ornamental ring. Balanced rotationally symmetric decorative composition, looks the same when turned upside down. Luxurious yet simple, ivory hairline accents, no letters, no words, no numbers, no suits, no crowns, no additional objects. Fine tactile cardstock texture."
+    },
+    {
+      "file": "frame-treasure.png",
+      "width": 600,
+      "height": 840,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Asset: empty TREASURE card frame overlay. Portrait 5:7 aspect, 600x840 PNG with TRUE ALPHA transparent center and transparent outer rounded corners. Frame perimeter nearly touches all four canvas edges. Perfectly straight-on flat orthographic UI asset, no perspective, no mockup, no shadows outside frame. Narrow warm ivory cardstock perimeter 6% width with double antique-brass hairline edging, amber-gold narrow inset stripe and tiny diamond corner details. The ENTIRE inner rectangle from x=10% to90%, y=8% to92% must be completely transparent, not white, not parchment, not a checkerboard. Only the perimeter exists. No title banner, no footer panel, no words, no letters, no numbers, no central art, no icons. Elegant restrained premium tabletop border, consistent thickness, rounded rectangular outline."
+    },
+    {
+      "file": "frame-heist.png",
+      "width": 600,
+      "height": 840,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Edit the supplied empty card frame into the HEIST type variant. Preserve exact geometry, border thickness, rounded corners, ivory material, outer brass lines, tiny diamond details and ALL existing transparency including the completely empty center. Change ONLY the narrow amber-gold inner accent stripe to deep ruby/burgundy red. Do not add anything else. No text. Output portrait 600x840 PNG, transparent center and corners."
+    },
+    {
+      "file": "frame-trap.png",
+      "width": 600,
+      "height": 840,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Edit the supplied empty card frame into the TRAP type variant. Preserve exact geometry, border thickness, rounded corners, ivory material, outer brass lines, tiny diamond details and ALL existing transparency including the completely empty center. Change ONLY the narrow amber-gold inner accent stripe to rich amethyst purple. Do not add anything else. No text. Output portrait 600x840 PNG, transparent center and corners."
+    },
+    {
+      "file": "frame-tool.png",
+      "width": 600,
+      "height": 840,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Edit the supplied empty card frame into the TOOL type variant. Preserve exact geometry, border thickness, rounded corners, ivory material, outer brass lines, tiny diamond details and ALL existing transparency including the completely empty center. Change ONLY the narrow amber-gold inner accent stripe to deep sapphire blue. Do not add anything else. No text. Output portrait 600x840 PNG, transparent center and corners."
+    },
+    {
+      "file": "frame-wild.png",
+      "width": 600,
+      "height": 840,
+      "transparent": true,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Edit the supplied empty card frame into the WILD type variant. Preserve exact geometry, border thickness, rounded corners, ivory material, outer brass lines, tiny diamond details and ALL existing transparency including the completely empty center. Change ONLY the narrow amber-gold inner accent stripe to rich emerald green. Do not add anything else. No text. Output portrait 600x840 PNG, transparent center and corners."
+    },
+    {
+      "file": "logo.png",
+      "width": 1600,
+      "height": 700,
+      "transparent": true,
+      "prompt": "Selected option 2: Playful Caper. See logo-options/prompts.json."
+    },
+    {
+      "file": "table-background.png",
+      "width": 1080,
+      "height": 1920,
+      "transparent": false,
+      "prompt": "Original premium tabletop heist-caper game illustration, softly shaded polished storybook realism, crisp clean silhouette, rich jewel colors, restrained antique-brass accents, subtle tactile materials, warm light from upper left, readable at small sizes. Not flat emoji, not photorealistic, no lettering, no watermark. Asset: subtle full-screen tabletop BACKGROUND for portrait mobile card game. Output 1080x1920 PNG portrait 9:16, fully opaque. Perfect straight-down flat orthographic view of uninterrupted deep muted forest-green felt, fine soft cloth grain, extremely subtle broad illumination gently brighter in the center, slightly darker edges. LOW CONTRAST. No items at all, no cards, no chips, no jewels, no markings, no circles, no border, no wooden rail, no text, no logo, no patterns, no visible lighting hotspot. Entire canvas is quiet dark green felt suitable behind bright cards and ivory UI text. Premium tactile tabletop surface with just enough soft texture to avoid a flat color."
+    },
+    {
+      "file": "app-icon.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "prompt": "Edit this exact approved app icon with ONE localized change: replace the UPPER LEFT RED HEART above the mask with the words \"You're a Card\". Set the title in bold playful navy lettering on two lines \"You're a\" then \"Card\", printed directly onto the ivory upper portion of the card, following the same slight counterclockwise tilt as the card. Use that upper ivory space generously for legibility but keep a clear gap above the mask. Remove the upper heart completely. Keep the LOWER RIGHT RED HEART unchanged. Preserve the mascot face, wink, open eye, navy bandit mask, curved smile, ivory card silhouette, thick navy edge, coral offset shadow, original large card size, placement and golden yellow background. No separate text below or outside the card. Exact spelling and apostrophe in \"You're a Card\". Fully opaque square PNG 1024x1024, RGB, no transparency, square outer corners. No additional elements.\n"
+    }
+  ]
+}

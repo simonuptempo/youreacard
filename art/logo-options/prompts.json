@@ -1,0 +1,18 @@
+{
+  "tool": "Built-in image_gen",
+  "options": [
+    {
+      "file": "01-classic-tabletop.png",
+      "prompt": "Create an original polished logo for the tabletop heist-caper card game. OPTION 1: CLASSIC TABLETOP. Exact text \"You're a Card\" with correct apostrophe, no other words. Beautiful confident bold editorial serif lettering, slightly playful bespoke letter shapes, exceptionally readable. Single horizontal line wordmark with a small elegant fan of three ivory playing cards to its left; front card has a simple gold diamond, no suits or letters. Refined ivory and antique brass with dark midnight navy outline so it reads over green felt. Flat print-ready logo design with very restrained depth, no photo mockup, no ornate fantasy flourishes, no casino styling, no existing brand references. Genuine transparent background, no rectangle behind design. Wide composition approximately 1600x600 with generous padding, all lettering and symbol fully inside canvas. Premium tactile tabletop aesthetic, warm and inviting."
+    },
+    {
+      "file": "02-playful-caper.png",
+      "prompt": "Design an original professional logo for a friendly heist-caper tabletop card game. OPTION 2: PLAYFUL CAPER. Exact text \"You're a Card\", no other words. Dynamic compact two-line lettering: \"You're a\" smaller above a big expressive \"Card\". Custom thick rounded retro display lettering, jaunty slight tilt, sophisticated friendly personality, clean precise edges. Ivory \"You're a\", rich golden-yellow \"Card\", dark navy outlines and a subtle coral-red offset accent. To the left a mischievous illustrated ivory playing card mascot with only one winking eye and a small confident smile, wearing a simple dark eye mask, no arms/legs, not an existing character. Tiny four-point sparkle and a second tilted card add movement. Keep refined premium board-game feel, not babyish or casino-themed. Bold uncluttered silhouettes readable at mobile sizes. Genuine transparent background, no surrounding background panel or mockup. All elements within generous safe padding. Wide 1600x700 canvas, design balanced horizontally. No trademarked references, no watermark."
+    },
+    {
+      "file": "03-modern-card-club.png",
+      "prompt": "Create an original professional game logo. OPTION 3: MODERN CARD CLUB. Exact text \"You're a Card\", no other text. Modern bold geometric sans-serif wordmark with beautifully spaced friendly rounded corners, arranged in two balanced lines \"You're\" above \"a Card\". To the left a minimal memorable emblem: three overlapping rounded upright card outlines forming a fan, the front ivory card containing a simple four-point gold star cutout. Deep teal/emerald outlines, warm ivory main lettering, subtle golden yellow accent on the small word \"a\". Flat clean sophisticated graphic design, no bevels, no gradients, no texture, no shadows, no cartoon mascot, no serif letters, no casino suits. The logo should feel welcoming and premium, suitable for a contemporary tabletop card game and mobile app, readable when small. True transparent background, no panel or rectangle or colored backdrop, no mockup. Wide canvas 1600x700, generous padding around complete design. Dark teal keyline around ivory letters for contrast on light and dark backgrounds."
+    }
+  ],
+  "cleanup_option_1": "Clean up this logo's transparent background. Remove ALL stray white marks, flecks, noise, and artifacts along the top edge and outside the actual card-fan symbol and lettering. The entire exterior must be genuinely transparent. Preserve the exact \"You're a Card\" typography, ivory and navy colors, gold diamond, card-fan symbol, layout and proportions. Do not redesign, add any elements, or crop the logo. Transparent PNG with clean padding."
+}

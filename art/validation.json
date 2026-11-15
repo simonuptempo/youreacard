@@ -1,0 +1,144 @@
+[
+  {
+    "file": "treasure-ruby.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 59.13
+  },
+  {
+    "file": "treasure-emerald.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 56.74
+  },
+  {
+    "file": "treasure-sapphire.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 68.94
+  },
+  {
+    "file": "treasure-gold.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 44.03
+  },
+  {
+    "file": "treasure-pearl.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 48.6
+  },
+  {
+    "file": "treasure-crown.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 67.62
+  },
+  {
+    "file": "card-back.png",
+    "size": [
+      600,
+      840
+    ],
+    "alpha_channel": false
+  },
+  {
+    "file": "frame-treasure.png",
+    "size": [
+      600,
+      840
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 79.46,
+    "safe_center_max_alpha": 1,
+    "safe_center_nonzero_percent": 0.0216
+  },
+  {
+    "file": "frame-heist.png",
+    "size": [
+      600,
+      840
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 79.44,
+    "safe_center_max_alpha": 1,
+    "safe_center_nonzero_percent": 0.4499
+  },
+  {
+    "file": "frame-trap.png",
+    "size": [
+      600,
+      840
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 78.41,
+    "safe_center_max_alpha": 1,
+    "safe_center_nonzero_percent": 0.0378
+  },
+  {
+    "file": "frame-tool.png",
+    "size": [
+      600,
+      840
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 79.43,
+    "safe_center_max_alpha": 1,
+    "safe_center_nonzero_percent": 0.0103
+  },
+  {
+    "file": "frame-wild.png",
+    "size": [
+      600,
+      840
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 78.4,
+    "safe_center_max_alpha": 1,
+    "safe_center_nonzero_percent": 0.0309
+  },
+  {
+    "file": "table-background.png",
+    "size": [
+      1080,
+      1920
+    ],
+    "alpha_channel": false
+  },
+  {
+    "file": "logo.png",
+    "size": [
+      1600,
+      700
+    ],
+    "alpha_channel": true
+  },
+  {
+    "file": "app-icon.png",
+    "size": [
+      1024,
+      1024
+    ],
+    "alpha_channel": false,
+    "color_space": "RGB"
+  }
+]

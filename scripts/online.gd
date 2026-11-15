@@ -1,0 +1,263 @@
+extends Node
+## Online play: accounts (Supabase Auth) and the Gem Heist server function.
+## Autoloaded as "Online". Everything here is async: callers `await` the results.
+##
+## Every server call returns {"ok": bool, "data": Variant, "error": String}.
+
+const URL := "https://ktomoljsvbpftptwqcqy.supabase.co"
+const KEY := "sb_publishable_6yFIuxGaYiili79iym-pbQ_Xi4gYTR9"  # public by design; safe to ship
+const FN := "/functions/v1/gem-heist"
+const RELAY := "/functions/v1/auth-relay"
+const SESSION_PATH := "user://session.json"
+
+var server := URL               # tests point this at a local stand-in via YAC_SERVER
+var session: Dictionary = {}   # access_token, refresh_token, expires_at, user_id, is_anonymous, email
+var me: Dictionary = {}        # server profile: display_name, is_guest
+var game_id := ""              # set just before opening the game scene for an online game
+var pending_character := -1    # CAST index to play when no human is free (cycles through the cast)
+
+
+func _ready() -> void:
+	if OS.get_environment("YAC_SERVER") != "":
+		server = OS.get_environment("YAC_SERVER")
+		return  # tests start signed out
+	_load_session()
+
+
+func signed_in() -> bool:
+	return session.has("access_token")
+
+
+func is_guest() -> bool:
+	return bool(session.get("is_anonymous", false))
+
+
+func name_or(fallback: String) -> String:
+	var n := str(me.get("display_name", ""))
+	return n if n != "" and n != "Player" else fallback
+
+
+# ------------------------------------------------------------------ HTTP
+
+func _http(method: int, path: String, body: Variant = null, use_session := true) -> Dictionary:
+	var req := HTTPRequest.new()
+	req.timeout = 20.0
+	add_child(req)
+	var headers := PackedStringArray(["apikey: " + KEY, "Content-Type: application/json"])
+	if use_session and signed_in():
+		headers.append("Authorization: Bearer " + str(session["access_token"]))
+	var payload := "" if body == null else JSON.stringify(body)
+	var err := req.request(server + path, headers, method, payload)
+	if err != OK:
+		req.queue_free()
+		return {"ok": false, "status": 0, "data": null, "error": "Couldn't reach the server. Check your internet connection."}
+	var res: Array = await req.request_completed
+	req.queue_free()
+	var status: int = res[1]
+	var text: String = (res[3] as PackedByteArray).get_string_from_utf8()
+	var data = JSON.parse_string(text) if text != "" else null
+	if res[0] != HTTPRequest.RESULT_SUCCESS:
+		return {"ok": false, "status": 0, "data": null, "error": "Couldn't reach the server. Check your internet connection."}
+	if status >= 200 and status < 300:
+		return {"ok": true, "status": status, "data": data, "error": ""}
+	var msg := "Something went wrong (%d)." % status
+	if typeof(data) == TYPE_DICTIONARY:
+		for k in ["error", "msg", "message", "error_description"]:
+			if data.has(k) and typeof(data[k]) == TYPE_STRING:
+				msg = data[k]
+				break
+	return {"ok": false, "status": status, "data": data, "error": _friendly(msg)}
+
+
+func _friendly(msg: String) -> String:
+	var m := msg.to_lower()
+	if m.contains("invalid login"):
+		return "That email and password don't match."
+	if m.contains("email not confirmed"):
+		return "Check your email and tap the confirmation link first."
+	if m.contains("already registered"):
+		return "That email already has an account. Try signing in."
+	if m.contains("anonymous sign-ins are disabled"):
+		return "Guest play isn't switched on yet. Ask the game's owner, or sign in instead."
+	if m.contains("password should be"):
+		return "Passwords need at least 6 characters."
+	return msg
+
+
+## Call the Gem Heist server. Refreshes the sign-in first if it's about to expire.
+func call_fn(action: String, payload: Dictionary = {}) -> Dictionary:
+	if not signed_in():
+		return {"ok": false, "data": null, "error": "Please sign in first."}
+	await _ensure_fresh()
+	var body := payload.duplicate()
+	body["action"] = action
+	var r := await _http(HTTPClient.METHOD_POST, FN, body)
+	if r["status"] == 401:
+		# Expired or deleted account: try one refresh, then give up.
+		if await _refresh():
+			r = await _http(HTTPClient.METHOD_POST, FN, body)
+	return r
+
+
+# ------------------------------------------------------------------ accounts
+
+func sign_up_email(email: String, password: String, first_name: String) -> String:
+	var r := await _http(HTTPClient.METHOD_POST, "/auth/v1/signup",
+		{"email": email.strip_edges(), "password": password, "data": {"display_name": first_name.strip_edges()}}, false)
+	if not r["ok"]:
+		return r["error"]
+	if typeof(r["data"]) == TYPE_DICTIONARY and r["data"].has("access_token"):
+		_store(r["data"])
+		await refresh_profile()
+		return ""
+	return "CONFIRM"  # account made; email confirmation is switched on
+
+
+func sign_in_email(email: String, password: String) -> String:
+	var r := await _http(HTTPClient.METHOD_POST, "/auth/v1/token?grant_type=password",
+		{"email": email.strip_edges(), "password": password}, false)
+	if not r["ok"]:
+		return r["error"]
+	_store(r["data"])
+	await refresh_profile()
+	return ""
+
+
+## A quick guest account for someone joining with an invite code.
+func sign_in_guest(first_name: String) -> String:
+	var r := await _http(HTTPClient.METHOD_POST, "/auth/v1/signup", {"data": {"display_name": first_name}}, false)
+	if not r["ok"]:
+		return r["error"]
+	_store(r["data"])
+	await refresh_profile()
+	return ""
+
+
+## Apple, Google or Facebook: opens the browser, then waits for the sign-in to come back.
+## The browser lands on our relay page, which holds the one-time code for this phone.
+var _oauth_cancel := false
+
+func sign_in_with(provider: String) -> String:
+	_oauth_cancel = false
+	var verifier := _random_token(48)
+	var challenge := Marshalls.raw_to_base64(verifier.sha256_buffer()).replace("+", "-").replace("/", "_").replace("=", "")
+	var lid := _random_token(24)
+	var back := server + RELAY + "?lid=" + lid
+	var url := "%s/auth/v1/authorize?provider=%s&redirect_to=%s&code_challenge=%s&code_challenge_method=s256" % [
+		server, provider, back.uri_encode(), challenge]
+	OS.shell_open(url)
+	# Wait up to 5 minutes for the player to finish in the browser.
+	for i in 150:
+		if _oauth_cancel:
+			return "CANCELLED"
+		await get_tree().create_timer(2.0).timeout
+		var r := await _http(HTTPClient.METHOD_GET, RELAY + "?poll=" + lid, null, false)
+		if r["ok"] and typeof(r["data"]) == TYPE_DICTIONARY and str(r["data"].get("code", "")) != "":
+			var t := await _http(HTTPClient.METHOD_POST, "/auth/v1/token?grant_type=pkce",
+				{"auth_code": r["data"]["code"], "code_verifier": verifier}, false)
+			if not t["ok"]:
+				return t["error"]
+			_store(t["data"])
+			await refresh_profile()
+			return ""
+	return "Sign-in timed out. Please try again."
+
+
+func cancel_sign_in() -> void:
+	_oauth_cancel = true
+
+
+func refresh_profile() -> void:
+	var r := await call_fn("me")
+	if r["ok"]:
+		me = r["data"].get("profile", {})
+		# Keep the local nickname and the online name in step.
+		if Profile.display_name == "" and name_or("") != "":
+			Profile.display_name = name_or("")
+			Profile.save_profile()
+
+
+func set_display_name(n: String) -> String:
+	var r := await call_fn("update_profile", {"display_name": n})
+	if r["ok"]:
+		me = r["data"].get("profile", me)
+	return r["error"]
+
+
+func sign_out() -> void:
+	if signed_in():
+		await _http(HTTPClient.METHOD_POST, "/auth/v1/logout", {})
+	_clear()
+
+
+func delete_account() -> String:
+	var r := await call_fn("delete_account")
+	if not r["ok"]:
+		return r["error"]
+	_clear()
+	return ""
+
+
+# ------------------------------------------------------------------ session storage
+
+func _store(data: Dictionary) -> void:
+	var user: Dictionary = data.get("user", {}) if typeof(data.get("user")) == TYPE_DICTIONARY else {}
+	session = {
+		"access_token": data.get("access_token", ""),
+		"refresh_token": data.get("refresh_token", ""),
+		"expires_at": Time.get_unix_time_from_system() + float(data.get("expires_in", 3600)),
+		"user_id": user.get("id", ""),
+		"is_anonymous": bool(user.get("is_anonymous", false)),
+		"email": str(user.get("email", "")) if user.get("email") != null else "",
+	}
+	_save_session()
+
+
+func _ensure_fresh() -> void:
+	if signed_in() and float(session.get("expires_at", 0)) - Time.get_unix_time_from_system() < 120:
+		await _refresh()
+
+
+func _refresh() -> bool:
+	if not session.has("refresh_token"):
+		return false
+	var r := await _http(HTTPClient.METHOD_POST, "/auth/v1/token?grant_type=refresh_token",
+		{"refresh_token": session["refresh_token"]}, false)
+	if not r["ok"]:
+		if r["status"] >= 400 and r["status"] < 500:
+			_clear()  # the sign-in is no longer valid (e.g. account deleted)
+		return false
+	_store(r["data"])
+	return true
+
+
+func _clear() -> void:
+	session = {}
+	me = {}
+	if FileAccess.file_exists(SESSION_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SESSION_PATH))
+
+
+func _save_session() -> void:
+	var f := FileAccess.open(SESSION_PATH, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(session))
+
+
+func _load_session() -> void:
+	if not FileAccess.file_exists(SESSION_PATH):
+		return
+	var f := FileAccess.open(SESSION_PATH, FileAccess.READ)
+	var data = JSON.parse_string(f.get_as_text()) if f else null
+	if typeof(data) == TYPE_DICTIONARY and data.has("access_token"):
+		session = data
+
+
+func _random_token(n: int) -> String:
+	var chars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	var crypto := Crypto.new()
+	var bytes := crypto.generate_random_bytes(n)
+	var out := ""
+	for b in bytes:
+		out += chars[b % chars.length()]
+	return out

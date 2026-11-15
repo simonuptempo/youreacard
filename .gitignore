@@ -1,0 +1,11 @@
+# Godot's local cache (rebuilt automatically when the project opens)
+.godot/
+# iOS / other exports (the Xcode project Godot generates)
+build/
+# Mac clutter
+.DS_Store
+# Signing secrets never go in git
+*.mobileprovision
+*.p12
+*.p8
+export_credentials.cfg

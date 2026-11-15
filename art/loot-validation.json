@@ -1,0 +1,58 @@
+[
+  {
+    "file": "loot-mouse.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 36.57
+  },
+  {
+    "file": "loot-raccoon.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 37.05
+  },
+  {
+    "file": "loot-fox.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 37.0
+  },
+  {
+    "file": "loot-owl.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 37.19
+  },
+  {
+    "file": "loot-magpie.png",
+    "size": [
+      512,
+      512
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 37.3
+  },
+  {
+    "file": "frame-money.png",
+    "size": [
+      600,
+      840
+    ],
+    "alpha_channel": true,
+    "transparent_percent": 78.2,
+    "safe_center_max_alpha": 1,
+    "safe_center_nonzero_percent": 0.0474
+  }
+]
