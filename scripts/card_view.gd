@@ -265,7 +265,13 @@ func _draw_full_art(font: Font, kind: String, typ: String) -> void:
 		rules = "Costs %s. %s" % [CardDB.bills(cost), rules]
 	var fs := int(w * 0.08)
 	var lines := _wrap(font, rules, w * 0.76, fs)
-	if lines.size() > 2:
+	if w >= 300.0:
+		# Big preview card: use the full width and keep the text large.
+		lines = _wrap(font, rules, w * 0.84, fs)
+		if lines.size() > 3:
+			fs = int(w * 0.072)
+			lines = _wrap(font, rules, w * 0.84, fs)
+	elif lines.size() > 2:
 		fs = int(w * 0.07)
 		lines = _wrap(font, rules, w * 0.8, fs)
 	if lines.size() > 3:

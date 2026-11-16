@@ -5,19 +5,36 @@ extends Node
 ## (made by tools/make_audio.py). To use real recorded voices later, drop files named the
 ## same way into res://audio/voice_real/ (.wav, .ogg or .mp3): they're used instead.
 
+## Ten lines per character. Lines 0-2 were recorded first; the rest play once their
+## recordings are in res://audio/voice_real/<role>_<n>.ogg. Only recorded lines are used.
 const LINES := {
-	"you": ["I'm wild!", "Any gem you like!", "Count me in!"],
-	"pickpocket": ["Finders keepers!", "Mine now!", "Didn't see that coming!"],
-	"trickster": ["Let's make a deal!", "Fair trade... ish!", "Swapsies!"],
-	"boss": ["Empty those pockets!", "Pay up, pal!", "Time to settle up."],
-	"mastermind": ["All according to plan.", "The whole set? Don't mind if I do.", "Checkmate."],
-	"bouncer": ["Not on my watch!", "Nope. Blocked.", "You're not getting past me."],
-	"illusionist": ["Right back at you!", "Mirror, mirror!", "Now you see it..."],
-	"trapper": ["Gotcha!", "Caught you red-handed!", "Snap!"],
-	"locksmith": ["Click! It's open.", "No lock can stop me.", "Let's see what's inside."],
+	"you": ["I'm wild!", "Any gem you like!", "Count me in!", "Wild card, coming through!", "I fit right in.",
+		"Call me whatever you need.", "Surprise!", "I go with everything.", "Did somebody need a gem?", "Deal me in!"],
+	"pickpocket": ["Finders keepers!", "Mine now!", "Didn't see that coming!", "Thanks, I'll take that.", "Sticky fingers!",
+		"Now it's in MY pocket.", "Oops, did I take that?", "Too slow!", "Easy pickings.", "Yoink!"],
+	"trickster": ["Let's make a deal!", "Fair trade... ish!", "Swapsies!", "Trust me, it's a bargain.", "You'll thank me later.",
+		"Everybody wins! Mostly me.", "A little switcheroo!", "No take-backs!", "Pleasure doing business.", "What a steal... I mean deal!"],
+	"boss": ["Empty those pockets!", "Pay up, pal!", "Time to settle up.", "Let's see what you're hiding.", "Turn out those pockets.",
+		"I'll just help myself.", "Nothing personal.", "You owe me.", "Cash on the table, please.", "The Boss always collects."],
+	"mastermind": ["All according to plan.", "The whole set? Don't mind if I do.", "Checkmate.", "I planned this ten moves ago.", "Exactly as I predicted.",
+		"Thank you for collecting these for me.", "Brilliant, if I do say so.", "Every piece in its place.", "You never stood a chance.", "The grand finale!"],
+	"bouncer": ["Not on my watch!", "Nope. Blocked.", "You're not getting past me.", "Not tonight.", "Name's not on the list.",
+		"Back it up.", "Denied.", "Nice try.", "This area's off limits.", "Move along."],
+	"illusionist": ["Right back at you!", "Mirror, mirror!", "Now you see it...", "Ta-da!", "Look again!",
+		"The trick's on you!", "Abracadabra!", "Was that meant for me?", "Return to sender!", "Smoke and mirrors!"],
+	"trapper": ["Gotcha!", "Caught you red-handed!", "Snap!", "Walked right into it!", "Hook, line and sinker!",
+		"Mine now, thank you!", "Watch your step!", "I set that trap ages ago.", "Caught one!", "Nobody escapes the Trapper!"],
+	"locksmith": ["Click! It's open.", "No lock can stop me.", "Let's see what's inside.", "Child's play.", "Every lock has a key.",
+		"Open sesame!", "Easy as one, two, click.", "What have we got here?", "Don't mind me.", "Locked? Not anymore."],
 }
 ## The Boss has two cards; each gets its own lines.
-const BOSS_LINES := {"shakedown": [0], "payup": [1, 2]}
+const BOSS_LINES := {"shakedown": [0, 3, 4, 5, 6], "payup": [1, 2, 7, 8, 9]}
+## The voice each character is recorded in, and its alternate (files named <role>_alt_<n>).
+const VOICE := {"you": "", "pickpocket": "boy", "trickster": "woman", "boss": "man", "mastermind": "woman",
+	"bouncer": "man", "illusionist": "woman", "trapper": "woman", "locksmith": "woman"}
+const ALT_VOICE := {"boy": "girl", "girl": "boy", "woman": "man", "man": "woman"}
+## How often characters speak (Settings: Often / Sometimes / Off).
+const CHANCE := {"often": [0.75, 1.0], "sometimes": [0.35, 0.8], "off": [0.0, 0.0]}
 const GEMS := ["ruby", "emerald", "sapphire", "topaz", "diamond", "amethyst"]
 
 var enabled := true
@@ -25,6 +42,10 @@ var _players: Array[AudioStreamPlayer] = []
 var _voice: AudioStreamPlayer
 var _cache := {}
 var _last := {}
+var _bags := {}          # role -> line numbers not used yet (no repeats until all are heard)
+var _last_line := {}
+var _last_speaker := ""
+var _heard := {}         # characters who have spoken since the app opened
 
 
 func _ready() -> void:
@@ -68,30 +89,90 @@ func play(name: String, volume_db := 0.0, pitch := 1.0) -> void:
 	_players[0].play()
 
 
-## A character speaks: plays their voice and returns the line to show in a speech bubble.
+## Seconds left in the character line that's playing now (0 if none).
+func voice_left() -> float:
+	if _voice == null or not _voice.playing or _voice.stream == null:
+		return 0.0
+	return maxf(0.0, _voice.stream.get_length() - _voice.get_playback_position())
+
+
+## Should this character speak now? Not every card gets a line, or it gets tiring:
+## big moments (twists firing, a Grand Heist, your own recorded voice) usually do,
+## everyday plays only sometimes, and the same character rarely twice in a row.
+func should_speak(role: String, e: Dictionary, own_voice := false) -> bool:
+	var mode := str(Profile.voices)
+	if mode == "off" or role == "":
+		return false
+	var card := str(e.get("card", ""))
+	var big := own_voice or card in CardDB.TRAPS or card == "grand"
+	var chance: float = CHANCE.get(mode, CHANCE["sometimes"])[1 if big else 0]
+	if not _heard.has(role):
+		chance = 1.0  # everyone gets to introduce themselves once
+	elif role == _last_speaker:
+		chance *= 0.4
+	return randf() < chance
+
+
+## A character speaks: plays one of their recorded lines and returns it for the speech bubble.
 ## own_voice: the card shows your face and you recorded yourself (see VoiceRecorder).
-func say(role: String, action := "", own_voice := false) -> String:
+## alt: use the character's other voice (<role>_alt_<n>), when those recordings exist.
+func say(role: String, action := "", own_voice := false, alt := false) -> String:
 	if not LINES.has(role):
 		return ""
-	var options: Array = BOSS_LINES.get(action, [0, 1, 2]) if role == "boss" else [0, 1, 2]
-	var i: int = options[randi() % options.size()]
-	if enabled:
-		var s: AudioStream = null
-		var mine := "user://voices/%s_%d.wav" % [role, i]
-		if own_voice and FileAccess.file_exists(mine):
-			s = AudioStreamWAV.load_from_file(mine)  # not cached, so re-recordings take effect
-		for ext in ["wav", "ogg", "mp3"]:
-			if s != null:
-				break
-			s = _load("res://audio/voice_real/%s_%d.%s" % [role, i, ext])
-			if s != null:
-				break
-		if s == null:
-			s = _load("res://audio/voice/%s_%d.wav" % [role, i])
-		if s != null:
-			_voice.stream = s
-			_voice.play()
+	var allowed: Array = BOSS_LINES.get(action, range(LINES[role].size())) if role == "boss" else range(LINES[role].size())
+	# Which recordings exist: yours, then the alternate voice, then the regular one, then babble.
+	var sources: Array = []
+	if own_voice:
+		sources.append(func(i): return "user://voices/%s_%d.wav" % [role, i])
+	if alt:
+		sources.append(func(i): return _real_path("%s_alt_%d" % [role, i]))
+	sources.append(func(i): return _real_path("%s_%d" % [role, i]))
+	var pick_from: Array = []
+	var source: Callable
+	for src in sources:
+		pick_from = allowed.filter(func(i): return str(src.call(i)) != "" and (str(src.call(i)).begins_with("res://") or FileAccess.file_exists(str(src.call(i)))))
+		if not pick_from.is_empty():
+			source = src
+			break
+	var babble := pick_from.is_empty()
+	if babble:
+		pick_from = allowed.filter(func(i): return i < 3)
+	var i := _next_line(role + ("_alt" if alt else ""), pick_from)
+	_heard[role] = true
+	_last_speaker = role
+	var s: AudioStream = null
+	if babble:
+		s = _load("res://audio/voice/%s_%d.wav" % [role, i])
+	else:
+		var path := str(source.call(i))
+		s = AudioStreamWAV.load_from_file(path) if path.begins_with("user://") else _load(path)
+	if s != null:
+		_voice.stream = s
+		_voice.play()
 	return LINES[role][i]
+
+
+## The recorded file for a line in res://audio/voice_real, or "" if it isn't there.
+func _real_path(stem: String) -> String:
+	for ext in ["ogg", "wav", "mp3"]:
+		var p := "res://audio/voice_real/%s.%s" % [stem, ext]
+		if _load(p) != null:
+			return p
+	return ""
+
+
+## Deal lines from a shuffled bag so none repeats until the others have been heard.
+func _next_line(key: String, options: Array) -> int:
+	var bag: Array = _bags.get(key, []).filter(func(i): return i in options)
+	if bag.is_empty():
+		bag = options.duplicate()
+		bag.shuffle()
+		if bag.size() > 1 and bag[0] == _last_line.get(key, -1):
+			bag.reverse()
+	var i: int = bag.pop_front()
+	_bags[key] = bag
+	_last_line[key] = i
+	return i
 
 
 ## The effect that fits a game event (from GameState.events).

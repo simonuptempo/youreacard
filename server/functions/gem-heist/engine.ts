@@ -361,6 +361,14 @@ export class Game {
     return out;
   }
 
+  // A collected gem can be pawned unless it's a wild or a finished set needs it.
+  canPawnCollected(p: number, color: string, card: Card): boolean {
+    if (card.kind === "wild") return false;
+    if (!this.isComplete(p, color)) return true;
+    const rest = this.setCards(p, color).filter((c) => c.id !== card.id);
+    return rest.length >= setSize(color) && rest.some((c) => c.kind !== "wild");
+  }
+
   canCollect(p: number, card: Card, color: string): boolean {
     if (this.isComplete(p, color)) return card.kind === color;
     return card.kind === "wild" || card.kind === color;
@@ -392,6 +400,9 @@ export class Game {
         } else if (kind === "lucky") moves.push({ type: "tool", card: id });
         if (empty >= 0) moves.push({ type: "vault", card: id, slot: empty });
       }
+      // Pawn a gem straight out of a collection (never a wild, never one a finished set needs).
+      for (const color of COLORS)
+        for (const c of this.setCards(p, color)) if (this.canPawnCollected(p, color, c)) moves.push({ type: "pawn", card: c.id });
     }
     for (let sl = 0; sl < 2; sl++) if (this.vault(p)[sl] !== null) moves.push({ type: "reclaim", slot: sl });
     for (const from of COLORS)
@@ -458,6 +469,14 @@ export class Game {
         s.plays_left--;
         if (isTreasure(c.kind)) this.ev(p, (v) => `${this.nm(p, v)} pawned ${aAn(oneName(c.kind))} for ${bills(value(c.kind))}.`, c.kind, -1, false);
         else this.ev(p, (v) => `${this.nm(p, v)} banked ${bills(value(c.kind))}.`, c.kind, -1, false);
+        this.collectDebt(p);
+        break;
+      }
+      case "pawn": {
+        const found = this.removeFromCollection(p, n("card"))!;
+        this.bank(p).push(found[1]);
+        s.plays_left--;
+        this.ev(p, (v) => `${this.nm(p, v)} pawned ${aAn(oneName(found[0]))} from ${p === v ? "your" : "their"} collection for ${bills(pawnValue(found[0]))}.`, found[0], -1, false);
         this.collectDebt(p);
         break;
       }
@@ -636,14 +655,44 @@ export class Game {
         for (const col of COLORS)
           if (this.isComplete(vic, col) && this.setCards(vic, col).length > best) { best = this.setCards(vic, col).length; color = col; }
       } else color = move.color as string;
+      if (!color && reflected) {
+        // No finished set to take: the Mirror takes their best set in progress instead.
+        const pick = this.bestUnfinishedSet(a, vic);
+        if (!pick) {
+          this.ev(a, (v) => `The Mirror bounced it back, but ${this.nm(vic, v)} had no gems to take.`, "", -1, false);
+          return;
+        }
+        const taken = this.setCards(vic, pick).splice(0);
+        for (const c of taken) this.receive(a, c, pick);
+        const what = taken.length === 1 ? oneName(pick) : `${taken.length} ${displayName(pick)}`;
+        this.ev(a, (v) => `${this.nm(vic, v)} had no finished set, so ${a === v ? "you" : this.s.players[a].name} took ${vic === v ? "your" : "their"} ${what} instead!`, "grand", a, true);
+        return;
+      }
       if (!color) {
-        this.ev(a, (v) => (reflected ? `The Mirror bounced it back, but ${this.nm(vic, v)} had no finished set to take.` : "There was no complete set to take."), "", -1, false);
+        this.ev(a, () => "There was no complete set to take.", "", -1, false);
         return;
       }
       const cards = this.setCards(vic, color).splice(0);
       this.setCards(a, color).push(...cards);
       this.ev(a, (v) => `${this.nm(a, v)} pulled off a Grand Heist and took ${this.poss(vic, v)} ${displayName(color)}!`, "grand", a, true);
     }
+  }
+
+  // For a reflected Grand Heist when the victim has no finished set.
+  bestUnfinishedSet(a: number, vic: number): string {
+    let best = "";
+    let bestScore = 0;
+    for (const color of COLORS) {
+      const n = this.setCards(vic, color).length;
+      if (n === 0 || this.isComplete(vic, color)) continue;
+      let score = n;
+      if (!this.isComplete(a, color)) {
+        score += this.setCards(a, color).length;
+        if (score >= setSize(color)) score += 100;
+      }
+      if (score > bestScore) { bestScore = score; best = color; }
+    }
+    return best;
   }
 
   cardLabel = (card: Card, color: string) => (card.kind === "wild" ? `wild (${oneName(color)})` : oneName(color));

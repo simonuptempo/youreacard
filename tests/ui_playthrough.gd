@@ -59,8 +59,7 @@ func _process(_d: float) -> bool:
 		"tool":
 			s._on_hand_tapped(null, m["card"])
 			if m.has("slot"):
-				s._start_target("lockpick")
-				s._on_opp_vault_tapped(null, m["slot"])
+				s._lockpick_random()
 			else:
 				s._apply_and_clear(m)
 		_:

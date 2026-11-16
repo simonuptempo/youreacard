@@ -1,47 +1,110 @@
 {
- "you": [
-  "I'm wild!",
-  "Any gem you like!",
-  "Count me in!"
- ],
- "pickpocket": [
-  "Finders keepers!",
-  "Mine now!",
-  "Didn't see that coming!"
- ],
- "trickster": [
-  "Let's make a deal!",
-  "Fair trade... ish!",
-  "Swapsies!"
- ],
  "boss": [
   "Empty those pockets!",
   "Pay up, pal!",
-  "Time to settle up."
- ],
- "mastermind": [
-  "All according to plan.",
-  "The whole set? Don't mind if I do.",
-  "Checkmate."
+  "Time to settle up.",
+  "Let's see what you're hiding.",
+  "Turn out those pockets.",
+  "I'll just help myself.",
+  "Nothing personal.",
+  "You owe me.",
+  "Cash on the table, please.",
+  "The Boss always collects."
  ],
  "bouncer": [
   "Not on my watch!",
   "Nope. Blocked.",
-  "You're not getting past me."
+  "You're not getting past me.",
+  "Not tonight.",
+  "Name's not on the list.",
+  "Back it up.",
+  "Denied.",
+  "Nice try.",
+  "This area's off limits.",
+  "Move along."
  ],
  "illusionist": [
   "Right back at you!",
   "Mirror, mirror!",
-  "Now you see it..."
- ],
- "trapper": [
-  "Gotcha!",
-  "Caught you red-handed!",
-  "Snap!"
+  "Now you see it...",
+  "Ta-da!",
+  "Look again!",
+  "The trick's on you!",
+  "Abracadabra!",
+  "Was that meant for me?",
+  "Return to sender!",
+  "Smoke and mirrors!"
  ],
  "locksmith": [
   "Click! It's open.",
   "No lock can stop me.",
-  "Let's see what's inside."
+  "Let's see what's inside.",
+  "Child's play.",
+  "Every lock has a key.",
+  "Open sesame!",
+  "Easy as one, two, click.",
+  "What have we got here?",
+  "Don't mind me.",
+  "Locked? Not anymore."
+ ],
+ "mastermind": [
+  "All according to plan.",
+  "The whole set? Don't mind if I do.",
+  "Checkmate.",
+  "I planned this ten moves ago.",
+  "Exactly as I predicted.",
+  "Thank you for collecting these for me.",
+  "Brilliant, if I do say so.",
+  "Every piece in its place.",
+  "You never stood a chance.",
+  "The grand finale!"
+ ],
+ "pickpocket": [
+  "Finders keepers!",
+  "Mine now!",
+  "Didn't see that coming!",
+  "Thanks, I'll take that.",
+  "Sticky fingers!",
+  "Now it's in MY pocket.",
+  "Oops, did I take that?",
+  "Too slow!",
+  "Easy pickings.",
+  "Yoink!"
+ ],
+ "trapper": [
+  "Gotcha!",
+  "Caught you red-handed!",
+  "Snap!",
+  "Walked right into it!",
+  "Hook, line and sinker!",
+  "Mine now, thank you!",
+  "Watch your step!",
+  "I set that trap ages ago.",
+  "Caught one!",
+  "Nobody escapes the Trapper!"
+ ],
+ "trickster": [
+  "Let's make a deal!",
+  "Fair trade... ish!",
+  "Swapsies!",
+  "Trust me, it's a bargain.",
+  "You'll thank me later.",
+  "Everybody wins! Mostly me.",
+  "A little switcheroo!",
+  "No take-backs!",
+  "Pleasure doing business.",
+  "What a steal... I mean deal!"
+ ],
+ "you": [
+  "I'm wild!",
+  "Any gem you like!",
+  "Count me in!",
+  "Wild card, coming through!",
+  "I fit right in.",
+  "Call me whatever you need.",
+  "Surprise!",
+  "I go with everything.",
+  "Did somebody need a gem?",
+  "Deal me in!"
  ]
 }

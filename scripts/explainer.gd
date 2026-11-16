@@ -15,12 +15,12 @@ const ACTIONS := [
 	["swap", "Trade one of your gems for one of theirs. Both must come from sets that aren't finished."],
 	["shakedown", "Take a random card from your opponent's hand."],
 		["swipe", "Steal one gem from a set your opponent hasn't finished."],
-	["lockpick", "Pick one face-down card in their vault and steal it. Twists can't stop it."],
+	["lockpick", "Steal a random face-down card from their vault. Twists can't stop it."],
 	["grand", "Steal an entire finished set."],
 ]
 const TWISTS := [
 	["shield", "Blocks the action."],
-	["mirror", "Bounces the action back at the player who played it. A bounced Trade gives you a free counter-trade."],
+	["mirror", "Bounces the action back at the player who played it. A bounced Trade gives you a free counter-trade. A bounced Grand Heist takes their best unfinished set if they have no finished one."],
 	["snare", "Blocks the action, and you keep their card."],
 ]
 const PANEL_BG := Color(0.07, 0.17, 0.17, 0.85)
@@ -90,7 +90,8 @@ func _ready() -> void:
 		Profile.rematch_cast = -1
 		Profile.go("game"))
 	add_child(_practice)
-	_show_step(0)
+	_show_step(Profile.explainer_start)
+	Profile.explainer_start = 0
 
 
 # ------------------------------------------------------------------ navigation
@@ -380,7 +381,7 @@ func _tab_gem() -> void:
 	_label(_tab_root, "FROM YOUR HAND", Vector2(410, 24), Vector2(220, 30), 18, UI.MUTED)
 	var played := _card(_tab_root, "emerald", Vector2(450, 64), Vector2(130, 182))
 	_move(played, Vector2(140, 104), 0.6, 0.75)
-	_label(_tab_root, "Add a gem to a set of the same kind. Finish the set to lock it in. Add another gem to a finished set and your opponent pays you 2 bills (3 for the next one).\nNeed cash? Pawn a gem: 1 bill (Rubies and Diamonds: 2).", Vector2(30, 320), Vector2(620, 150), 23)
+	_label(_tab_root, "Add a gem to a set of the same kind. Finish the set to lock it in. Add another gem to a finished set and your opponent pays you 2 bills (3 for the next one).\nNeed cash? Pawn a gem from your hand or collection: 1 bill (Rubies and Diamonds: 2).", Vector2(30, 320), Vector2(620, 150), 23)
 
 
 func _tab_vault() -> void:
@@ -451,5 +452,28 @@ func _rows(list: Array, free: bool) -> void:
 func _wild() -> void:
 	var cv := _card(_stage, "wild", Vector2(195, 10), Vector2(330, 462), Profile.slot_face("you"))
 	cv.placeholder = not Profile.is_custom("you")
+	# Tap the card to put your face on it right here.
+	cv.mouse_filter = Control.MOUSE_FILTER_STOP
+	cv.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	cv.tapped.connect(func(_v): _edit_wild())
 	_pop(cv)
-	_pop(_label(_stage, "A wild card counts as a gem of any color.", Vector2(40, 510), Vector2(640, 70), 28), 0.4)
+	_pop(_label(_stage, "A wild card counts as a gem of any color.", Vector2(40, 490), Vector2(640, 60), 28), 0.4)
+	var custom := Profile.is_custom("you")
+	var edit := UI.button("Change your card" if custom else "Tap to make it you", Vector2(185, 556), Vector2(350, 64), UI.ACCENT, 24)
+	edit.pressed.connect(_edit_wild)
+	_stage.add_child(edit)
+	_pop(edit, 0.7)
+	if not custom:
+		# A gentle pulse invites the tap.
+		cv.pivot_offset = cv.size / 2.0
+		var pulse := _tween().set_loops()
+		pulse.tween_interval(1.2)
+		pulse.tween_property(cv, "scale", Vector2(1.04, 1.04), 0.35).set_trans(Tween.TRANS_SINE)
+		pulse.tween_property(cv, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_SINE)
+
+
+func _edit_wild() -> void:
+	_stop_animations()
+	Profile.edit_slot = "you"
+	Profile.creator_return = "explainer"
+	Profile.go("avatar_creator")

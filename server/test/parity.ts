@@ -26,7 +26,7 @@ for (const [gi, gm] of games.entries()) {
     steps++;
     if (!ok) { console.log(`game ${gi} step ${si}: TS says illegal`, JSON.stringify(st.move)); fails++; break; }
     const a = norm(strip(g.s)), b = norm(strip(st.after));
-    const last = si === gm.steps.length - 1 && st.texts.some((t: string) => t.includes("random card") || t.includes("shuffled") || t.startsWith("Reflected!"));
+    const last = st.texts.some((t: string) => t.includes("random card") || t.includes("shuffled") || (t.startsWith("Reflected!") && !t.includes("Grand Heist")));
     if (last) break;
     if (a !== b) { console.log(`game ${gi} step ${si}: state differs after`, JSON.stringify(st.move)); fails++; break; }
     const tsTexts = g.s.events.slice(evBefore).map((e: any) => e.t3);

@@ -2,6 +2,12 @@
 .godot/
 # iOS / other exports (the Xcode project Godot generates)
 build/
+# An Xcode export made straight into the project folder
+YoureACard/
+*.xcodeproj/
+*.xcframework/
+*.pck
+PrivacyInfo.xcprivacy
 # Mac clutter
 .DS_Store
 # Signing secrets never go in git

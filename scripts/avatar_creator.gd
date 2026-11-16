@@ -457,6 +457,10 @@ func _leave(saved: bool) -> void:
 			Profile.go("onboarding")
 		"my_cards":
 			Profile.go("my_cards")
+		"explainer":
+			# Back to the tutorial's "you are wild" step.
+			Profile.explainer_start = 5
+			Profile.go("explainer")
 		_:
 			Profile.go("main")
 

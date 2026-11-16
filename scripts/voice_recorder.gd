@@ -17,6 +17,7 @@ var _recording := -1          # which line is recording, or -1
 var _elapsed := 0.0
 var _rows: Array = []         # [{status: Label, rec: Button, play: Button}]
 var _note: Label
+var _alt_btn: Button
 
 
 static func path_for(s: String, i: int) -> String:
@@ -53,9 +54,9 @@ func _ready() -> void:
 	add_child(UI.label("Your voice", Vector2(30, 176), Vector2(660, 54), 40, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
 	add_child(UI.label("%s says these when the card is played. Read each one out loud, with lots of character!" % who,
 		Vector2(70, 236), Vector2(580, 80), 22, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	var lines: Array = Sfx.LINES[slot]
+	var lines: Array = Sfx.LINES[slot].slice(0, 3)
 	for i in lines.size():
-		var y := 340.0 + i * 190.0
+		var y := 330.0 + i * 175.0
 		add_child(UI.panel(Vector2(60, y), Vector2(600, 170), Color("#1d2547"), 18))
 		add_child(UI.label("“%s”" % lines[i], Vector2(80, y + 12), Vector2(560, 50), 30, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 		var status := UI.label("", Vector2(80, y + 62), Vector2(560, 30), 18, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
@@ -67,7 +68,14 @@ func _ready() -> void:
 		play.pressed.connect(_play.bind(i))
 		add_child(play)
 		_rows.append({"status": status, "rec": rec, "play": play})
-	_note = UI.label("Your recordings stay on this phone. Online opponents hear the regular voices.", Vector2(60, 920), Vector2(600, 56), 17, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	# Without your own recordings, the card can use the character's other voice instead.
+	var regular: String = Sfx.VOICE.get(slot, "")
+	if Sfx.ALT_VOICE.has(regular):
+		_alt_btn = UI.button("", Vector2(60, 860), Vector2(600, 56), Color("#2f3866"), 20)
+		_alt_btn.pressed.connect(_toggle_alt)
+		add_child(_alt_btn)
+		_update_alt()
+	_note = UI.label("Your recordings stay on this phone. Online opponents hear the regular voices.", Vector2(60, 924), Vector2(600, 56), 17, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	add_child(_note)
 	var reset := UI.button("Use the regular voice", Vector2(60, 990), Vector2(290, 70), Color("#3a4166"), 20)
 	reset.pressed.connect(_use_default)
@@ -77,6 +85,21 @@ func _ready() -> void:
 	done.pressed.connect(_close)
 	add_child(done)
 	_refresh()
+
+
+func _toggle_alt() -> void:
+	if Profile.voice_alt.get(slot, false):
+		Profile.voice_alt.erase(slot)
+	else:
+		Profile.voice_alt[slot] = true
+	Profile.save_profile()
+	_update_alt()
+
+
+func _update_alt() -> void:
+	var regular: String = Sfx.VOICE.get(slot, "")
+	var using: String = Sfx.ALT_VOICE[regular] if Profile.voice_alt.get(slot, false) else regular
+	_alt_btn.text = "Regular voice: %s's  ·  tap to switch" % using.capitalize()
 
 
 func _setup_audio() -> void:

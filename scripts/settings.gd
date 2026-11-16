@@ -5,6 +5,7 @@ var _name_edit: LineEdit
 var _plays_btn: Button
 var _status: Label
 var _sound_btn: Button
+var _voices_btn: Button
 
 
 func _ready() -> void:
@@ -59,18 +60,22 @@ func _ready() -> void:
 		Profile.explainer_return = "settings"
 		Profile.go("explainer"))
 	add_child(watch)
-	_plays_btn = UI.button("", Vector2(20, 698), Vector2(440, 76), Color("#3a4166"), 20)
-	_plays_btn.pressed.connect(_toggle_plays)
-	add_child(_plays_btn)
-	_sound_btn = UI.button("", Vector2(476, 698), Vector2(224, 76), Color("#3a4166"), 22)
+	_sound_btn = UI.button("", Vector2(20, 698), Vector2(330, 76), Color("#3a4166"), 22)
 	_sound_btn.pressed.connect(_toggle_sound)
 	add_child(_sound_btn)
+	_voices_btn = UI.button("", Vector2(370, 698), Vector2(330, 76), Color("#3a4166"), 22)
+	_voices_btn.pressed.connect(_cycle_voices)
+	add_child(_voices_btn)
+	_update_voices()
 	_update_sound()
-	_update_plays()
 
 	# Testing
 	add_child(UI.label("For testing", Vector2(30, 800), Vector2(660, 40), 26, UI.MUTED))
-	var replay := UI.button("Replay first-time setup", Vector2(20, 846), Vector2(680, 76), Color("#3a4166"), 24)
+	_plays_btn = UI.button("", Vector2(370, 846), Vector2(330, 76), Color("#3a4166"), 19)
+	_plays_btn.pressed.connect(_toggle_plays)
+	add_child(_plays_btn)
+	_update_plays()
+	var replay := UI.button("Replay first-time setup", Vector2(20, 846), Vector2(330, 76), Color("#3a4166"), 20)
 	replay.pressed.connect(func():
 		Profile.onboarded = false
 		Profile.onboarding_step = 0
@@ -95,7 +100,7 @@ func _toggle_plays() -> void:
 
 
 func _update_plays() -> void:
-	_plays_btn.text = "Playtest: %d plays per turn" % Profile.plays_per_turn
+	_plays_btn.text = "Playtest: %d plays/turn" % Profile.plays_per_turn
 
 
 func _toggle_sound() -> void:
@@ -107,7 +112,19 @@ func _toggle_sound() -> void:
 
 
 func _update_sound() -> void:
-	_sound_btn.text = "Sound: On" if Profile.sound_on else "Sound: Off"
+	_sound_btn.text = "Sound effects: On" if Profile.sound_on else "Sound effects: Off"
+
+
+## Character voices: Often -> Sometimes -> Off.
+func _cycle_voices() -> void:
+	var order := ["sometimes", "often", "off"]
+	Profile.voices = order[(order.find(Profile.voices) + 1) % order.size()]
+	Profile.save_profile()
+	_update_voices()
+
+
+func _update_voices() -> void:
+	_voices_btn.text = "Voices: %s" % Profile.voices.capitalize()
 
 
 

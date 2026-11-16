@@ -518,27 +518,40 @@ func _inspect_collection(p: int,color: String) -> void:
 	_collection_popup.add_child(dim)
 	_collection_popup.add_child(UI.panel(Vector2(24,230),Vector2(672,790),TABLE_PANEL,22))
 	_collection_popup.add_child(UI.label("%s · %s" % ["Your collection" if p==0 else bot_name,CardDB.one_name(color)],Vector2(44,252),Vector2(632,50),27,UI.ACCENT,HORIZONTAL_ALIGNMENT_CENTER))
-	_collection_popup.add_child(UI.label("Tap a highlighted card to choose it." if mode=="target" else ("Tap a Wild to move it between sets." if p==0 else "Cards in this set are visible to both players."),Vector2(44,310),Vector2(632,48),21,UI.MUTED,HORIZONTAL_ALIGNMENT_CENTER))
-	var scroll:=ScrollContainer.new()
-	scroll.position=Vector2(48,390)
-	scroll.size=Vector2(624,390)
-	_collection_popup.add_child(scroll)
-	var row:=HBoxContainer.new()
-	row.add_theme_constant_override("separation",16)
-	scroll.add_child(row)
-	for card in g.set_cards(p,color):
-		var holder:=Control.new()
-		holder.custom_minimum_size=Vector2(214,306)
-		row.add_child(holder)
+	_collection_popup.add_child(UI.label("Tap the stack to choose it." if mode=="target" else ("Tap a gem to pawn it, or a Wild to move it." if p==0 else "Cards in this set are visible to both players."),Vector2(44,310),Vector2(632,48),21,UI.MUTED,HORIZONTAL_ALIGNMENT_CENTER))
+	# The set is shown as one stack, each card a little offset, so you can count it at a glance.
+	var cards: Array = g.set_cards(p,color).duplicate()
+	cards.sort_custom(func(x, y): return x["kind"]=="wild" and y["kind"]!="wild")  # real gems on top
+	var n:=cards.size()
+	var step:=Vector2(34,30)
+	var card_sz:=Vector2(214,300)
+	var origin:=Vector2(360-(card_sz.x+(n-1)*step.x)/2.0,380)
+	var targeting:=mode=="target" and n>0
+	var top_id:=int(cards[n-1]["id"]) if n>0 else -1
+	var stack_is_target:=targeting and _chip_is_target(p,top_id,color)
+	for i in n:
+		var card: Dictionary = cards[i]
 		var view:=CardView.new()
-		view.size=Vector2(214,300)
-		holder.add_child(view)
+		view.position=origin+step*i
+		view.size=card_sz
+		_collection_popup.add_child(view)
 		view.setup(card,face_for(int(card.get("face",p)),"you") if card["kind"]=="wild" else {})
-		view.highlight=mode=="target" and _chip_is_target(p,card["id"],color)
+		view.highlight=stack_is_target and i==n-1
+		# When targeting, any tap on the stack picks its top card.
+		var pick: Dictionary = cards[n-1] if targeting else card
 		view.tapped.connect(func(v):
-			_detail_card=card
+			_detail_card=pick
 			_close_collection()
-			_on_chip_tapped(v,p,card["id"],color))
+			_on_chip_tapped(v,p,int(pick["id"]),color))
+	if n>0:
+		var count_text:="%d %s" % [n,CardDB.display_name(color)] if n!=1 else "1 %s" % CardDB.one_name(color)
+		var how:=""
+		if stack_is_target:
+			var taking_all:=false
+			for m in target_moves:
+				if m.get("as","")=="grand": taking_all=true
+			how="  ·  Tap the stack to take %s" % ("all %d" % n if taking_all and n>1 else ("it" if n==1 else "1 (the top card)"))
+		_collection_popup.add_child(UI.label(count_text+how,Vector2(44,origin.y+card_sz.y+(n-1)*step.y+16),Vector2(632,40),23,UI.TEXT,HORIZONTAL_ALIGNMENT_CENTER))
 	if g.set_cards(p,color).is_empty():
 		_collection_popup.add_child(UI.label("No gems in this set yet.",Vector2(60,450),Vector2(600,100),26,UI.MUTED,HORIZONTAL_ALIGNMENT_CENTER))
 	var close:=UI.button("Back to table",Vector2(180,916),Vector2(360,66),UI.ACCENT,24)
@@ -585,16 +598,17 @@ func _bar_buttons(items: Array) -> void:
 	var panel:=UI.panel(Vector2(18,HAND_Y),Vector2(684,panel_h),TABLE_PANEL,18)
 	panel.mouse_filter=Control.MOUSE_FILTER_STOP
 	bar.add_child(panel)
-	var card_h:=minf(panel_h-24.0,406.0)
+	# The card fills the panel's full height so its text is readable on a phone.
+	var card_h:=panel_h-20.0
 	var card_w:=card_h*5.0/7.0
 	if not card.is_empty():
 		var preview:=CardView.new()
-		preview.position=Vector2(14,12)
+		preview.position=Vector2(10,10)
 		preview.size=Vector2(card_w,card_h)
 		panel.add_child(preview)
 		preview.setup(card,face_for(0,CardDB.slot_for(card["kind"])))
 		preview.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	var col_x:=card_w+32.0 if not card.is_empty() else 16.0
+	var col_x:=card_w+24.0 if not card.is_empty() else 16.0
 	var col_w:=684.0-col_x-14.0
 	panel.add_child(UI.label("What do you want to do?",Vector2(col_x,14),Vector2(col_w,30),18,UI.MUTED))
 	var scroll:=ScrollContainer.new()
@@ -607,8 +621,9 @@ func _bar_buttons(items: Array) -> void:
 	choices.add_theme_constant_override("separation",10)
 	scroll.add_child(choices)
 	for item in items:
-		var button:=UI.button(item[0],Vector2.ZERO,Vector2(col_w-6.0,58),item[2] if item.size()>2 else UI.ACCENT,18)
-		button.custom_minimum_size=Vector2(col_w-6.0,58)
+		var button_h:=58.0 if ThemeDB.fallback_font.get_string_size(item[0],HORIZONTAL_ALIGNMENT_LEFT,-1,18).x<col_w-30.0 else 84.0
+		var button:=UI.button(item[0],Vector2.ZERO,Vector2(col_w-6.0,button_h),item[2] if item.size()>2 else UI.ACCENT,18)
+		button.custom_minimum_size=Vector2(col_w-6.0,button_h)
 		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		if item[1].is_valid():
 			button.pressed.connect(item[1])
@@ -687,7 +702,7 @@ func _build_bar() -> void:
 					items.append(["Play Lucky Break (draw 2)", _apply_and_clear.bind(m), CardDB.TYPE_COLORS["tool"]])
 				elif not seen.has("lockpick"):
 					seen["lockpick"] = true
-					items.append(["Steal from their vault (2 bills)…", _start_target.bind("lockpick"), CardDB.TYPE_COLORS["tool"]])
+					items.append(["Steal a random card from their vault (2 bills)", _lockpick_random, CardDB.TYPE_COLORS["tool"]])
 			"vault":
 				items.append(["Move to vault", _apply_and_clear.bind(m), Color("#4c8dff")])
 	if g.plays_left <= 0:
@@ -765,13 +780,22 @@ func _on_chip_tapped(_v: CardView, p: int, id: int, color: String) -> void:
 	# Free action: move a wild in your own collection.
 	if mode == "play" and p == 0:
 		var items: Array = []
+		var can_pawn := false
 		for m in g.legal_moves(0):
 			if m["type"] == "move_wild" and m["card"] == id:
 				items.append(["Move wild to %s" % CardDB.one_name(m["color"]), _apply_and_clear.bind(m), CardDB.tint(m["color"])])
+			elif m["type"] == "pawn" and m["card"] == id:
+				can_pawn = true
+				items.append(["Pawn for %s (uses a play)" % CardDB.bills(CardDB.pawn_value(color)), _apply_and_clear.bind(m), Color("#c9a227")])
+		if items.is_empty() and color != "":
+			var found := g.find_collection_card(0, id)
+			var is_wild: bool = not found.is_empty() and found[1]["kind"] == "wild"
+			var why := "Wilds can't be pawned." if is_wild else ("No plays left this turn." if g.plays_left <= 0 else "A finished set needs this gem, so it can't be pawned.")
+			items.append([why, Callable(), Color("#3a4166")])
 		if not items.is_empty():
 			selected_id = -1
 			items.append(["Cancel", _cancel_selection, Color("#3a4166")])
-			_set_msg("Move your wild to another set (free, doesn't use a play).")
+			_set_msg("Pawn this gem for bills? It leaves your collection." if can_pawn else "Move your wild to another set (free, doesn't use a play).")
 			refresh()
 			_bar_buttons(items)
 
@@ -794,6 +818,17 @@ func _on_my_vault_tapped(_v: CardView, slot: int) -> void:
 	refresh()
 	_set_msg("Take this card back into your hand? (Free, doesn't use a play.)")
 	_bar_buttons([["Move back to hand (free)", _apply_and_clear.bind({"type": "reclaim", "slot": slot}), Color("#4c8dff")], ["Cancel", _cancel_selection, Color("#3a4166")]])
+
+
+## Their vault cards are face down, so a Lockpick just picks one at random.
+func _lockpick_random() -> void:
+	var options: Array = []
+	for m in g.legal_moves(0):
+		if m["type"] == "tool" and m.get("card", -1) == selected_id and m.has("slot"):
+			options.append(m)
+	if options.is_empty():
+		return
+	_apply_and_clear(options[randi() % options.size()])
 
 
 func _start_target(as_kind: String) -> void:
@@ -1416,7 +1451,8 @@ func _show_step_card(evs: Array) -> void:
 	var token := _replay_skip
 	for k in shown.size():
 		if k > 0:
-			await get_tree().create_timer(1.25).timeout
+			# Let the previous character finish their line before the next one speaks.
+			await get_tree().create_timer(maxf(1.25, Sfx.voice_left() + 0.2)).timeout
 			if token != _replay_skip or not is_instance_valid(_replay_card):
 				return
 			_clear(_replay_card)
@@ -1469,7 +1505,7 @@ func _run_replay() -> void:
 		var token := _replay_skip
 		var t := 0.0
 		var hold := 1.6 + 1.25 * maxi(0, _step_speakers(step[2]) - 1)
-		while t < hold and token == _replay_skip and _replaying:
+		while (t < hold or Sfx.voice_left() > 0.0) and token == _replay_skip and _replaying:
 			await get_tree().process_frame
 			t += get_process_delta_time()
 	if not _replaying:
@@ -1738,8 +1774,11 @@ func _speak(card: Control, e: Dictionary, parent: Control, at: Vector2, width: f
 		return
 	# Your own recorded voice plays when the card shows your face on this phone.
 	var who: int = e["face"] if int(e.get("face", -1)) >= 0 else int(e.get("p", 0))
-	var own := Profile.is_custom(role) and (role != "you" or who == 0)
-	var line := Sfx.say(role, str(e.get("card", "")), own)
+	var mine := Profile.is_custom(role) and (role != "you" or who == 0)
+	var own := mine and VoiceRecorder.has_voice(role)
+	if not Sfx.should_speak(role, e, own):
+		return  # characters don't comment on every single play
+	var line := Sfx.say(role, str(e.get("card", "")), own, mine and bool(Profile.voice_alt.get(role, false)))
 	if line == "":
 		return
 	card.pivot_offset = card.size / 2.0

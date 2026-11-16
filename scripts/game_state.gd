@@ -476,6 +476,21 @@ func _counter_moves(p: int) -> Array:
 	return out
 
 
+## A collected gem can be pawned unless it's a wild or a finished set needs it.
+func can_pawn_collected(p: int, color: String, card: Dictionary) -> bool:
+	if card["kind"] == "wild":
+		return false
+	if not is_complete(p, color):
+		return true
+	var rest: Array = set_cards(p, color).filter(func(c): return c["id"] != card["id"])
+	if rest.size() < CardDB.set_size(color):
+		return false
+	for c in rest:
+		if c["kind"] != "wild":
+			return true
+	return false
+
+
 func can_collect(p: int, card: Dictionary, color: String) -> bool:
 	if is_complete(p, color):
 		# An extra real gem (not a wild) can go on a finished set; the opponent pays for it.
@@ -525,6 +540,11 @@ func legal_moves(p: int) -> Array:
 				moves.append({"type": "tool", "card": id})
 			if empty_slot >= 0:
 				moves.append({"type": "vault", "card": id, "slot": empty_slot})
+		# Pawn a gem straight out of a collection (never a wild, never one a finished set needs).
+		for color in CardDB.COLORS:
+			for c in set_cards(p, color):
+				if can_pawn_collected(p, color, c):
+					moves.append({"type": "pawn", "card": c["id"]})
 	# Free actions (no play used, no limit): take a vault card back, move a wild.
 	if true:
 		for s in 2:
@@ -614,6 +634,12 @@ func apply(move: Dictionary) -> bool:
 				_event(p, "%s pawned %s for %s." % [nm(p), a_an(CardDB.one_name(c["kind"])), CardDB.bills(CardDB.value(c["kind"]))], c["kind"], -1, false)
 			else:
 				_event(p, "%s banked %s." % [nm(p), CardDB.bills(CardDB.value(c["kind"]))], c["kind"], -1, false)
+			_collect_debt(p)
+		"pawn":
+			var found := _remove_from_collection(p, move["card"])
+			bank(p).append(found[1])
+			plays_left -= 1
+			_event(p, "%s pawned %s from %s collection for %s." % [nm(p), a_an(CardDB.one_name(found[0])), "your" if nm(p) == "You" else "their", CardDB.bills(CardDB.pawn_value(found[0]))], found[0], -1, false)
 			_collect_debt(p)
 		"heist":
 			_do_heist_play(p, move)
@@ -791,8 +817,21 @@ func _resolve_heist(kind: String, a: int, v: int, reflected: bool, move: Diction
 						color = col
 			else:
 				color = move["color"]
+			if color == "" and reflected:
+				# No finished set to take: the Mirror takes their best set in progress instead.
+				var pick := _best_unfinished_set(a, v)
+				if pick == "":
+					_event(a, "The Mirror bounced it back, but %s had no gems to take." % nm(v), "", -1, false)
+					return
+				var taken: Array = set_cards(v, pick).duplicate()
+				set_cards(v, pick).clear()
+				for c in taken:
+					_receive(a, c, pick)
+				var what := CardDB.one_name(pick) if taken.size() == 1 else "%d %s" % [taken.size(), CardDB.display_name(pick)]
+				_event(a, "%s had no finished set, so %s took %s %s instead!" % [nm(v), "you" if nm(a) == "You" else nm(a), "your" if nm(v) == "You" else "their", what], "grand", a, true)
+				return
 			if color == "":
-				_event(a, ("The Mirror bounced it back, but %s had no finished set to take." % nm(v)) if reflected else "There was no complete set to take.", "", -1, false)
+				_event(a, "There was no complete set to take.", "", -1, false)
 				return
 			var cards: Array = set_cards(v, color).duplicate()
 			set_cards(v, color).clear()
@@ -811,6 +850,26 @@ func _receive(p: int, card: Dictionary, color: String) -> void:
 		hand(p).append(card)
 	else:
 		set_cards(p, color).append(card)
+
+
+## For a reflected Grand Heist when the victim has no finished set: the unfinished set
+## that helps the beneficiary most (finishing one of their sets counts most).
+func _best_unfinished_set(a: int, v: int) -> String:
+	var best := ""
+	var best_score := 0
+	for color in CardDB.COLORS:
+		var n := set_cards(v, color).size()
+		if n == 0 or is_complete(v, color):
+			continue
+		var score := n
+		if not is_complete(a, color):
+			score += set_cards(a, color).size()
+			if score >= CardDB.set_size(color):
+				score += 100
+		if score > best_score:
+			best_score = score
+			best = color
+	return best
 
 
 ## For a reflected Swipe: pick the victim's card the beneficiary most wants.

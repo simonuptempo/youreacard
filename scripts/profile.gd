@@ -12,14 +12,17 @@ var slots: Dictionary = {}
 var edit_slot := "you"                 # which slot the avatar creator is editing
 var plays_per_turn := 3
 var sound_on := true
+var voices := "sometimes"     # how often characters speak: often | sometimes | off
+var voice_alt := {}           # slot -> true: your card speaks in the character's other voice
 var onboarded := false
 var display_name := ""
 var beaten: Array = []           # names of characters you have beaten (cycles you through the cast)
 
 ## Navigation hints (not saved): where the avatar creator / explainer return to,
 ## and which onboarding step to show.
-var creator_return := "main"       # main | my_cards | onboarding
+var creator_return := "main"       # main | my_cards | onboarding | explainer
 var explainer_return := "main"     # main | onboarding | settings
+var explainer_start := 0           # step to open the tutorial on (e.g. back from editing your Wild)
 var onboarding_step := 0
 var practice_requested := false  # One-shot navigation flag; never saved.
 var rematch_first := -1           # set by Rematch: the loser of the last game starts (not saved)
@@ -119,7 +122,8 @@ func save_profile() -> void:
 	if f == null:
 		return
 	f.store_string(JSON.stringify({"slots": slots, "plays_v3": plays_per_turn,
-		"onboarded": onboarded, "display_name": display_name, "beaten": beaten, "sound_on": sound_on}))
+		"onboarded": onboarded, "display_name": display_name, "beaten": beaten, "sound_on": sound_on,
+		"voices": voices, "voice_alt": voice_alt}))
 
 
 func load_profile() -> void:
@@ -144,6 +148,10 @@ func load_profile() -> void:
 	onboarded = bool(data.get("onboarded", false))
 	display_name = str(data.get("display_name", ""))
 	sound_on = bool(data.get("sound_on", true))
+	voices = str(data.get("voices", "sometimes"))
+	if not voices in ["often", "sometimes", "off"]:
+		voices = "sometimes"
+	voice_alt = data["voice_alt"] if typeof(data.get("voice_alt")) == TYPE_DICTIONARY else {}
 	beaten = []
 	if typeof(data.get("beaten")) == TYPE_ARRAY:
 		for n in data["beaten"]:
