@@ -1,0 +1,62 @@
+name: Build native photo add-on
+
+# Compiles addons/native_photos for iPhone (and a stand-in for the Mac editor) on a
+# GitHub Mac, then commits the libraries so Godot can export them into the app.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "addons/native_photos/src/**"
+      - "addons/native_photos/SConstruct"
+      - "addons/native_photos/native_photos.gdextension.in"
+      - ".github/workflows/native-photos.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tools
+        run: python3 -m pip install --break-system-packages scons || python3 -m pip install scons
+
+      - name: godot-cpp (Godot 4.5 API, works with 4.5 and newer)
+        working-directory: addons/native_photos
+        run: git clone --depth 1 -b godot-4.5-stable https://github.com/godotengine/godot-cpp godot-cpp
+
+      - name: Build for iPhone
+        working-directory: addons/native_photos
+        run: |
+          set -euo pipefail
+          mkdir -p bin
+          for t in template_debug template_release; do
+            scons platform=ios arch=arm64 target=$t -j4
+            cpp=$(ls godot-cpp/bin/libgodot-cpp.ios.$t*.a | head -1)
+            mine=$(ls build/libnative_photos.ios.$t*.a | head -1)
+            libtool -static -o build/combined.$t.a "$mine" "$cpp"
+            rm -rf bin/libnative_photos.ios.$t.xcframework
+            xcodebuild -create-xcframework -library build/combined.$t.a -output bin/libnative_photos.ios.$t.xcframework
+          done
+
+      - name: Build for the Mac editor
+        working-directory: addons/native_photos
+        run: |
+          set -euo pipefail
+          for t in template_debug template_release; do
+            scons platform=macos arch=universal target=$t -j4
+          done
+          ls -la bin
+
+      - name: Commit the libraries
+        run: |
+          set -euo pipefail
+          cp addons/native_photos/native_photos.gdextension.in addons/native_photos/native_photos.gdextension
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -f addons/native_photos/bin addons/native_photos/native_photos.gdextension
+          git commit -m "Build native photo add-on [skip ci]" || exit 0
+          for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done

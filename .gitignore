@@ -15,3 +15,6 @@ PrivacyInfo.xcprivacy
 *.p12
 *.p8
 export_credentials.cfg
+# Build-time copies for the native photo add-on (the workflow commits bin/ itself)
+addons/native_photos/godot-cpp/
+addons/native_photos/build/
