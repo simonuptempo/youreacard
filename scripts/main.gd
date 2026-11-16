@@ -36,6 +36,19 @@ func _ready() -> void:
 		Profile.onboarding_step = 0
 		Profile.go.call_deferred("onboarding")
 		return
+	# Opening the app: go straight back to the game you were in, even if the app was closed.
+	if not Profile.launch_checked:
+		Profile.launch_checked = true
+		var online: Dictionary = Profile.saved_game(Profile.ONLINE_SAVE)
+		var local: Dictionary = Profile.saved_game()
+		if online.has("online") and Online.signed_in():
+			Online.game_id = str(online["online"])
+			Profile.go.call_deferred("game")
+			return
+		if local.has("state") and bool(local.get("open", true)):
+			Profile.resume_game = true
+			Profile.go.call_deferred("game")
+			return
 	theme = UI.make_theme()
 	var bg := ColorRect.new()
 	bg.color = UI.BG
@@ -84,13 +97,27 @@ func _ready() -> void:
 	var online := UI.button("Play Online", Vector2(160, 790), Vector2(400, 88), UI.ACCENT, 36)
 	online.pressed.connect(func(): Profile.go("online"))
 	add_child(online)
-	var play := UI.button("Play a Character", Vector2(160, 896), Vector2(400, 76), Color("#3cb97a"), 28)
-	play.pressed.connect(_play_character)
+	var saved: Dictionary = Profile.saved_game()
+	var resumable := saved.has("state")
+	var play := UI.button("Continue vs %s" % str(saved.get("bot_name", "")) if resumable else "Play a Character", Vector2(160, 896), Vector2(400, 76), Color("#3cb97a"), 28)
+	play.pressed.connect(_continue_game if resumable else _play_character)
 	add_child(play)
 	var watch := UI.button("Learn to Play", Vector2(160, 990), Vector2(400, 74), Color("#4c8dff"), 28)
 	watch.pressed.connect(_watch)
 	add_child(watch)
-	add_child(UI.label("Beat all 8 characters, then take on your friends.", Vector2(60, 1084), Vector2(600, 40), 18, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	if resumable:
+		var fresh := UI.button("Start a new game instead", Vector2(200, 1082), Vector2(320, 46), Color("#2f3866"), 18)
+		fresh.pressed.connect(func():
+			Profile.clear_saved_game()
+			_play_character())
+		add_child(fresh)
+	else:
+		add_child(UI.label("Beat all 8 characters, then take on your friends.", Vector2(60, 1084), Vector2(600, 40), 18, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+
+
+func _continue_game() -> void:
+	Profile.resume_game = true
+	Profile.go("game")
 
 
 ## Takes on the next character you haven't beaten yet.

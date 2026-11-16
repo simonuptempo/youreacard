@@ -175,6 +175,38 @@ func next_character() -> int:
 	return 1
 
 
+# ------------------------------------------------------------------ game in progress
+# A game against a character is saved after every move, so closing the app (even
+# swiping it away) never loses it. Online games live on the server; we just remember
+# which one was open.
+
+const GAME_SAVE := "user://saved_game.json"
+var resume_game := false      # the game screen should pick up the saved game
+var launch_checked := false   # reopen the last game only once, when the app starts
+
+
+const ONLINE_SAVE := "user://open_online_game.json"
+
+
+func save_game(data: Dictionary, path := GAME_SAVE) -> void:
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify(data))
+
+
+func saved_game(path := GAME_SAVE) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var f := FileAccess.open(path, FileAccess.READ)
+	var data = JSON.parse_string(f.get_as_text()) if f != null else null
+	return data if typeof(data) == TYPE_DICTIONARY else {}
+
+
+func clear_saved_game(path := GAME_SAVE) -> void:
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
 func go(scene: String) -> void:
 	get_tree().change_scene_to_file("res://scenes/%s.tscn" % scene)
 

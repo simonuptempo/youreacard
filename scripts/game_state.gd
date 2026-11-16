@@ -80,6 +80,26 @@ static func from_view(v: Dictionary) -> GameState:
 	return g
 
 
+## The whole table as plain data, to save a game in progress (see Profile.save_game).
+func to_dict(with_events := true) -> Dictionary:
+	return {"players": players.duplicate(true), "deck": deck.duplicate(true), "discard": discard.duplicate(true),
+		"current": current, "plays_left": plays_left, "plays_per_turn": plays_per_turn, "winner": winner,
+		"turn_number": turn_number, "counter_owed": counter_owed.duplicate(), "owes": owes.duplicate(),
+		"free_used": free_used, "events": events.duplicate(true) if with_events else [],
+		"rng_seed": str(rng.seed), "rng_state": str(rng.state)}
+
+
+## Rebuild a saved table (JSON turns every number into a float, so ids are made ints again).
+static func from_dict(d: Dictionary) -> GameState:
+	var g := from_view(d)
+	g.deck = _cards(d.get("deck", []))
+	g.discard = _cards(d.get("discard", []))
+	g.free_used = bool(d.get("free_used", false))
+	g.rng.seed = int(str(d.get("rng_seed", "0")))
+	g.rng.state = int(str(d.get("rng_state", "0")))
+	return g
+
+
 static func _card(c: Dictionary) -> Dictionary:
 	var out := {"id": int(c.get("id", 0)), "kind": str(c.get("kind", "hidden"))}
 	if c.has("face"):

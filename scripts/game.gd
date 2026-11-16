@@ -58,6 +58,10 @@ var _replay_token := 0
 func _ready() -> void:
 	_practice = Profile.practice_requested
 	Profile.practice_requested = false
+	var saved := {}
+	if Profile.resume_game:
+		Profile.resume_game = false
+		saved = Profile.saved_game()
 	var online_id := Online.game_id
 	Online.game_id = ""
 	_online = online_id != "" and not _practice
@@ -78,6 +82,8 @@ func _ready() -> void:
 		first = Profile.rematch_first
 	Profile.rematch_first = -1
 	Profile.rematch_cast = -1
+	if saved.has("state"):
+		cast_index = clampi(int(saved.get("cast_index", cast_index)), 1, Profile.CAST.size() - 1)
 	_cast_index = cast_index
 	var cast: Dictionary = Profile.CAST[cast_index]
 	bot_name = cast["name"]
@@ -120,6 +126,9 @@ func _ready() -> void:
 
 	if _online:
 		_online_open(online_id)
+		return
+	if saved.has("state"):
+		_resume(saved)
 		return
 	g = GameState.new()
 	g.setup(["You", bot_name], randi(), 0 if _practice else first, Profile.plays_per_turn)
@@ -960,12 +969,15 @@ func _run_bot_turn() -> void:
 	_recap = _build_recap(_turn_before, _snapshot(), g.events.slice(_turn_first_event))
 	_turn_before = {}
 	events_seen = g.events.size()  # the replay shows these, not the one-at-a-time popups
+	_replay_pending = true
+	_save_game()
 	_start_replay()
 
 
 # ------------------------------------------------------------------ events + replay
 
 func _after_change() -> void:
+	_save_game()
 	var new_events := g.events.slice(events_seen)
 	events_seen = g.events.size()
 	for e in new_events:
@@ -1092,6 +1104,7 @@ func _show_game_over() -> void:
 	o.add_child(UI.label("Finished in %d turns each." % ceili(g.turn_number / 2.0), Vector2(0, 690), Vector2(720, 40), 24, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 	if not _online and g.winner == 0:
 		Profile.mark_beaten(bot_name)
+	_save_game()  # a finished game isn't reopened
 	if _online:
 		var back := UI.button("Back to your games", Vector2(160, 790), Vector2(400, 80), UI.ACCENT, 28)
 		back.pressed.connect(_leave)
@@ -1506,9 +1519,11 @@ func _run_replay() -> void:
 		var t := 0.0
 		var hold := 1.6 + 1.25 * maxi(0, _step_speakers(step[2]) - 1)
 		while (t < hold or Sfx.voice_left() > 0.0) and token == _replay_skip and _replaying:
+			if not is_inside_tree():
+				return  # you left the table mid-replay
 			await get_tree().process_frame
 			t += get_process_delta_time()
-	if not _replaying:
+	if not _replaying or not is_inside_tree():
 		return
 	g = _real_g
 	_flash = {}
@@ -1560,6 +1575,8 @@ func _end_replay_now() -> void:
 	if _real_g != null:
 		g = _real_g
 	_replaying = false
+	_replay_pending = false
+	_save_game()
 	_flash = {}
 	_close_replay_panel()
 	if _replay_from_mode in ["play", "discard"]:
@@ -1622,6 +1639,8 @@ func _practice_prompt(complete: bool) -> void:
 
 func _leave() -> void:
 	_waiting = false
+	_left = true
+	_save_game()
 	get_tree().change_scene_to_file("res://scenes/online.tscn" if _online else "res://scenes/main.tscn")
 
 
@@ -1637,6 +1656,7 @@ func _online_load(d: Dictionary) -> void:
 
 func _online_open(id: String) -> void:
 	_online_game = id
+	_save_game()
 	mode = "busy"
 	_set_msg("Loading your game…")
 	var r := await Online.call_fn("state", {"game_id": id, "since_seq": 1000000})
@@ -1815,3 +1835,63 @@ func _speak(card: Control, e: Dictionary, parent: Control, at: Vector2, width: f
 	pop.tween_interval(0.15)
 	pop.tween_property(bubble, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	pop.parallel().tween_property(bubble, "modulate:a", 1.0, 0.15)
+
+
+# ------------------------------------------------------------------ saving a game in progress
+
+var _replay_pending := false   # their turn was played but you haven't watched the replay yet
+var _left := false             # you tapped Menu: keep the game for Continue, don't reopen it at launch
+
+
+## Saved after every move and when the app goes to the background, so swiping the app
+## away never loses a game. Practice isn't saved; finished games are cleared.
+func _save_game() -> void:
+	if _practice:
+		return
+	if _online:
+		if _online_game != "":
+			if _left or mode == "over":
+				Profile.clear_saved_game(Profile.ONLINE_SAVE)
+			else:
+				Profile.save_game({"online": _online_game}, Profile.ONLINE_SAVE)
+		return
+	var st: GameState = _real_g if _replaying and _real_g != null else g
+	if st == null:
+		return
+	if st.winner >= 0:
+		Profile.clear_saved_game()
+		return
+	var frames: Array = []
+	for f in _frames:
+		frames.append({"state": f["state"].to_dict(false), "events": f["events"], "end": f.get("end", false)})
+	Profile.save_game({"version": 1, "cast_index": _cast_index, "bot_name": bot_name, "open": not _left,
+		"state": st.to_dict(), "frames": frames, "recap": _recap, "replay_pending": _replay_pending})
+
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST]:
+		if is_inside_tree() and (g != null or _online):
+			_save_game()
+
+
+## Pick up a saved game exactly where it was.
+func _resume(saved: Dictionary) -> void:
+	g = GameState.from_dict(saved["state"])
+	events_seen = g.events.size()
+	_frames = []
+	for f in saved.get("frames", []):
+		var evs: Array = GameState.from_view({"events": f.get("events", [])}).events
+		_frames.append({"state": GameState.from_dict(f["state"]), "events": evs, "end": bool(f.get("end", false))})
+	_recap = saved.get("recap", {})
+	mode = "busy"
+	refresh()
+	if g.winner >= 0:
+		_finish_replays()
+	elif g.current == 1:
+		_run_bot_turn()           # the app closed before their turn was played
+	elif bool(saved.get("replay_pending", false)) and _frames.size() > 1:
+		_replay_pending = true
+		_start_replay()           # show what they did while you were away
+	else:
+		_finish_replays()
+		_set_msg("Welcome back! Your turn.")
