@@ -87,7 +87,7 @@ static void send_failure(const char *reason) {
 
 @implementation GemHeistPhotoDelegate
 
-- (void)picker:(PHPickerViewController *)picker didFinishPicking:(NSArray<PHPickerResult *> *)results {
+- (void)picker:(PHPickerViewController *)picker didFinishPicking:(NSArray<PHPickerResult *> *)results API_AVAILABLE(ios(14)) {
 	[picker dismissViewControllerAnimated:YES completion:nil];
 	if (results.count == 0) {
 		send_cancel();
@@ -181,6 +181,20 @@ bool NativePhotosIOS::has_camera() const {
 
 void NativePhotosIOS::pick_photo() {
 #if TARGET_OS_IOS
+	UIViewController *host = top_controller();
+	if (host == nil) {
+		report_failure("Couldn't open your photos. Please try again.");
+		return;
+	}
+	if (@available(iOS 14.0, *)) {
+		// Handled below with the modern picker.
+	} else {
+		UIImagePickerController *old = [[UIImagePickerController alloc] init];
+		old.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+		old.delegate = get_delegate();
+		[host presentViewController:old animated:YES completion:nil];
+		return;
+	}
 	// PhotosUI is loaded at run time, so the app doesn't need to link it.
 	dlopen("/System/Library/Frameworks/PhotosUI.framework/PhotosUI", RTLD_LAZY);
 	Class config_class = NSClassFromString(@"PHPickerConfiguration");
@@ -190,17 +204,14 @@ void NativePhotosIOS::pick_photo() {
 		report_failure("Your photo library isn't available on this device.");
 		return;
 	}
-	PHPickerConfiguration *config = [[config_class alloc] init];
-	config.filter = [filter_class imagesFilter];
-	config.selectionLimit = 1;
-	PHPickerViewController *picker = [[picker_class alloc] initWithConfiguration:config];
-	picker.delegate = get_delegate();
-	UIViewController *host = top_controller();
-	if (host == nil) {
-		report_failure("Couldn't open your photos. Please try again.");
-		return;
+	if (@available(iOS 14.0, *)) {
+		PHPickerConfiguration *config = [[config_class alloc] init];
+		config.filter = [filter_class imagesFilter];
+		config.selectionLimit = 1;
+		PHPickerViewController *picker = [[picker_class alloc] initWithConfiguration:config];
+		picker.delegate = get_delegate();
+		[host presentViewController:picker animated:YES completion:nil];
 	}
-	[host presentViewController:picker animated:YES completion:nil];
 #else
 	report_failure("The photo library opens on iPhone and iPad.");
 #endif

@@ -10,7 +10,7 @@ objects += [env.Object(s, CCFLAGS=objc_flags) for s in Glob("src/*.mm")]
 
 if env["platform"] == "ios":
     # A static library; the build script merges it with godot-cpp into an xcframework.
-    lib = env.StaticLibrary("build/libnative_photos.ios.{}".format(env["target"]), source=objects)
+    lib = env.StaticLibrary("build/libnative_photos.ios.{}.a".format(env["target"]), source=objects)
 else:
     lib = env.SharedLibrary("bin/libnative_photos.{}.{}{}".format(env["platform"], env["target"], env["SHLIBSUFFIX"]), source=objects)
 Default(lib)
