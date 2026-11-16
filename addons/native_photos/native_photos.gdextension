@@ -1,0 +1,12 @@
+[configuration]
+
+entry_symbol = "native_photos_init"
+compatibility_minimum = "4.5"
+reloadable = false
+
+[libraries]
+
+ios.debug = "res://addons/native_photos/bin/libnative_photos.ios.template_debug.xcframework"
+ios.release = "res://addons/native_photos/bin/libnative_photos.ios.template_release.xcframework"
+macos.debug = "res://addons/native_photos/bin/libnative_photos.macos.template_debug.dylib"
+macos.release = "res://addons/native_photos/bin/libnative_photos.macos.template_release.dylib"
