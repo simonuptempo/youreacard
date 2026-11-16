@@ -21,6 +21,8 @@ var beaten: Array = []           # names of characters you have beaten (cycles y
 ## Navigation hints (not saved): where the avatar creator / explainer return to,
 ## and which onboarding step to show.
 var creator_return := "main"       # main | my_cards | onboarding | explainer
+var creator_mode := ""         # open the card maker on "photo", "builder" or "gallery"
+var photo_kind := "me"          # whose photo: "me", "pet" or "person" (a friend or family member)
 var explainer_return := "main"     # main | onboarding | settings
 var explainer_start := 0           # step to open the tutorial on (e.g. back from editing your Wild)
 var onboarding_step := 0

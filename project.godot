@@ -18,6 +18,7 @@ config/icon="res://art/app-icon.png"
 [audio]
 
 driver/enable_input=true
+general/ios/session_category=2
 
 [autoload]
 

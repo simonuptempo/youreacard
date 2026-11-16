@@ -4,9 +4,11 @@
 env = SConscript("godot-cpp/SConstruct")
 env.Append(CPPPATH=["src/"])
 
-objects = [env.Object(s) for s in Glob("src/*.cpp")]
+# iPhone gets a static library; the Mac editor gets a shared one (.dylib).
+make = env.Object if env["platform"] == "ios" else env.SharedObject
+objects = [make(s) for s in Glob("src/*.cpp")]
 objc_flags = env["CCFLAGS"] + ["-fobjc-arc"]
-objects += [env.Object(s, CCFLAGS=objc_flags) for s in Glob("src/*.mm")]
+objects += [make(s, CCFLAGS=objc_flags) for s in Glob("src/*.mm")]
 
 if env["platform"] == "ios":
     # A static library; the build script merges it with godot-cpp into an xcframework.

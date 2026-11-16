@@ -259,7 +259,12 @@ func _draw_full_art(font: Font, kind: String, typ: String) -> void:
 				Art.draw_fit(self, gem, Rect2(w * 0.16 + i * w * 0.116, hgt * 0.835, gem_size, gem_size))
 		return
 	if role != "":
-		draw_string(font, Vector2(0, hgt * 0.715), _role_label(role), HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.085), Color(ink, 0.9))
+		# "Pip the Pickpocket": shrink long names to fit the card.
+		var label := _role_label(role)
+		var lfs := int(w * 0.085)
+		while lfs > 8 and font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs).x > w * 0.9:
+			lfs -= 1
+		draw_string(font, Vector2(0, hgt * 0.715), label, HORIZONTAL_ALIGNMENT_CENTER, w, lfs, Color(ink, 0.9))
 	var rules: String = CardDB.ACTIONS[kind]["text"]
 	if cost > 0:
 		rules = "Costs %s. %s" % [CardDB.bills(cost), rules]
@@ -405,7 +410,15 @@ func _role_label(role: String) -> String:
 	if preview_name != "":
 		return preview_name
 	if role != "you":
-		return CardDB.ROLE_TITLES[role]
+		# Each character has a name and a nickname: "Pip the Pickpocket", or "Sam the
+		# Pickpocket" once you've put Sam's face on that card.
+		var who := ""
+		if face.is_empty():
+			who = str(Profile.cast_for_role(role)["name"])
+		elif face == Profile.slot_face(role):
+			who = str(Profile.slots[role].get("name", ""))
+		var title: String = CardDB.ROLE_TITLES[role]
+		return title if who == "" else "%s the %s" % [who, title.trim_prefix("The ")]
 	if face.is_empty():
 		return Profile.cast_for_role("you")["name"]
 	var path := str(face.get("portrait_path", ""))

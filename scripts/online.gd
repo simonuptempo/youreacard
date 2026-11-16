@@ -99,6 +99,50 @@ func call_fn(action: String, payload: Dictionary = {}) -> Dictionary:
 	return r
 
 
+# ------------------------------------------------------------------ cartoons
+
+## Turn a photo into a cartoon portrait for a card (Gemini, via our server).
+## kind: "me" / "person" or "pet". Returns {"ok", "image": Image, "error"}.
+## The photo is only sent to make the cartoon; neither is stored on the server.
+func cartoonize(photo: Image, kind: String, role: String) -> Dictionary:
+	var img := photo.duplicate() as Image
+	var longest := maxi(img.get_width(), img.get_height())
+	if longest > 1024:
+		var k := 1024.0 / longest
+		img.resize(int(img.get_width() * k), int(img.get_height() * k), Image.INTERPOLATE_LANCZOS)
+	if img.get_format() != Image.FORMAT_RGB8 and img.get_format() != Image.FORMAT_RGBA8:
+		img.convert(Image.FORMAT_RGBA8)
+	var body := {"image": Marshalls.raw_to_base64(img.save_jpg_to_buffer(0.88)), "mime": "image/jpeg",
+		"kind": "pet" if kind == "pet" else "person", "role": role, "device": OS.get_unique_id().sha256_text().substr(0, 32)}
+	var req := HTTPRequest.new()
+	req.timeout = 90.0
+	add_child(req)
+	var headers := PackedStringArray(["apikey: " + KEY, "Authorization: Bearer " + KEY, "Content-Type: application/json"])
+	var err := req.request(server + "/functions/v1/cartoonize", headers, HTTPClient.METHOD_POST, JSON.stringify(body))
+	if err != OK:
+		req.queue_free()
+		return {"ok": false, "error": "Couldn't reach the cartoon maker. Check your internet connection."}
+	var res: Array = await req.request_completed
+	req.queue_free()
+	var data = JSON.parse_string((res[3] as PackedByteArray).get_string_from_utf8())
+	if res[0] != HTTPRequest.RESULT_SUCCESS:
+		return {"ok": false, "error": "Couldn't reach the cartoon maker. Check your internet connection."}
+	if typeof(data) != TYPE_DICTIONARY:
+		return {"ok": false, "error": "The cartoon maker didn't answer. Please try again."}
+	if not data.has("image"):
+		return {"ok": false, "error": str(data.get("error", "Couldn't make a cartoon. Please try again."))}
+	var bytes := Marshalls.base64_to_raw(str(data["image"]))
+	var out := Image.new()
+	var ok := out.load_png_from_buffer(bytes) if str(data.get("mime", "")) == "image/png" else out.load_jpg_from_buffer(bytes)
+	if ok != OK:
+		ok = out.load_png_from_buffer(bytes)
+		if ok != OK:
+			ok = out.load_jpg_from_buffer(bytes)
+	if ok != OK or out.is_empty():
+		return {"ok": false, "error": "The cartoon came back damaged. Please try again."}
+	return {"ok": true, "image": out, "error": ""}
+
+
 # ------------------------------------------------------------------ accounts
 
 func sign_up_email(email: String, password: String, first_name: String) -> String:

@@ -33,6 +33,7 @@ func _ready() -> void:
 	add_child(UI.label("Gem Heist Online", Vector2(0, 30), Vector2(720, 56), 40, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
 	_body = Control.new()
 	_body.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE  # don't cover the back arrow
 	add_child(_body)
 	_status = UI.label("", Vector2(40, 1190), Vector2(640, 70), 20, Color("#ff9f8f"), HORIZONTAL_ALIGNMENT_CENTER)
 	add_child(_status)
@@ -129,7 +130,7 @@ func _close_overlay() -> void:
 func _show_signin() -> void:
 	_reset()
 	_text("Play friends and family, or find a new rival.", 130, 26)
-	_text("Opponents see your cartoon card art and first name. Photos never leave this phone.", 176, 20, UI.MUTED, 60)
+	_text("Opponents see your card art and first name. Your photos and voice recordings stay on this phone.", 176, 20, UI.MUTED, 60)
 	_button("Continue with Apple", 270, Color("#000000"), _oauth.bind("apple"))
 	_button("Continue with Google", 366, Color("#ffffff"), _oauth.bind("google"), 80, 28, Color("#1f1f1f"))
 	_button("Continue with Facebook", 462, Color("#1877f2"), _oauth.bind("facebook"))

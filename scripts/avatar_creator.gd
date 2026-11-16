@@ -37,12 +37,18 @@ var _source_buttons: Array[Button] = []
 var _manual_data: Dictionary = {}
 var _portrait_data: Dictionary = {}
 var _photo_data: Dictionary = {}
+var _original: Image          # the photo as taken, before the cartoon
+var _cartoon_busy := false
+var _cartoon_note := ""       # "", "cartoon", "original", or an error message
+var _kind := "me"             # whose photo: me, pet or person
 const GROUPS := [["skin", "face", "face_size", "eyes", "eye_color", "brows", "nose", "mouth", "face_details"], ["hair", "hair_color", "facial"], ["shirt", "shirt_color", "head", "head_color", "hat", "hat_color", "bowtie"], ["eyewear", "ears", "accessory_details", "braces"]]
 
 func _ready() -> void:
 	theme = UI.make_theme()
 	slot = Profile.edit_slot
-	data = Profile.slot_face(slot).duplicate(true) if Profile.is_custom(slot) else {"portrait_path": "res://art/role-you.png"}
+	# Until it's customized, a card shows its own character (Pip on Swipe, and so on).
+	var own_art := "res://art/role-%s.png" % (slot if slot in CardDB.ROLES else "you")
+	data = Profile.slot_face(slot).duplicate(true) if Profile.is_custom(slot) else {"portrait_path": own_art}
 	_manual_data = AvatarView.normalized(Profile.default_face(slot))
 	if not data.has("portrait_path"):
 		_mode = "builder"
@@ -52,9 +58,18 @@ func _ready() -> void:
 		_photo_data = data.duplicate(true)
 	else:
 		_portrait_data = data.duplicate(true)
+	_kind = Profile.photo_kind if Profile.creator_mode != "" else "me"
+	# My Cards may have chosen how to customize: a photo (yours, a pet's or a friend's) or Create.
+	var wanted := Profile.creator_mode
+	Profile.creator_mode = ""
 	add_child(UI.panel(Vector2.ZERO, Vector2(720, 1280), UI.BG, 0))
-	add_child(UI.label("Create your Wild card" if slot == "you" else "Make this card yours", Vector2(24, 16), Vector2(672, 54), 34, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
-	add_child(UI.label("You're part of the crew. Choose how you'll appear.", Vector2(24, 72), Vector2(672, 40), 21, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	var title := "Create your Wild card" if slot == "you" else "Make this card yours"
+	var sub := "You're part of the crew. Choose how you'll appear."
+	if wanted == "photo":
+		title = {"me": "Put yourself on this card", "pet": "Put your pet on this card", "person": "Put someone you know on this card"}.get(_kind, title)
+		sub = "Take or choose a photo, and we'll turn it into a cartoon."
+	add_child(UI.label(title, Vector2(24, 16), Vector2(672, 54), 34, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
+	add_child(UI.label(sub, Vector2(24, 72), Vector2(672, 40), 21, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 	_preview = CardView.new()
 	_preview.position = Vector2(239, 122)
 	_preview.size = Vector2(242, 339)
@@ -64,8 +79,10 @@ func _ready() -> void:
 	_name_edit.position = Vector2(28, 508)
 	_name_edit.size = Vector2(664, 52)
 	_name_edit.max_length = 14
-	_name_edit.placeholder_text = "Your name (optional)"
+	_name_edit.placeholder_text = {"pet": "Your pet's name", "person": "Their first name"}.get(_kind, "Your name (optional)")
 	_name_edit.text = str(Profile.slots.get(slot, {}).get("name", Profile.display_name if slot == "you" else ""))
+	if wanted == "photo" and not str(data.get("portrait_path", "")).begins_with("user://"):
+		_name_edit.text = Profile.display_name if _kind == "me" else ""
 	_name_edit.add_theme_stylebox_override("normal", UI.box(Color("#f4f1ea"), 12))
 	_name_edit.add_theme_color_override("font_color", UI.BG)
 	_name_edit.add_theme_stylebox_override("read_only", UI.box(Color("#e5e0d4"), 12))
@@ -98,7 +115,10 @@ func _ready() -> void:
 	_save_button = save
 	save.pressed.connect(_save)
 	add_child(save)
-	_render_mode()
+	if wanted != "" and wanted != _mode:
+		_set_mode(wanted)
+	else:
+		_render_mode()
 
 func _clear_body() -> void:
 	for child in _body.get_children():
@@ -123,7 +143,7 @@ func _set_mode(mode: String) -> void:
 
 func _render_mode() -> void:
 	_sync_footer()
-	_save_button.disabled = _mode == "photo" and not str(data.get("portrait_path", "")).begins_with("user://portraits/")
+	_save_button.disabled = (_mode == "photo" and not str(data.get("portrait_path", "")).begins_with("user://portraits/")) or _cartoon_busy
 	_name_edit.editable = _mode != "gallery"
 	if _mode == "gallery":
 		var role := str(data.get("portrait_path", "res://art/role-you.png")).get_file().trim_prefix("role-").trim_suffix(".png")
@@ -164,20 +184,35 @@ func _choose_character(path: String, character_name: String) -> void:
 	_render_mode()
 
 func _show_photo() -> void:
-	_body.add_child(UI.label("How would you like to add your photo?", Vector2.ZERO, Vector2(664, 40), 23))
-	_body.add_child(UI.label("Take a selfie or upload a photo from your device. Then adjust the framing on your card.", Vector2(0, 44), Vector2(664, 64), 20, UI.MUTED))
-	var selfie := UI.button("Take a selfie", Vector2(0, 124), Vector2(326, 58), UI.ACCENT, 23)
-	selfie.pressed.connect(_take_selfie)
-	_body.add_child(selfie)
-	var choose := UI.button("Upload photo", Vector2(338, 124), Vector2(326, 58), UI.PANEL, 23)
+	var who: String = {"me": "yourself", "pet": "your pet", "person": "them"}.get(_kind, "yourself")
+	_body.add_child(UI.label("Add a photo of %s" % who, Vector2.ZERO, Vector2(664, 40), 23))
+	var hint := "A clear, well-lit photo of a face works best. We'll turn it into a cartoon for your card."
+	if _kind == "person":
+		hint = "Only use a photo of someone who's happy to be on your card. We'll turn it into a cartoon."
+	elif _kind == "pet":
+		hint = "A clear photo of your pet's face works best. We'll turn it into a cartoon for your card."
+	_body.add_child(UI.label(hint, Vector2(0, 44), Vector2(664, 64), 19, UI.MUTED))
+	var camera := UI.button("Take a selfie" if _kind == "me" else "Take a photo", Vector2(0, 116), Vector2(326, 58), UI.ACCENT, 23)
+	camera.pressed.connect(_take_selfie)
+	camera.disabled = _cartoon_busy
+	_body.add_child(camera)
+	var choose := UI.button("Choose from Photos", Vector2(338, 116), Vector2(326, 58), UI.PANEL, 23)
 	choose.pressed.connect(_open_photo_picker)
+	choose.disabled = _cartoon_busy
 	_body.add_child(choose)
+	if _cartoon_busy:
+		var busy := UI.label("Making your cartoon… this takes about 10 seconds.", Vector2(0, 200), Vector2(664, 80), 24, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
+		_body.add_child(busy)
+		var tw := busy.create_tween().set_loops()
+		tw.tween_property(busy, "modulate:a", 0.4, 0.6)
+		tw.tween_property(busy, "modulate:a", 1.0, 0.6)
+		return
 	if str(data.get("portrait_path", "")).begins_with("user://"):
 		for i in 3:
 			var key: String = ["portrait_zoom", "portrait_x", "portrait_y"][i]
-			_body.add_child(UI.label(["Zoom", "Left / right", "Up / down"][i], Vector2(0, 202+i*64), Vector2(160, 40), 20))
+			_body.add_child(UI.label(["Zoom", "Left / right", "Up / down"][i], Vector2(0, 194+i*60), Vector2(160, 40), 20))
 			var slider := HSlider.new()
-			slider.position = Vector2(174, 210+i*64)
+			slider.position = Vector2(174, 202+i*60)
 			slider.size = Vector2(480, 32)
 			slider.min_value = 1.0 if i == 0 else 0.0
 			slider.max_value = 3.0 if i == 0 else 1.0
@@ -185,7 +220,21 @@ func _show_photo() -> void:
 			slider.value = float(data.get(key, 1.0 if i == 0 else 0.5))
 			slider.value_changed.connect(func(value): data[key] = value; _refresh_preview())
 			_body.add_child(slider)
-	_body.add_child(UI.label("Have a portrait illustrated elsewhere? You can import it here too.", Vector2(0, 408), Vector2(664, 68), 19, UI.MUTED))
+	if _original != null:
+		# Cartoon or original photo: your choice.
+		var note := ""
+		match _cartoon_note:
+			"cartoon": note = "Here's your cartoon! Not quite right?"
+			"original": note = "Using your original photo."
+			_: note = _cartoon_note
+		_body.add_child(UI.label(note, Vector2(0, 384), Vector2(664, 34), 19, UI.TEXT if _cartoon_note in ["cartoon", "original"] else Color("#ff9f8f")))
+		var again := UI.button("Make a new cartoon" if _cartoon_note == "cartoon" else "Make it a cartoon", Vector2(0, 420), Vector2(326, 54), Color("#7a4fd6"), 20)
+		again.pressed.connect(_make_cartoon)
+		_body.add_child(again)
+		if _cartoon_note == "cartoon":
+			var plain := UI.button("Use my original photo", Vector2(338, 420), Vector2(326, 54), UI.PANEL, 20)
+			plain.pressed.connect(_use_original)
+			_body.add_child(plain)
 
 func _import_photo(path: String) -> void:
 	if FileAccess.get_file_as_bytes(path).size() > 25 * 1024 * 1024:
@@ -201,6 +250,38 @@ func _import_photo(path: String) -> void:
 	_accept_image(image)
 
 func _accept_image(image: Image) -> void:
+	_original = image
+	_cartoon_note = ""
+	_use_photo(image)
+	_make_cartoon()
+
+
+func _use_original() -> void:
+	if _original == null:
+		return
+	_cartoon_note = "original"
+	_use_photo(_original)
+
+
+## Send the photo to the cartoon maker (Gemini, through our server) and show the result.
+func _make_cartoon() -> void:
+	if _original == null or _cartoon_busy:
+		return
+	_cartoon_busy = true
+	_render_mode()
+	var r: Dictionary = await Online.cartoonize(_original, _kind, slot if Sfx.LINES.has(slot) else "")
+	if not is_inside_tree():
+		return
+	_cartoon_busy = false
+	if r["ok"]:
+		_cartoon_note = "cartoon"
+		_use_photo(r["image"])
+	else:
+		_cartoon_note = str(r["error"])
+		_render_mode()
+
+
+func _use_photo(image: Image) -> void:
 	_photo = image
 	var destination := "user://portraits/portrait_%d_%d.png" % [int(Time.get_unix_time_from_system()), Time.get_ticks_usec()]
 	AvatarView.portrait_cache[destination] = ImageTexture.create_from_image(image)
@@ -362,6 +443,11 @@ func _refresh_preview() -> void:
 	if _mode == "gallery":
 		var path := str(data.get("portrait_path", ""))
 		card_name = str(Profile.cast_for_role(path.get_file().trim_prefix("role-").trim_suffix(".png"))["name"])
+	# Character cards read "Sam the Pickpocket"; the wild just shows the name.
+	var role := CardDB.role_of(_preview_kind())
+	if role != "" and role != "you":
+		var title: String = CardDB.ROLE_TITLES[role]
+		card_name = title if card_name == "" else "%s the %s" % [card_name, title.trim_prefix("The ")]
 	_preview.preview_name = card_name if card_name != "" else "You"
 	_preview.setup({"id": 0, "kind": _preview_kind()}, data.duplicate(true))
 	if _preview._overlay != null:
@@ -464,7 +550,35 @@ func _leave(saved: bool) -> void:
 		_:
 			Profile.go("main")
 
+## The iPhone's own camera and Photos picker (addons/native_photos), when available.
+func _native() -> Object:
+	if Engine.has_singleton("NativePhotos"):
+		var n := Engine.get_singleton("NativePhotos")
+		if n.call("is_available"):
+			if not n.is_connected("photo_ready", _native_photo):
+				n.connect("photo_ready", _native_photo)
+				n.connect("photo_failed", _native_failed)
+			return n
+	return null
+
+
+func _native_photo(jpeg: PackedByteArray) -> void:
+	var img := Image.new()
+	if img.load_jpg_from_buffer(jpeg) != OK or img.is_empty():
+		_status.text = "Couldn't open that photo. Please try another."
+		return
+	_accept_image(img)
+
+
+func _native_failed(reason: String) -> void:
+	_status.text = reason
+
+
 func _take_selfie() -> void:
+	var n := _native()
+	if n != null:
+		n.call("take_photo", _kind == "me")
+		return
 	var camera := preload("res://scripts/selfie_capture.gd").new()
 	camera.size = Vector2(720,1280)
 	add_child(camera)
@@ -473,6 +587,10 @@ func _take_selfie() -> void:
 
 func _open_photo_picker() -> void:
 	if _picker_pending: return
+	var n := _native()
+	if n != null:
+		n.call("pick_photo")
+		return
 	if not DisplayServer.has_feature(DisplayServer.FEATURE_NATIVE_DIALOG_FILE):
 		_photo_picker_unavailable()
 		return

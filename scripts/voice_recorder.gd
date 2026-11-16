@@ -1,7 +1,7 @@
 class_name VoiceRecorder
 extends Control
-## "Record your voice" for a card you've put your face on. You read that character's three
-## lines; when the card is played on this phone, it speaks in your voice.
+## "Record your voice" for a card. You read that character's ten lines; when the card is
+## played on this phone, it speaks in your voice (any lines you skip use the regular voice).
 ## Recordings stay on this device (user://voices) and are never uploaded.
 
 signal closed
@@ -24,15 +24,26 @@ static func path_for(s: String, i: int) -> String:
 	return "user://voices/%s_%d.wav" % [s, i]
 
 
+const LINE_COUNT := 10
+
+
+static func recorded_count(s: String) -> int:
+	var n := 0
+	for i in LINE_COUNT:
+		if FileAccess.file_exists(path_for(s, i)):
+			n += 1
+	return n
+
+
 static func has_voice(s: String) -> bool:
-	for i in 3:
+	for i in LINE_COUNT:
 		if FileAccess.file_exists(path_for(s, i)):
 			return true
 	return false
 
 
 static func clear_voice(s: String) -> void:
-	for i in 3:
+	for i in LINE_COUNT:
 		if FileAccess.file_exists(path_for(s, i)):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path_for(s, i)))
 
@@ -52,21 +63,32 @@ func _ready() -> void:
 	add_child(UI.panel(Vector2(30, 150), Vector2(660, 980), UI.PANEL, 24))
 	var who := Profile.face_name(slot)
 	add_child(UI.label("Your voice", Vector2(30, 176), Vector2(660, 54), 40, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
-	add_child(UI.label("%s says these when the card is played. Read each one out loud, with lots of character!" % who,
-		Vector2(70, 236), Vector2(580, 80), 22, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	var lines: Array = Sfx.LINES[slot].slice(0, 3)
+	add_child(UI.label("%s says one of these when the card is played. Read them with lots of character! Skip any you like." % who,
+		Vector2(60, 232), Vector2(600, 84), 20, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	var lines: Array = Sfx.LINES[slot]
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(50, 326)
+	scroll.size = Vector2(620, 524)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+	var list := VBoxContainer.new()
+	list.custom_minimum_size = Vector2(610, 0)
+	list.add_theme_constant_override("separation", 10)
+	scroll.add_child(list)
 	for i in lines.size():
-		var y := 330.0 + i * 175.0
-		add_child(UI.panel(Vector2(60, y), Vector2(600, 170), Color("#1d2547"), 18))
-		add_child(UI.label("“%s”" % lines[i], Vector2(80, y + 12), Vector2(560, 50), 30, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-		var status := UI.label("", Vector2(80, y + 62), Vector2(560, 30), 18, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
-		add_child(status)
-		var rec := UI.button("● Record", Vector2(90, y + 100), Vector2(260, 56), Color("#c0392b"), 22)
+		var row := Control.new()
+		row.custom_minimum_size = Vector2(600, 150)
+		list.add_child(row)
+		row.add_child(UI.panel(Vector2(0, 0), Vector2(600, 150), Color("#1d2547"), 18))
+		row.add_child(UI.label("%d.  “%s”" % [i + 1, lines[i]], Vector2(16, 8), Vector2(568, 44), 25, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+		var status := UI.label("", Vector2(16, 50), Vector2(568, 28), 17, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+		row.add_child(status)
+		var rec := UI.button("● Record", Vector2(30, 84), Vector2(260, 54), Color("#c0392b"), 21)
 		rec.pressed.connect(_toggle_record.bind(i))
-		add_child(rec)
-		var play := UI.button("▶ Play", Vector2(370, y + 100), Vector2(260, 56), Color("#3a4166"), 22)
+		row.add_child(rec)
+		var play := UI.button("▶ Play", Vector2(310, 84), Vector2(260, 54), Color("#3a4166"), 21)
 		play.pressed.connect(_play.bind(i))
-		add_child(play)
+		row.add_child(play)
 		_rows.append({"status": status, "rec": rec, "play": play})
 	# Without your own recordings, the card can use the character's other voice instead.
 	var regular: String = Sfx.VOICE.get(slot, "")
