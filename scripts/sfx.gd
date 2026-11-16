@@ -100,9 +100,10 @@ func voice_left() -> float:
 ## big moments (twists firing, a Grand Heist, your own recorded voice) usually do,
 ## everyday plays only sometimes, and the same character rarely twice in a row.
 func should_speak(role: String, e: Dictionary, own_voice := false) -> bool:
-	var mode := str(Profile.voices)
-	if mode == "off" or role == "":
+	if role == "":
 		return false
+	# With voices off, characters still "speak" in speech bubbles, just silently.
+	var mode := str(Profile.voices) if Profile.voices != "off" else "sometimes"
 	var card := str(e.get("card", ""))
 	var big := own_voice or card in CardDB.TRAPS or card == "grand"
 	var chance: float = CHANCE.get(mode, CHANCE["sometimes"])[1 if big else 0]
@@ -113,43 +114,62 @@ func should_speak(role: String, e: Dictionary, own_voice := false) -> bool:
 	return randf() < chance
 
 
-## A character speaks: plays one of their recorded lines and returns it for the speech bubble.
+## A character speaks: picks one of their lines, plays it, and returns it for the bubble.
 ## own_voice: the card shows your face and you recorded yourself (see VoiceRecorder).
 ## alt: use the character's other voice (<role>_alt_<n>), when those recordings exist.
 func say(role: String, action := "", own_voice := false, alt := false) -> String:
-	if not LINES.has(role):
+	var i := pick_line(role, action, own_voice, alt)
+	if i < 0:
 		return ""
+	play_line(role, i, own_voice, alt)
+	return LINES[role][i]
+
+
+## Choose which line a character says next (no sound). -1 if the role has no lines.
+func pick_line(role: String, action := "", own_voice := false, alt := false) -> int:
+	if not LINES.has(role):
+		return -1
 	var allowed: Array = BOSS_LINES.get(action, range(LINES[role].size())) if role == "boss" else range(LINES[role].size())
-	# Which recordings exist: yours, then the alternate voice, then the regular one, then babble.
-	var sources: Array = []
-	if own_voice:
-		sources.append(func(i): return "user://voices/%s_%d.wav" % [role, i])
-	if alt:
-		sources.append(func(i): return _real_path("%s_alt_%d" % [role, i]))
-	sources.append(func(i): return _real_path("%s_%d" % [role, i]))
 	var pick_from: Array = []
-	var source: Callable
-	for src in sources:
-		pick_from = allowed.filter(func(i): return str(src.call(i)) != "" and (str(src.call(i)).begins_with("res://") or FileAccess.file_exists(str(src.call(i)))))
+	for src in _sources(role, own_voice, alt):
+		pick_from = allowed.filter(func(i): return src.call(i) != "")
 		if not pick_from.is_empty():
-			source = src
 			break
-	var babble := pick_from.is_empty()
-	if babble:
-		pick_from = allowed.filter(func(i): return i < 3)
+	if pick_from.is_empty():
+		pick_from = allowed.filter(func(i): return i < 3)  # babble placeholders
 	var i := _next_line(role + ("_alt" if alt else ""), pick_from)
 	_heard[role] = true
 	_last_speaker = role
+	return i
+
+
+## Play a chosen line out loud, unless voices are off in Settings.
+func play_line(role: String, i: int, own_voice := false, alt := false) -> void:
+	if Profile.voices == "off" or i < 0:
+		return
 	var s: AudioStream = null
-	if babble:
+	for src in _sources(role, own_voice, alt):
+		var path: String = src.call(i)
+		if path != "":
+			s = AudioStreamWAV.load_from_file(path) if path.begins_with("user://") else _load(path)
+			break
+	if s == null:
 		s = _load("res://audio/voice/%s_%d.wav" % [role, i])
-	else:
-		var path := str(source.call(i))
-		s = AudioStreamWAV.load_from_file(path) if path.begins_with("user://") else _load(path)
 	if s != null:
 		_voice.stream = s
 		_voice.play()
-	return LINES[role][i]
+
+
+## Where a line's recording can come from, best first: your own voice, the character's
+## other voice, then their regular voice. Each returns the file path, or "" if missing.
+func _sources(role: String, own_voice: bool, alt: bool) -> Array:
+	var out: Array = []
+	if own_voice:
+		out.append(func(i): var p := "user://voices/%s_%d.wav" % [role, i]; return p if FileAccess.file_exists(p) else "")
+	if alt:
+		out.append(func(i): return _real_path("%s_alt_%d" % [role, i]))
+	out.append(func(i): return _real_path("%s_%d" % [role, i]))
+	return out
 
 
 ## The recorded file for a line in res://audio/voice_real, or "" if it isn't there.

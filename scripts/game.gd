@@ -1380,6 +1380,9 @@ func _start_replay() -> void:
 		return
 	_replay_from_mode = mode if mode in ["play", "discard"] else "busy"
 	_replaying = true
+	for step in _replay_steps():
+		for e in step[2]:
+			_decide_line(e)
 	_set_msg("Watch what %s did. Tap the panel to skip ahead." % bot_name)
 	mode = "busy"
 	_real_g = g
@@ -1421,12 +1424,18 @@ func _build_replay_panel() -> void:
 	_replay_panel.add_child(bg)
 	_replay_panel.add_child(UI.label("%s'S TURN" % bot_name.to_upper(), Vector2(36, y + 12), Vector2(420, 36), 26, UI.ACCENT))
 	_replay_panel.add_child(UI.label("tap to skip ahead", Vector2(36, y + 46), Vector2(420, 24), 15, UI.MUTED))
+	_replay_scroll = ScrollContainer.new()
+	_replay_scroll.position = Vector2(36, y + 80)
+	_replay_scroll.size = Vector2(448, 1150 - y - 180)
+	_replay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_replay_scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_replay_panel.add_child(_replay_scroll)
 	var box := VBoxContainer.new()
-	box.position = Vector2(36, y + 80)
-	box.size = Vector2(440, 1150 - y - 180)
+	box.custom_minimum_size = Vector2(440, 0)
 	box.add_theme_constant_override("separation", 6)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_replay_panel.add_child(box)
+	_replay_scroll.add_child(box)
+	_replay_box = box
 	_replay_lines = []
 	for step in _replay_steps():
 		var group: Array = []
@@ -1533,6 +1542,9 @@ func _run_replay() -> void:
 
 func _replay_summary() -> void:
 	_clear(_replay_card)
+	for b in _replay_panel.get_children():
+		if b.z_index == 30:
+			b.queue_free()  # the last step's big speech bubble
 	for group in _replay_lines:
 		for l in group:
 			l.modulate.a = 1.0
@@ -1542,7 +1554,24 @@ func _replay_summary() -> void:
 	var gained: Array = _recap.get("they_gained", [])
 	var text := "You lost: " + (", ".join(lost) if not lost.is_empty() else "nothing")
 	text += "\n%s gained: " % bot_name + (", ".join(gained) if not gained.is_empty() else "nothing you can see")
-	_replay_panel.add_child(UI.label(text, Vector2(494, y + 76), Vector2(196, 260), 17, Color("#f3ca89")))
+	# Who said what this turn: each character's face with their line in a bubble.
+	var quotes: Array = []
+	for step in _replay_steps():
+		for e in step[2]:
+			if str(e.get("said", "")) != "":
+				quotes.append(e)
+	if quotes.is_empty():
+		_replay_panel.add_child(UI.label(text, Vector2(494, y + 76), Vector2(196, 260), 17, Color("#f3ca89")))
+	else:
+		var sep := HSeparator.new()
+		sep.custom_minimum_size = Vector2(440, 10)
+		_replay_box.add_child(sep)
+		var sum := UI.label(text, Vector2.ZERO, Vector2(440, 0), 18, Color("#f3ca89"))
+		sum.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		sum.custom_minimum_size = Vector2(440, 0)
+		_replay_box.add_child(sum)
+		_replay_scroll.mouse_filter = Control.MOUSE_FILTER_PASS  # scroll if it runs long
+		_show_quotes(quotes.slice(maxi(0, quotes.size() - 4)), Vector2(492, y + 70))
 	var again := UI.button("Watch again", Vector2(40, 1150 - 82), Vector2(250, 62), Color("#314742"), 21)
 	again.pressed.connect(_watch_again)
 	_replay_panel.add_child(again)
@@ -1550,6 +1579,40 @@ func _replay_summary() -> void:
 	if _practice and _practice_completed >= 10: done.text = "Finish practice"
 	done.pressed.connect(_end_replay_now)
 	_replay_panel.add_child(done)
+
+
+## Up to four little faces down the right side, each with what they said.
+func _show_quotes(quotes: Array, at: Vector2) -> void:
+	var y := at.y
+	for e in quotes:
+		var face := AvatarView.new()
+		face.data = _speaker_face(e)
+		face.position = Vector2(at.x, y + 4)
+		face.size = Vector2(56, 66)
+		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_replay_panel.add_child(face)
+		var lbl := UI.label(str(e["said"]), Vector2(at.x + 76, y + 8), Vector2(118, 0), 16, Color("#1b2038"), HORIZONTAL_ALIGNMENT_CENTER)
+		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var font := lbl.get_theme_font("font")
+		var text_h := font.get_multiline_string_size(str(e["said"]), HORIZONTAL_ALIGNMENT_CENTER, 118, 16).y
+		var h := maxf(48.0, text_h + 18.0)
+		var bubble := Panel.new()
+		bubble.position = Vector2(at.x + 68, y)
+		bubble.size = Vector2(134, h)
+		bubble.add_theme_stylebox_override("panel", UI.box(Color("#fffaf0"), 14, Color("#1b2038"), 2))
+		bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_replay_panel.add_child(bubble)
+		var tail := Polygon2D.new()
+		tail.polygon = PackedVector2Array([Vector2(at.x + 70, y + 16), Vector2(at.x + 70, y + 34), Vector2(at.x + 56, y + 30)])
+		tail.color = Color("#fffaf0")
+		_replay_panel.add_child(tail)
+		lbl.size = Vector2(118, h - 14)
+		lbl.position = Vector2(at.x + 76, y + 7)
+		_replay_panel.add_child(lbl)
+		for n in [face, bubble, tail, lbl]:
+			n.modulate.a = 0.0
+			n.create_tween().tween_property(n, "modulate:a", 1.0, 0.25).set_delay(0.12 * quotes.find(e))
+		y += maxf(h, 70.0) + 12.0
 
 
 func _on_replay_panel_input(ev: InputEvent) -> void:
@@ -1788,19 +1851,50 @@ func _online_resync() -> void:
 
 ## When a character's card is played, they say their line: the card wobbles like it's
 ## talking and a speech bubble pops up. Voices come from Sfx (one voice per character).
-func _speak(card: Control, e: Dictionary, parent: Control, at: Vector2, width: float) -> void:
-	var role := Sfx.speaker(e)
-	if role == "" or not is_instance_valid(parent):
+## Decide once whether this event's character speaks, and which line (stored on the event
+## so the replay, "Watch again" and the recap all agree). Not every play gets a line.
+func _decide_line(e: Dictionary) -> void:
+	if e.has("said"):
 		return
-	# Your own recorded voice plays when the card shows your face on this phone.
+	var role := Sfx.speaker(e)
+	e["said"] = ""
+	if role == "":
+		return
 	var who: int = e["face"] if int(e.get("face", -1)) >= 0 else int(e.get("p", 0))
 	var mine := Profile.is_custom(role) and (role != "you" or who == 0)
 	var own := mine and VoiceRecorder.has_voice(role)
 	if not Sfx.should_speak(role, e, own):
-		return  # characters don't comment on every single play
-	var line := Sfx.say(role, str(e.get("card", "")), own, mine and bool(Profile.voice_alt.get(role, false)))
-	if line == "":
 		return
+	var alt := mine and bool(Profile.voice_alt.get(role, false))
+	var i := Sfx.pick_line(role, str(e.get("card", "")), own, alt)
+	if i < 0:
+		return
+	e["said"] = Sfx.LINES[role][i]
+	e["said_i"] = i
+	e["said_role"] = role
+	e["said_who"] = who
+	e["said_voice"] = [own, alt]
+
+
+## The face of whoever said an event's line (your custom face, the bot's, or the character art).
+func _speaker_face(e: Dictionary) -> Dictionary:
+	var role: String = e.get("said_role", "")
+	var f := face_for(int(e.get("said_who", 0)), CardDB.slot_for(str(e.get("card", ""))))
+	if f.is_empty() and role == "you":
+		f = _player_portrait() if int(e.get("said_who", 0)) == 0 else bot_face
+	return f if not f.is_empty() else {"portrait_path": "res://art/role-%s.png" % role}
+
+
+func _speak(card: Control, e: Dictionary, parent: Control, at: Vector2, width: float) -> void:
+	if not is_instance_valid(parent):
+		return
+	_decide_line(e)
+	var line: String = e.get("said", "")
+	if line == "":
+		return  # characters don't comment on every single play
+	# The bubble always shows; the voice plays only if voices are on (Settings).
+	var v: Array = e.get("said_voice", [false, false])
+	Sfx.play_line(str(e["said_role"]), int(e["said_i"]), bool(v[0]), bool(v[1]))
 	card.pivot_offset = card.size / 2.0
 	var wob := card.create_tween()
 	wob.tween_interval(0.2)
@@ -1839,6 +1933,8 @@ func _speak(card: Control, e: Dictionary, parent: Control, at: Vector2, width: f
 
 # ------------------------------------------------------------------ saving a game in progress
 
+var _replay_scroll: ScrollContainer
+var _replay_box: VBoxContainer
 var _replay_pending := false   # their turn was played but you haven't watched the replay yet
 var _left := false             # you tapped Menu: keep the game for Continue, don't reopen it at launch
 
