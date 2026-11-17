@@ -434,7 +434,8 @@ export class Game {
     } else if (kind === "grand") {
       for (const color of COLORS) if (this.isComplete(o, color)) out.push({ type: "heist", card: id, as: "grand", color });
     } else if (kind === "payup") {
-      if (this.bank(o).length) out.push({ type: "heist", card: id, as: "payup" });
+      // No bills? They pay with a gem at its pawn value instead (never from a finished set).
+      if (this.bank(o).length || this.gemForPayment(o, p)) out.push({ type: "heist", card: id, as: "payup" });
     }
     return out;
   }

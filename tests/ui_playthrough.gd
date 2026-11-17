@@ -3,6 +3,7 @@ extends SceneTree
 var games := 0
 var started := false
 var steps := 0
+var recaps := 0
 func _process(_d: float) -> bool:
 	if not started:
 		started = true
@@ -18,7 +19,7 @@ func _process(_d: float) -> bool:
 		games += 1
 		print("game %d over: winner=%d turns=%d" % [games, s.g.winner, s.g.turn_number])
 		if games >= 4:
-			print("UI PLAYTHROUGH OK"); quit(0); return true
+			print("your-turn recaps shown: %d" % recaps); print("UI PLAYTHROUGH OK"); quit(0); return true
 		s.get_tree().reload_current_scene()
 		return false
 	if s._replaying and is_instance_valid(s._replay_panel):
@@ -30,6 +31,11 @@ func _process(_d: float) -> bool:
 	if s.overlay != null:
 		s._replay_token += 1
 		s._play_next_replay()
+		return false
+	if is_instance_valid(s._recap_layer) and s.g.current == 0 and s.mode == "busy":
+		recaps += 1
+		s._close_recap_layer_only()   # "Got it" on your turn's recap
+		s._finish_end_turn()
 		return false
 	if s.g.current != 0 or s.mode == "busy":
 		return false

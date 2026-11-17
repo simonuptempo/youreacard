@@ -614,7 +614,8 @@ func _heist_moves(p: int, id: int, kind: String) -> Array:
 				if is_complete(o, color):
 					out.append({"type": "heist", "card": id, "as": "grand", "color": color})
 		"payup":
-			if not bank(o).is_empty():
+			# No bills? They pay with a gem at its pawn value instead (never from a finished set).
+			if not bank(o).is_empty() or not _gem_for_payment(o, p).is_empty():
 				out.append({"type": "heist", "card": id, "as": "payup"})
 	return out
 

@@ -20,7 +20,7 @@ const ACTIONS := {
 	"swap":      {"name": "Trade",          "type": "heist", "count": 4, "role": "trickster",   "text": "Trade one of your gems for one of theirs"},
 	"shakedown": {"name": "Shakedown",      "type": "heist", "count": 4, "role": "boss",        "text": "Take a random card from their hand"},
 	"grand":     {"name": "Grand Heist",    "type": "heist", "count": 2, "role": "mastermind",  "text": "Steal a COMPLETE set"},
-	"payup":     {"name": "Pay Up!",        "type": "heist", "count": 4, "role": "boss",        "text": "They pay you 2 bills from their bank"},
+	"payup":     {"name": "Pay Up!",        "type": "heist", "count": 4, "role": "boss",        "text": "They pay you 2 bills (or gems, if they have no bills)"},
 	"shield":    {"name": "Shield",         "type": "trap",  "count": 5, "role": "bouncer",     "text": "Twist: blocks an action"},
 	"mirror":    {"name": "Mirror",         "type": "trap",  "count": 3, "role": "illusionist", "text": "Twist: bounces an action back"},
 	"snare":     {"name": "Snare",          "type": "trap",  "count": 2, "role": "trapper",     "text": "Twist: blocks an action and you keep their card"},

@@ -134,7 +134,10 @@ static func score(g: GameState, p: int, m: Dictionary) -> float:
 				"shakedown":
 					return 8.0 + 2.0 * g.hand(o).size() - risk - wild_penalty - 2.0 * CardDB.cost("shakedown")
 				"payup":
-					return 10.0 + mini(GameState.PAY_UP_AMOUNT, g.bank_total(o)) * 3.0 - risk - wild_penalty
+					var worth := mini(GameState.PAY_UP_AMOUNT, g.bank_total(o)) * 3.0
+					if g.bank(o).is_empty():
+						worth = 5.0   # they'll pay with a gem
+					return 10.0 + worth - risk - wild_penalty
 		"tool":
 			var card := g.find_hand_card(p, m["card"])
 			if card["kind"] == "lucky":

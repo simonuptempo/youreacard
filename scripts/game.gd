@@ -255,6 +255,7 @@ func _end_coin_flip(winner: int) -> void:
 			_run_bot_turn()
 	else:
 		mode = "play"
+		_mark_my_turn()
 		refresh()
 		_set_msg("You're up first! Tap a card in your hand.")
 
@@ -516,6 +517,13 @@ func _close_collection() -> void:
 func _inspect_collection(p: int,color: String) -> void:
 	if mode=="busy" or mode=="over": return
 	_close_collection()
+	# Trade: choosing which of YOUR gems to give is one tap, straight from the table.
+	if mode=="target" and p==0:
+		var mine: Array = g.set_cards(0,color).duplicate()
+		mine.sort_custom(func(x, y): return x["kind"]=="wild" and y["kind"]!="wild")
+		if not mine.is_empty() and _chip_is_target(0,int(mine[-1]["id"]),color):
+			_on_chip_tapped(null,0,int(mine[-1]["id"]),color)
+			return
 	_collection_popup=Control.new()
 	_collection_popup.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_collection_popup.z_index=30
@@ -523,6 +531,10 @@ func _inspect_collection(p: int,color: String) -> void:
 	var dim:=ColorRect.new()
 	dim.color=Color(0,0,0,.7)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Tapping outside the popup closes it (so a tap meant for the table isn't lost).
+	dim.gui_input.connect(func(ev):
+		if ev is InputEventMouseButton and ev.pressed:
+			_close_collection.call_deferred())
 	_collection_popup.add_child(dim)
 	_collection_popup.add_child(UI.panel(Vector2(24,230),Vector2(672,790),TABLE_PANEL,22))
 	_collection_popup.add_child(UI.label("%s · %s" % ["Your collection" if p==0 else bot_name,CardDB.one_name(color)],Vector2(44,252),Vector2(632,50),27,UI.ACCENT,HORIZONTAL_ALIGNMENT_CENTER))
@@ -562,9 +574,29 @@ func _inspect_collection(p: int,color: String) -> void:
 		_collection_popup.add_child(UI.label(count_text+how,Vector2(44,origin.y+card_sz.y+(n-1)*step.y+16),Vector2(632,40),23,UI.TEXT,HORIZONTAL_ALIGNMENT_CENTER))
 	if g.set_cards(p,color).is_empty():
 		_collection_popup.add_child(UI.label("No gems in this set yet.",Vector2(60,450),Vector2(600,100),26,UI.MUTED,HORIZONTAL_ALIGNMENT_CENTER))
-	var close:=UI.button("Back to table",Vector2(180,916),Vector2(360,66),UI.ACCENT,24)
-	close.pressed.connect(_close_collection)
-	_collection_popup.add_child(close)
+	if stack_is_target:
+		# A clear button for it too, not just tapping the stack.
+		var verb:="Take"
+		for m in target_moves:
+			if m.get("as","")=="swap" and p==0: verb="Give"
+		var all:=false
+		for m in target_moves:
+			if m.get("as","")=="grand": all=true
+		var what:=("all %d" % n) if all and n>1 else ("1 " + CardDB.one_name(color))
+		var take:=UI.button("%s %s" % [verb, what],Vector2(366,916),Vector2(310,66),UI.ACCENT,24)
+		var top: Dictionary = cards[n-1]
+		take.pressed.connect(func():
+			_detail_card=top
+			_close_collection()
+			_on_chip_tapped(null,p,int(top["id"]),color))
+		_collection_popup.add_child(take)
+		var back:=UI.button("Back to table",Vector2(44,916),Vector2(310,66),Color("#3a4166"),22)
+		back.pressed.connect(_close_collection)
+		_collection_popup.add_child(back)
+	else:
+		var close:=UI.button("Back to table",Vector2(180,916),Vector2(360,66),UI.ACCENT,24)
+		close.pressed.connect(_close_collection)
+		_collection_popup.add_child(close)
 
 func _inspect_discard() -> void:
 	if mode not in ["play","discard"] or g.discard.is_empty(): return
@@ -778,7 +810,9 @@ func _on_chip_tapped(_v: CardView, p: int, id: int, color: String) -> void:
 				if swap_step == 0 and p == 0 and m["mine"] == id:
 					swap_mine = id
 					swap_step = 1
-					_set_msg("Now tap one of %s gems to take." % (bot_name + "'s"))
+					var gave := g.find_collection_card(0, id)
+					var gave_name := CardDB.one_name(color) if color != "" else (CardDB.display_name(gave[1]["kind"]) if not gave.is_empty() else "that gem")
+					_set_msg("Giving your %s. Now tap one of %s glowing gems to take in return." % [gave_name, bot_name + "'s"])
 					refresh()
 					return
 				if swap_step == 1 and p == 1 and m["mine"] == swap_mine and m["their"] == id:
@@ -929,6 +963,14 @@ func _on_end_pressed() -> void:
 	mode = "busy"
 	selected_id = -1
 	_clear_bar()
+	if _show_my_recap():
+		return   # "Got it" carries on with _finish_end_turn()
+	_finish_end_turn()
+
+
+func _finish_end_turn() -> void:
+	_my_before = {}
+	_my_first_event = -1
 	_turn_before = _snapshot()   # recap compares against the board as you left it
 	_turn_first_event = g.events.size()
 	if _practice: _practice_completed += 1
@@ -1056,6 +1098,7 @@ func _finish_replays() -> void:
 	if g.current == 0 and mode == "busy":
 		Sfx.play("your_turn", -4.0)
 		mode = "play"
+		_mark_my_turn()
 		var last := ""
 		for i in range(g.events.size() - 1, -1, -1):
 			if g.events[i]["p"] == 0:
@@ -1299,6 +1342,195 @@ func _show_recap() -> void:
 	var ok := UI.button("Got it — my turn", Vector2(170, 1150), Vector2(380, 80), UI.ACCENT, 28)
 	ok.pressed.connect(_close_recap)
 	_recap_layer.add_child(ok)
+
+
+# ------------------------------------------------------------------ your turn's recap
+
+var _my_before: Dictionary = {}   # the board when your turn began
+var _my_first_event := -1         # first event of your turn
+
+
+func _mark_my_turn() -> void:
+	_my_before = _snapshot()
+	_my_first_event = g.events.size()
+
+
+## Your turn's events: from when it began, or (after resuming a saved game) this turn's number.
+func _my_turn_events() -> Array:
+	if _my_first_event >= 0 and _my_first_event <= g.events.size():
+		return g.events.slice(_my_first_event)
+	return g.events.filter(func(e): return int(e.get("turn", -1)) == g.turn_number)
+
+
+## Turns your turn into plain lists: what you gained, what they lost, their twists, and so on.
+func _build_my_recap(before: Dictionary, after: Dictionary, evs: Array) -> Dictionary:
+	var you_gained: Array = []
+	var they_lost: Array = []
+	var you_lost: Array = []
+	var they_gained: Array = []
+	var banked := 0
+	var bills_taken := 0
+	var bills_lost := 0
+	if not before.is_empty():
+		for id in after:
+			var a: Array = after[id]
+			var b = before.get(id)
+			if a[0] == 0 and a[1] != "hand":
+				if b != null and b[0] == 0 and b[1] == a[1]:
+					continue
+				var from_them: bool = b != null and b[0] == 1
+				match a[1]:
+					"bank":
+						if from_them:
+							bills_taken += CardDB.value(a[2])
+						else:
+							banked += CardDB.value(a[2])
+					"coll":
+						you_gained.append(_thing(a, false) + (" (from %s)" % bot_name if from_them else ""))
+					"vault":
+						if from_them:
+							you_gained.append("%s from %s's vault (into your vault)" % [CardDB.display_name(a[2]), bot_name])
+						else:
+							you_gained.append("%s set face-down in your vault" % CardDB.display_name(a[2]))
+			elif a[0] == 0 and a[1] == "hand" and b != null and b[0] == 1:
+				you_gained.append("%s from %s (into your hand)" % [CardDB.display_name(a[2]), bot_name])
+			elif a[0] == 1 and b != null and b[0] == 0 and a[1] != "hand":
+				they_gained.append(_thing(a, true))
+		for id in before:
+			var b: Array = before[id]
+			var a = after.get(id)
+			if b[0] == 1 and (a == null or a[0] != 1):
+				match b[1]:
+					"bank": pass   # counted as bills taken
+					"coll": they_lost.append(_thing(b, true))
+					"hand": they_lost.append("a card from their hand")
+					"vault": they_lost.append("a face-down card from their vault" if a != null else "a vault card (used up)")
+			elif b[0] == 0 and b[1] in ["coll", "bank"] and a != null and a[0] == 1:
+				if b[1] == "bank":
+					bills_lost += CardDB.value(b[2])
+				else:
+					you_lost.append(_thing(b, false))
+	if banked > 0:
+		you_gained.append(CardDB.bills(banked) + " banked")
+	if bills_taken > 0:
+		you_gained.append(CardDB.bills(bills_taken) + " from %s's bank" % bot_name)
+		they_lost.append(CardDB.bills(bills_taken) + " from their bank")
+	if bills_lost > 0:
+		you_lost.append(CardDB.bills(bills_lost) + " from your bank")
+	var did: Array = []
+	var twists: Array = []
+	var quotes: Array = []
+	for e in evs:
+		var t := str(e["text"])
+		if e["card"] in ["shield", "mirror", "snare"] and e["p"] == 1:
+			twists.append(t)
+		elif e["p"] == 0 and not t.contains(" drew "):
+			did.append(t)
+		if str(e.get("said", "")) != "":
+			quotes.append(e)
+	return {"you_gained": you_gained, "they_lost": they_lost, "you_lost": you_lost, "they_gained": they_gained,
+		"twists": twists, "did": did, "quotes": quotes}
+
+
+## After End Turn: a recap of your turn. Returns false (nothing shown) if you didn't play anything.
+func _show_my_recap() -> bool:
+	var r := _build_my_recap(_my_before, _snapshot(), _my_turn_events())
+	if r["did"].is_empty() and r["twists"].is_empty():
+		return false
+	if is_instance_valid(_recap_layer):
+		_recap_layer.queue_free()
+	_recap_layer = Control.new()
+	_recap_layer.z_index = 40
+	_recap_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_recap_layer)
+	var dim := ColorRect.new()
+	dim.color = Color(0.02, 0.05, 0.06, 0.88)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_recap_layer.add_child(dim)
+	_recap_layer.add_child(UI.panel(Vector2(30, 90), Vector2(660, 1040), Color("#1d2a2c"), 22))
+	_recap_layer.add_child(UI.label("YOUR TURN", Vector2(30, 110), Vector2(660, 50), 34, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(56, 176)
+	scroll.size = Vector2(608, 940)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_recap_layer.add_child(scroll)
+	var box := VBoxContainer.new()
+	box.custom_minimum_size = Vector2(590, 0)
+	box.add_theme_constant_override("separation", 6)
+	scroll.add_child(box)
+	var section := func(title: String, lines: Array, color: Color, empty: String):
+		if lines.is_empty() and empty == "":
+			return
+		var h := Label.new()
+		h.text = title
+		h.add_theme_font_size_override("font_size", 22)
+		h.add_theme_color_override("font_color", color)
+		box.add_child(h)
+		var items: Array = lines if not lines.is_empty() else [empty]
+		for line in items:
+			var l := Label.new()
+			l.text = ("•  " + str(line)) if not lines.is_empty() else str(line)
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			l.custom_minimum_size = Vector2(590, 0)
+			l.add_theme_font_size_override("font_size", 22)
+			l.add_theme_color_override("font_color", UI.TEXT if not lines.is_empty() else UI.MUTED)
+			box.add_child(l)
+		var gap := Control.new()
+		gap.custom_minimum_size = Vector2(0, 14)
+		box.add_child(gap)
+	var who := bot_name.to_upper()
+	var known := not _my_before.is_empty()   # after resuming a saved game, only the plays are known
+	section.call("YOU GAINED", r["you_gained"], Color("#8fe3a0"), "Nothing new this turn." if known else "")
+	section.call("%s LOST" % who, r["they_lost"], Color("#f0b27a"), "Nothing." if known else "")
+	section.call("%s'S TWISTS" % who, r["twists"], Color("#b9a7ff"), "")
+	section.call("YOU LOST", r["you_lost"], Color("#ff8a7a"), "")
+	section.call("%s GAINED" % who, r["they_gained"], Color("#f0b27a"), "")
+	section.call("EVERYTHING YOU DID", r["did"], UI.MUTED, "")
+	# Who said what: each character's face with their line in a bubble.
+	var quotes: Array = r["quotes"]
+	if not quotes.is_empty():
+		var h := Label.new()
+		h.text = "WHO SAID WHAT"
+		h.add_theme_font_size_override("font_size", 22)
+		h.add_theme_color_override("font_color", Color("#f3ca89"))
+		box.add_child(h)
+		for e in quotes.slice(maxi(0, quotes.size() - 6)):
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 12)
+			var face := AvatarView.new()
+			face.data = _speaker_face(e)
+			face.custom_minimum_size = Vector2(60, 70)
+			face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(face)
+			var bubble := PanelContainer.new()
+			var style := UI.box(Color("#fffaf0"), 14, Color("#1b2038"), 2)
+			style.content_margin_left = 14
+			style.content_margin_right = 14
+			style.content_margin_top = 8
+			style.content_margin_bottom = 8
+			bubble.add_theme_stylebox_override("panel", style)
+			bubble.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			var l := Label.new()
+			l.text = "“%s”" % str(e["said"])
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			l.custom_minimum_size = Vector2(470, 0)
+			l.add_theme_font_size_override("font_size", 20)
+			l.add_theme_color_override("font_color", Color("#1b2038"))
+			bubble.add_child(l)
+			row.add_child(bubble)
+			box.add_child(row)
+	var ok := UI.button("Got it — %s's turn" % bot_name, Vector2(150, 1150), Vector2(420, 80), UI.ACCENT, 28)
+	ok.pressed.connect(func():
+		_close_recap_layer_only()
+		_finish_end_turn())
+	_recap_layer.add_child(ok)
+	return true
+
+
+func _close_recap_layer_only() -> void:
+	if is_instance_valid(_recap_layer):
+		_recap_layer.queue_free()
+	_recap_layer = null
 
 
 func _close_recap() -> void:
@@ -1687,6 +1919,7 @@ func _practice_prompt(complete: bool) -> void:
 				_frames.clear()
 				_recap.clear()
 			mode = "play"
+			_mark_my_turn()
 			selected_id = -1
 			_set_msg(PRACTICE_TIPS[mini(_practice_completed,9)])
 			refresh())
@@ -1840,6 +2073,7 @@ func _online_resync() -> void:
 		_show_game_over()
 	elif g.current == 0:
 		mode = "play"
+		_mark_my_turn()
 		refresh()
 	else:
 		_online_wait()
