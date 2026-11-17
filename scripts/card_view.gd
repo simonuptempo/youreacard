@@ -417,6 +417,10 @@ func _role_label(role: String) -> String:
 			who = str(Profile.cast_for_role(role)["name"])
 		elif face == Profile.slot_face(role):
 			who = str(Profile.slots[role].get("name", ""))
+		# The card you are carries your name.
+		if role == Profile.me_slot and Profile.display_name != "" and (face.is_empty() or face == Profile.slot_face(role)) \
+				and str(Profile.slots.get(role, {}).get("name", "")) == "":
+			who = Profile.display_name
 		var title: String = CardDB.ROLE_TITLES[role]
 		return title if who == "" else "%s the %s" % [who, title.trim_prefix("The ")]
 	if face.is_empty():

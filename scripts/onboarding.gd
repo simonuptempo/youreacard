@@ -52,8 +52,8 @@ func _step_welcome() -> void:
 	card.position = Vector2(225, 326)
 	card.pivot_offset = card.size / 2
 	_root.add_child(card)
-	card.setup({"id": 0, "kind": "wild"}, Profile.slot_face("you"))
-	card.placeholder = not Profile.is_custom("you")
+	card.setup(Profile.me_card(), Profile.me_face())
+	card.placeholder = Profile.me_placeholder()
 	card.tapped.connect(func(_v): _step_name())
 	var pulse := create_tween().set_loops()
 	pulse.tween_property(card, "scale", Vector2(1.04, 1.04), 0.6).set_trans(Tween.TRANS_SINE)
@@ -136,9 +136,9 @@ func _step_name() -> void:
 	preview.size = Vector2(220, 308)
 	preview.position = Vector2(250, 500)
 	_root.add_child(preview)
-	preview.setup({"id": 0, "kind": "wild"}, Profile.slot_face("you"))
-	preview.placeholder = not Profile.is_custom("you")
-	_root.add_child(UI.label("Next, put your face on your You're a Card! wild.", Vector2(80, 820), Vector2(560, 60), 20, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	preview.setup(Profile.me_card(), Profile.me_face())
+	preview.placeholder = Profile.me_placeholder()
+	_root.add_child(UI.label("Next, pick the card you'll be and put your face on it.", Vector2(80, 820), Vector2(560, 60), 20, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 
 	var next := UI.button("Next: make my face", Vector2(140, 920), Vector2(440, 92), UI.ACCENT, 32)
 	next.pressed.connect(_name_next)
@@ -154,7 +154,7 @@ func _name_next() -> void:
 	var n := _name_edit.text.strip_edges()
 	Profile.display_name = n if n != "" else "Player"
 	Profile.save_profile()
-	_edit("you")
+	_edit(Profile.me_slot)
 
 
 func _edit(slot: String) -> void:
@@ -206,9 +206,9 @@ func _step_reveal() -> void:
 	big.pivot_offset = big.size / 2
 	big.scale = Vector2.ZERO
 	_root.add_child(big)
-	big.setup({"id": 0, "kind": "wild"}, Profile.slot_face("you"))
-	big.placeholder = not Profile.is_custom("you")
-	big.tapped.connect(func(_v): _edit("you"))
+	big.setup(Profile.me_card(), Profile.me_face())
+	big.placeholder = Profile.me_placeholder()
+	big.tapped.connect(func(_v): _edit(Profile.me_slot))
 	var tw := create_tween()
 	tw.tween_property(big, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
@@ -225,7 +225,7 @@ func _step_reveal() -> void:
 		t2.tween_interval(0.35 + i * 0.09)
 		t2.tween_property(cv, "position", target, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		t2.parallel().tween_property(cv, "rotation", 0.0, 0.4)
-	_root.add_child(UI.label("Your wild and your bills. The other characters are played by the default cast unless you customize them.", Vector2(50, 740), Vector2(620, 90), 21, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	_root.add_child(UI.label("Your card and your bills. Any card you haven't customized is played by the default cast.", Vector2(50, 740), Vector2(620, 90), 21, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 
 	var watch := UI.button("Learn to play · step by step", Vector2(40, 900), Vector2(640, 80), Color("#4c8dff"), 28)
 	watch.pressed.connect(func():

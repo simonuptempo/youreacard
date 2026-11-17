@@ -16,6 +16,7 @@ var voices := "sometimes"     # how often characters speak: often | sometimes | 
 var voice_alt := {}           # slot -> true: your card speaks in the character's other voice
 var onboarded := false
 var display_name := ""
+var me_slot := "you"            # the card you are: the Wild by default, or any crew card or bill
 var beaten: Array = []           # names of characters you have beaten (cycles you through the cast)
 
 ## Navigation hints (not saved): where the avatar creator / explainer return to,
@@ -86,11 +87,47 @@ func face_or_default(slot: String) -> Dictionary:
 func face_name(slot: String) -> String:
 	if slots.has(slot) and str(slots[slot].get("name", "")) != "":
 		return slots[slot]["name"]
-	if slot == "you" and slots.has("you"):
+	if slot == me_slot and slots.has(slot):
 		return display_name if display_name != "" else "You"
 	if CRITTER_NAMES.has(slot):
 		return CRITTER_NAMES[slot]
 	return cast_for_role(slot)["name"]
+
+
+## The card kind that shows a slot's face: "wild", "loot3", or the crew character's action.
+func slot_kind(slot: String) -> String:
+	if slot == "you":
+		return "wild"
+	if slot.begins_with("bill"):
+		return "loot" + slot.substr(4)
+	for k in CardDB.ACTIONS.keys():
+		if CardDB.ACTIONS[k]["role"] == slot:
+			return k
+	return "wild"
+
+
+## Your card, ready for a CardView: setup(me_card(), me_face()), and placeholder = me_placeholder().
+func me_card() -> Dictionary:
+	return {"id": 0, "kind": slot_kind(me_slot)}
+
+
+func me_face() -> Dictionary:
+	return slot_face(me_slot)
+
+
+## An uncustomized Wild shows "Your face here"; any other card shows its character.
+func me_placeholder() -> bool:
+	return me_slot == "you" and not is_custom("you")
+
+
+## Your picture during a game: your card's face, or its character art.
+func me_portrait() -> Dictionary:
+	var face := slot_face(me_slot)
+	if not face.is_empty():
+		return face
+	if me_slot in CardDB.ROLES:
+		return {"portrait_path": "res://art/role-%s.png" % me_slot}
+	return {"portrait_path": "res://art/role-you.png"}
 
 
 ## What the slot is, for screen titles.
@@ -125,7 +162,7 @@ func save_profile() -> void:
 		return
 	f.store_string(JSON.stringify({"slots": slots, "plays_v3": plays_per_turn,
 		"onboarded": onboarded, "display_name": display_name, "beaten": beaten, "sound_on": sound_on,
-		"voices": voices, "voice_alt": voice_alt}))
+		"voices": voices, "voice_alt": voice_alt, "me_slot": me_slot}))
 
 
 func load_profile() -> void:
@@ -149,6 +186,9 @@ func load_profile() -> void:
 	plays_per_turn = int(data.get("plays_v3", 3))
 	onboarded = bool(data.get("onboarded", false))
 	display_name = str(data.get("display_name", ""))
+	me_slot = str(data.get("me_slot", "you"))
+	if not me_slot in SLOTS:
+		me_slot = "you"
 	sound_on = bool(data.get("sound_on", true))
 	voices = str(data.get("voices", "sometimes"))
 	if not voices in ["often", "sometimes", "off"]:

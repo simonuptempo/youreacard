@@ -87,10 +87,10 @@ func _ready() -> void:
 	card.position = Vector2(250, 452)
 	card.size = Vector2(220, 308)
 	add_child(card)
-	card.setup({"id": 0, "kind": "wild"}, Profile.slot_face("you"))
-	card.placeholder = not Profile.is_custom("you")
+	card.setup(Profile.me_card(), Profile.me_face())
+	card.placeholder = Profile.me_placeholder()
 	card.tapped.connect(func(_v):
-		Profile.edit_slot = "you"
+		Profile.edit_slot = Profile.me_slot
 		Profile.creator_return = "main"
 		Profile.go("my_cards"))
 

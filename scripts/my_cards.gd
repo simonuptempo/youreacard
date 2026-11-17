@@ -43,6 +43,8 @@ var _upload_btn: Button
 var _voice_btn: Button
 var _look_btn: Button
 var _reset_btn: Button
+var _me_btn: Button
+var _badges := {}           # slot -> the "YOU" badge on its grid card
 var _status: Label
 var _frames := {}            # slot -> the gold frame behind its grid card
 var _grid_cards := {}        # slot -> CardView
@@ -108,12 +110,16 @@ func _ready() -> void:
 	_reset_btn.pressed.connect(_reset_card)
 	add_child(_reset_btn)
 
-	_status = UI.label("", Vector2(28, 484), Vector2(664, 40), 19, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
+	_me_btn = UI.button("", Vector2(28, 454), Vector2(240, 46), Color("#2f3866"), 19)
+	_me_btn.pressed.connect(_make_me)
+	add_child(_me_btn)
+
+	_status = UI.label("", Vector2(28, 506), Vector2(664, 36), 19, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
 	add_child(_status)
 
 	var scroll := ScrollContainer.new()
-	scroll.position = Vector2(0, 528)
-	scroll.size = Vector2(720, 752)
+	scroll.position = Vector2(0, 548)
+	scroll.size = Vector2(720, 732)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
 	var page := Control.new()
@@ -132,6 +138,13 @@ func _ready() -> void:
 		page.add_child(cv)
 		cv.tapped.connect(func(_v): _select(s))
 		_grid_cards[s] = cv
+		var badge := UI.panel(pos + Vector2(-10, -12), Vector2(66, 30), Color("#e84d8a"), 15)
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var bl := UI.label("YOU", Vector2.ZERO, Vector2(66, 30), 16, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+		bl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		badge.add_child(bl)
+		page.add_child(badge)
+		_badges[s] = badge
 		_refresh_grid_card(s)
 	page.custom_minimum_size = Vector2(720, 12 + ceili(SLOTS.size() / 3.0) * (GRID_CARD.y + 22) + 40)
 	_select(_slot)
@@ -151,15 +164,8 @@ func _icon_button(icon: String, text: String, pos: Vector2) -> Button:
 
 # ------------------------------------------------------------------ which card
 
-static func kind_for(slot: String) -> String:
-	if slot == "you":
-		return "wild"
-	if slot.begins_with("bill"):
-		return "loot" + slot.substr(4)
-	for k in CardDB.ACTIONS.keys():
-		if CardDB.ACTIONS[k]["role"] == slot:
-			return k
-	return "wild"
+func kind_for(slot: String) -> String:
+	return Profile.slot_kind(slot)
 
 
 func _is_pet(slot: String) -> bool:
@@ -183,12 +189,12 @@ func _select(slot: String) -> void:
 	for s in _frames:
 		_frames[s].visible = s == slot
 	var custom_name := str(Profile.slots.get(slot, {}).get("name", ""))
-	if slot == "you" and custom_name == "":
+	if slot == Profile.me_slot and custom_name == "":
 		custom_name = Profile.display_name
 	_name_edit.set_block_signals(true)
 	_name_edit.text = custom_name
 	_name_edit.set_block_signals(false)
-	_name_edit.placeholder_text = "Your pet's name" if _is_pet(slot) else ("Your name" if slot == "you" else "Name (or keep %s)" % _original_name(slot))
+	_name_edit.placeholder_text = "Your pet's name" if _is_pet(slot) else ("Your name" if slot == Profile.me_slot else "Name (or keep %s)" % _original_name(slot))
 	if _busy_slot == "":
 		_status.text = ""
 	_refresh()
@@ -215,6 +221,13 @@ func _refresh() -> void:
 	_reset_btn.visible = Profile.is_custom(_slot) and _busy_slot != _slot
 	_reset_btn.text = "Change back to %s" % _original_name(_slot)
 	_reset_btn.position.y = y
+	var me := _slot == Profile.me_slot
+	_me_btn.text = "★  This card is you" if me else "Make this card me"
+	_me_btn.add_theme_stylebox_override("normal", UI.box(Color("#e84d8a") if me else Color("#2f3866"), 14))
+	_me_btn.add_theme_stylebox_override("hover", UI.box(Color("#e84d8a") if me else Color("#3a4580"), 14))
+	_me_btn.mouse_filter = Control.MOUSE_FILTER_IGNORE if me else Control.MOUSE_FILTER_STOP
+	for b in _badges:
+		_badges[b].visible = b == Profile.me_slot
 	_refresh_preview()
 
 
@@ -230,7 +243,7 @@ func _refresh_preview() -> void:
 	var typed := _name_edit.text.strip_edges()
 	_preview.preview_name = _card_name(_slot, typed) if typed != "" else ""
 	_preview.setup({"id": 0, "kind": kind_for(_slot)}, Profile.slot_face(_slot))
-	_preview.placeholder = _slot == "you" and not Profile.is_custom(_slot)
+	_preview.placeholder = _slot == "you" and Profile.me_placeholder()
 	if _preview._overlay != null and _is_pet(_slot):
 		_preview._overlay.name_text = typed
 		_preview._overlay.queue_redraw()
@@ -239,7 +252,7 @@ func _refresh_preview() -> void:
 func _refresh_grid_card(slot: String) -> void:
 	var cv: CardView = _grid_cards[slot]
 	cv.setup({"id": SLOTS.find(slot), "kind": kind_for(slot)}, Profile.slot_face(slot))
-	cv.placeholder = slot == "you" and not Profile.is_custom(slot)
+	cv.placeholder = slot == "you" and Profile.me_placeholder()
 
 
 # ------------------------------------------------------------------ name
@@ -249,7 +262,7 @@ func _name_changed(text: String) -> void:
 	if Profile.is_custom(_slot):
 		Profile.set_slot(_slot, Profile.slot_face(_slot), typed)
 		_refresh_grid_card(_slot)
-	if _slot == "you":
+	if _slot == Profile.me_slot:
 		Profile.display_name = typed
 		Profile.save_profile()
 	_refresh_preview()
@@ -379,7 +392,7 @@ func _put_on_card(slot: String, image: Image) -> void:
 	var label := str(Profile.slots.get(slot, {}).get("name", ""))
 	if slot == _slot:
 		label = _name_edit.text.strip_edges()
-	elif slot == "you" and label == "":
+	elif slot == Profile.me_slot and label == "":
 		label = Profile.display_name
 	Profile.set_slot(slot, {"portrait_path": path, "portrait_zoom": 1.0, "portrait_x": 0.5, "portrait_y": 0.5}, label)
 	if old.begins_with("user://portraits/") and old != path:
@@ -412,6 +425,20 @@ func _reset_card() -> void:
 		AvatarView.portrait_cache.erase(old)
 	_originals.erase(_slot)
 	_refresh_grid_card(_slot)
+	_select(_slot)
+
+
+## You are this card: it shows as yours on the main menu and next to your name in games.
+func _make_me() -> void:
+	var old: String = Profile.me_slot
+	# The card you were keeps your name, if it has your photo.
+	if Profile.is_custom(old) and str(Profile.slots[old].get("name", "")) == "" and Profile.display_name != "":
+		Profile.slots[old]["name"] = Profile.display_name
+		_refresh_grid_card(old)
+	Profile.me_slot = _slot
+	Profile.save_profile()
+	if old == "you" or _slot == "you":
+		_refresh_grid_card("you")   # the Wild's "your face here" comes and goes
 	_select(_slot)
 
 

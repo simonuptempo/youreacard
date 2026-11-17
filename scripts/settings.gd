@@ -31,8 +31,8 @@ func _ready() -> void:
 	card.position = Vector2(44, 140)
 	card.size = Vector2(264, 370)
 	add_child(card)
-	card.setup({"id": 0, "kind": "wild"}, Profile.slot_face("you"))
-	card.placeholder = not Profile.is_custom("you")
+	card.setup(Profile.me_card(), Profile.me_face())
+	card.placeholder = Profile.me_placeholder()
 	add_child(UI.label("Your cards", Vector2(332, 140), Vector2(350, 44), 30, UI.TEXT))
 	add_child(UI.label("Name", Vector2(332, 196), Vector2(350, 30), 20, UI.MUTED))
 	_name_edit = LineEdit.new()
@@ -49,11 +49,11 @@ func _ready() -> void:
 	add_child(_name_edit)
 	var edit := UI.button("My Cards", Vector2(332, 316), Vector2(344, 72), UI.ACCENT, 28)
 	edit.pressed.connect(func():
-		Profile.edit_slot = "you"
+		Profile.edit_slot = Profile.me_slot
 		Profile.creator_return = "settings"
 		Profile.go("my_cards"))
 	add_child(edit)
-	add_child(UI.label("%d of 14 cards customized: your wild, 5 bills, 8 characters." % Profile.custom_count(), Vector2(332, 396), Vector2(344, 70), 18, UI.MUTED))
+	add_child(UI.label("%d of 14 cards customized: 9 characters and 5 bills. Pick the card that's you." % Profile.custom_count(), Vector2(332, 396), Vector2(344, 70), 18, UI.MUTED))
 	add_child(UI.label("Saved only on this device.", Vector2(332, 474), Vector2(344, 30), 17, UI.MUTED))
 
 	# Game

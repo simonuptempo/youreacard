@@ -278,8 +278,7 @@ func _clear(node: Node) -> void:
 
 
 func _player_portrait() -> Dictionary:
-	var face:=Profile.slot_face("you")
-	return face if not face.is_empty() else {"portrait_path":"res://art/role-you.png"}
+	return Profile.me_portrait()
 
 func refresh() -> void:
 	_close_collection()
