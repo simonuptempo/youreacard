@@ -43,7 +43,6 @@ var _upload_btn: Button
 var _voice_btn: Button
 var _look_btn: Button
 var _reset_btn: Button
-var _me_btn: Button
 var _badges := {}           # slot -> the "YOU" badge on its grid card
 var _status: Label
 var _frames := {}            # slot -> the gold frame behind its grid card
@@ -52,6 +51,7 @@ var _busy_slot := ""         # the card whose cartoon is being made
 var _photo_slot := ""        # the card a photo was asked for
 var _originals := {}         # slot -> the photo as taken (this visit only), to remake the cartoon
 var _picker_pending := false
+var _selfie := false         # the photo being taken is a selfie: that card becomes yours
 var _sheet: Control
 var _edits := {}             # pending look changes
 var _look_cat := 0
@@ -80,8 +80,9 @@ func _ready() -> void:
 	_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_preview)
 
+	add_child(UI.label("Make this your card", Vector2(RIGHT_X, 106), Vector2(RIGHT_W, 44), 27, UI.ACCENT))
 	_name_edit = LineEdit.new()
-	_name_edit.position = Vector2(RIGHT_X, 108)
+	_name_edit.position = Vector2(RIGHT_X, 154)
 	_name_edit.size = Vector2(RIGHT_W, 64)
 	_name_edit.max_length = 14
 	_name_edit.add_theme_font_size_override("font_size", 26)
@@ -93,33 +94,29 @@ func _ready() -> void:
 	_name_edit.text_submitted.connect(func(_t): _name_edit.release_focus())
 	add_child(_name_edit)
 
-	_camera_btn = _icon_button("camera", "Take a selfie", Vector2(RIGHT_X, 184))
+	_camera_btn = _icon_button("camera", "Take a selfie", Vector2(RIGHT_X, 230))
 	_camera_btn.pressed.connect(_take_photo)
-	_upload_btn = _icon_button("photos", "Upload a photo", Vector2(RIGHT_X + RIGHT_W / 2 + 6, 184))
+	_upload_btn = _icon_button("photos", "Upload a photo", Vector2(RIGHT_X + RIGHT_W / 2 + 6, 230))
 	_upload_btn.pressed.connect(_choose_photo)
 
-	_voice_btn = UI.button("", Vector2(RIGHT_X, 300), Vector2(RIGHT_W, 56), Color("#c0392b"), 21)
+	_voice_btn = UI.button("", Vector2(RIGHT_X, 346), Vector2(RIGHT_W, 56), Color("#c0392b"), 21)
 	_voice_btn.pressed.connect(_record_voice)
 	_voice_btn.add_child(Icon.make("mic", Vector2(14, 10), Vector2(36, 36)))
 	add_child(_voice_btn)
-	_look_btn = UI.button("     Change the look", Vector2(RIGHT_X, 300), Vector2(RIGHT_W, 56), Color("#7a4fd6"), 21)
+	_look_btn = UI.button("     Change the look", Vector2(RIGHT_X, 346), Vector2(RIGHT_W, 56), Color("#7a4fd6"), 21)
 	_look_btn.pressed.connect(_open_look)
 	_look_btn.add_child(Icon.make("wand", Vector2(14, 10), Vector2(36, 36)))
 	add_child(_look_btn)
-	_reset_btn = UI.button("", Vector2(RIGHT_X, 300), Vector2(RIGHT_W, 44), Color("#2f3866"), 18)
+	_reset_btn = UI.button("", Vector2(RIGHT_X, 346), Vector2(RIGHT_W, 44), Color("#2f3866"), 18)
 	_reset_btn.pressed.connect(_reset_card)
 	add_child(_reset_btn)
 
-	_me_btn = UI.button("", Vector2(28, 454), Vector2(240, 46), Color("#2f3866"), 19)
-	_me_btn.pressed.connect(_make_me)
-	add_child(_me_btn)
-
-	_status = UI.label("", Vector2(28, 506), Vector2(664, 36), 19, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
+	_status = UI.label("", Vector2(28, 526), Vector2(664, 36), 19, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
 	add_child(_status)
 
 	var scroll := ScrollContainer.new()
-	scroll.position = Vector2(0, 548)
-	scroll.size = Vector2(720, 732)
+	scroll.position = Vector2(0, 566)
+	scroll.size = Vector2(720, 714)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
 	var page := Control.new()
@@ -206,7 +203,7 @@ func _refresh() -> void:
 	_camera_btn.get_meta("label").text = "Take a photo" if _is_pet(_slot) else "Take a selfie"
 	_camera_btn.disabled = busy
 	_upload_btn.disabled = busy
-	var y := 300.0
+	var y := 346.0
 	_voice_btn.visible = VoiceRecorder.speaks(_slot)
 	if _voice_btn.visible:
 		var n := VoiceRecorder.recorded_count(_slot)
@@ -221,11 +218,6 @@ func _refresh() -> void:
 	_reset_btn.visible = Profile.is_custom(_slot) and _busy_slot != _slot
 	_reset_btn.text = "Change back to %s" % _original_name(_slot)
 	_reset_btn.position.y = y
-	var me := _slot == Profile.me_slot
-	_me_btn.text = "★  This card is you" if me else "Make this card me"
-	_me_btn.add_theme_stylebox_override("normal", UI.box(Color("#e84d8a") if me else Color("#2f3866"), 14))
-	_me_btn.add_theme_stylebox_override("hover", UI.box(Color("#e84d8a") if me else Color("#3a4580"), 14))
-	_me_btn.mouse_filter = Control.MOUSE_FILTER_IGNORE if me else Control.MOUSE_FILTER_STOP
 	for b in _badges:
 		_badges[b].visible = b == Profile.me_slot
 	_refresh_preview()
@@ -284,6 +276,7 @@ func _native() -> Object:
 
 func _take_photo() -> void:
 	_photo_slot = _slot
+	_selfie = not _is_pet(_slot)
 	var n := _native()
 	if n != null:
 		# People: the selfie camera. Pets: the camera on the back.
@@ -297,6 +290,7 @@ func _take_photo() -> void:
 
 func _choose_photo() -> void:
 	_photo_slot = _slot
+	_selfie = false
 	var n := _native()
 	if n != null:
 		n.call("pick_photo")
@@ -349,6 +343,9 @@ func _got_photo(image: Image) -> void:
 		var k := 2048.0 / maxi(image.get_width(), image.get_height())
 		image.resize(maxi(1, int(image.get_width() * k)), maxi(1, int(image.get_height() * k)), Image.INTERPOLATE_LANCZOS)
 	_originals[slot] = image
+	if _selfie and slot != Profile.me_slot:
+		_make_me(slot)
+	_selfie = false
 	_cartoon(slot, image, {})
 
 
@@ -429,14 +426,15 @@ func _reset_card() -> void:
 	_select(_slot)
 
 
-## You are this card: it shows as yours on the main menu and next to your name in games.
-func _make_me() -> void:
+## You are this card (after a selfie on it): it shows as yours on the main menu and next to
+## your name in games, with a YOU badge here.
+func _make_me(slot: String) -> void:
 	var old: String = Profile.me_slot
 	# The card you were keeps your name, if it has your photo.
 	if Profile.is_custom(old) and str(Profile.slots[old].get("name", "")) == "" and Profile.display_name != "":
 		Profile.slots[old]["name"] = Profile.display_name
 		_refresh_grid_card(old)
-	Profile.me_slot = _slot
+	Profile.me_slot = slot
 	Profile.save_profile()
 	_select(_slot)
 
