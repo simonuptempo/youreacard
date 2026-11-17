@@ -1,0 +1,82 @@
+# Builds the browser version of Gem Heist and publishes it on GitHub Pages:
+#   https://simonuptempo.github.io/youreacard/
+# One-time setup: repo Settings > Pages > Build and deployment > Source: "GitHub Actions".
+name: Web build
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "server/**"
+      - "marketing/**"
+      - "**.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.7.1"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-web
+
+      - name: Get Godot and its web templates
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          V=$GODOT_VERSION
+          mkdir -p ~/godot
+          cd ~/godot
+          curl -sSfL -o godot.zip "https://github.com/godotengine/godot-builds/releases/download/${V}-stable/Godot_v${V}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && rm godot.zip
+          mv Godot_v${V}-stable_linux.x86_64 godot
+          curl -sSfL -o templates.tpz "https://github.com/godotengine/godot-builds/releases/download/${V}-stable/Godot_v${V}-stable_export_templates.tpz"
+          unzip -q templates.tpz
+          T=~/.local/share/godot/export_templates/${V}.stable
+          mkdir -p $T
+          # Only the web templates are needed.
+          cp templates/web_* templates/version.txt $T/
+          rm -rf templates templates.tpz
+          ls $T
+
+      - name: Export for the web
+        run: |
+          set -e
+          mkdir -p build/web
+          ~/godot/godot --headless --path . --import || true
+          ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
+          ls -la build/web
+          test -f build/web/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

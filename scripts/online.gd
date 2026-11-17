@@ -113,6 +113,22 @@ func cartoon_edit(picture: Image, kind: String, edits: Dictionary) -> Dictionary
 	return await _cartoon_request(picture, {"kind": "pet" if kind == "pet" else "person", "mode": "edit", "edits": edits})
 
 
+## A private id for this phone or browser (only used for the daily cartoon limit).
+## Browsers have no device id, so a random one is made once and kept.
+func device_id() -> String:
+	var id := OS.get_unique_id()
+	if id == "":
+		var f := FileAccess.open("user://device_id.txt", FileAccess.READ)
+		if f != null:
+			id = f.get_as_text().strip_edges()
+		if id == "":
+			id = "%d_%d" % [randi(), Time.get_ticks_usec()]
+			var w := FileAccess.open("user://device_id.txt", FileAccess.WRITE)
+			if w != null:
+				w.store_string(id)
+	return id.sha256_text().substr(0, 32)
+
+
 func _cartoon_request(photo: Image, extra: Dictionary) -> Dictionary:
 	var img := photo.duplicate() as Image
 	var longest := maxi(img.get_width(), img.get_height())
@@ -122,7 +138,7 @@ func _cartoon_request(photo: Image, extra: Dictionary) -> Dictionary:
 	if img.get_format() != Image.FORMAT_RGB8 and img.get_format() != Image.FORMAT_RGBA8:
 		img.convert(Image.FORMAT_RGBA8)
 	var body := {"image": Marshalls.raw_to_base64(img.save_jpg_to_buffer(0.88)), "mime": "image/jpeg",
-		"device": OS.get_unique_id().sha256_text().substr(0, 32)}
+		"device": device_id()}
 	body.merge(extra)
 	var req := HTTPRequest.new()
 	req.timeout = 90.0

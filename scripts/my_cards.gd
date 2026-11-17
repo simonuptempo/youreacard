@@ -317,6 +317,9 @@ func _take_photo() -> void:
 		# People: the selfie camera. Pets: the camera on the back.
 		n.call("take_photo", not _is_pet(_slot))
 		return
+	if OS.has_feature("web"):
+		_web_photo_picker("environment" if _is_pet(_slot) else "user")
+		return
 	var camera := preload("res://scripts/selfie_capture.gd").new()
 	camera.size = Vector2(720, 1280)
 	add_child(camera)
@@ -329,6 +332,9 @@ func _choose_photo() -> void:
 	var n := _native()
 	if n != null:
 		n.call("pick_photo")
+		return
+	if OS.has_feature("web"):
+		_web_photo_picker("")
 		return
 	if _picker_pending:
 		return
@@ -344,6 +350,63 @@ func _choose_photo() -> void:
 	if error != OK:
 		_picker_pending = false
 		_say("Couldn't open your photos. Try Take a selfie.", true)
+
+
+## In a browser: the page's own photo picker. capture "user" opens the selfie camera on a
+## phone, "environment" the back camera; "" lets you choose a photo.
+var _web_callback = null
+
+func _web_photo_picker(capture: String) -> void:
+	if _web_callback == null:
+		_web_callback = JavaScriptBridge.create_callback(_web_photo_ready)
+		var window = JavaScriptBridge.get_interface("window")
+		window.gemHeistPhoto = _web_callback
+	JavaScriptBridge.eval("""
+		(function (capture) {
+			var input = document.createElement('input');
+			input.type = 'file';
+			input.accept = 'image/*';
+			if (capture) input.setAttribute('capture', capture);
+			input.onchange = function () {
+				var file = input.files && input.files[0];
+				if (!file) return;
+				var reader = new FileReader();
+				reader.onload = function () {
+					var data = String(reader.result);
+					window.gemHeistPhoto(data.substring(data.indexOf(',') + 1), file.type || '');
+				};
+				reader.readAsDataURL(file);
+			};
+			input.click();
+		})(%s);
+	""" % JSON.stringify(capture))
+
+
+func _web_photo_ready(args: Array) -> void:
+	if args.size() < 1:
+		return
+	var bytes := Marshalls.base64_to_raw(str(args[0]))
+	var mime := str(args[1]) if args.size() > 1 else ""
+	if bytes.size() > 25 * 1024 * 1024:
+		_say("Please choose a photo smaller than 25 MB.", true)
+		return
+	var img := Image.new()
+	var err := ERR_FILE_UNRECOGNIZED
+	if mime.contains("png"):
+		err = img.load_png_from_buffer(bytes)
+	elif mime.contains("webp"):
+		err = img.load_webp_from_buffer(bytes)
+	else:
+		err = img.load_jpg_from_buffer(bytes)
+	if err != OK:
+		for loader in [img.load_jpg_from_buffer, img.load_png_from_buffer, img.load_webp_from_buffer]:
+			if loader.call(bytes) == OK:
+				err = OK
+				break
+	if err != OK or img.is_empty():
+		_say("Couldn't open that photo. Try a JPG or PNG (iPhone HEIC photos can't be read here).", true)
+		return
+	_got_photo(img)
 
 
 func _picker_finished(selected: bool, paths: PackedStringArray, _filter: int) -> void:
