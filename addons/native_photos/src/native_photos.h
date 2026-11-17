@@ -27,6 +27,11 @@ public:
 	void pick_photo();              // the system Photos picker (no permission prompt needed)
 	void take_photo(bool p_front);  // the system camera; p_front starts on the selfie camera
 
+	// Sound: normally the game follows the ring/silent switch. While recording a voice it switches
+	// to record mode (mic on, sound from the speaker), then back again.
+	bool set_recording_mode(bool p_on);
+	float output_volume() const;    // 0..1, or -1 where unknown
+
 	// Called by the native side; emit the signals on Godot's main loop.
 	void deliver(const PackedByteArray &p_jpeg);
 	void report_cancel();

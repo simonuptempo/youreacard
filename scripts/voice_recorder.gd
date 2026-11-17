@@ -18,6 +18,8 @@ var _elapsed := 0.0
 var _rows: Array = []         # [{status: Label, rec: Button, play: Button}]
 var _note: Label
 var _alt_btn: Button
+var _new_lines := 0           # lines recorded on this visit
+var _sound_mode_on := false
 
 
 static func path_for(s: String, i: int) -> String:
@@ -55,6 +57,7 @@ static func speaks(s: String) -> bool:
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_sound_mode(true)
 	_setup_audio()
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.75)
@@ -192,6 +195,7 @@ func _stop() -> void:
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://voices"))
 	wav.save_to_wav(path_for(slot, i))
+	_new_lines += 1
 	_refresh()
 	_play(i)
 
@@ -244,5 +248,66 @@ func _use_default() -> void:
 func _close() -> void:
 	if _recording >= 0:
 		_stop()
+	if _new_lines > 0:
+		_new_lines = 0
+		_show_unmute_reminder()
+		return
+	_finish()
+
+
+func _finish() -> void:
+	_sound_mode(false)
 	closed.emit()
 	queue_free()
+
+
+func _exit_tree() -> void:
+	_sound_mode(false)
+
+
+## The iPhone add-on: record mode while this screen is open (the mic works and sound comes from
+## the speaker), then back to normal so the ring/silent switch mutes the game again.
+func _native() -> Object:
+	if Engine.has_singleton("NativePhotos"):
+		var n := Engine.get_singleton("NativePhotos")
+		if n.call("is_available") and n.has_method("set_recording_mode"):
+			return n
+	return null
+
+
+func _sound_mode(recording: bool) -> void:
+	if recording == _sound_mode_on:
+		return
+	_sound_mode_on = recording
+	var n := _native()
+	if n != null:
+		n.call("set_recording_mode", recording)
+
+
+func _volume() -> float:
+	var n := _native()
+	return float(n.call("output_volume")) if n != null else -1.0
+
+
+## After you record, make sure you'll actually hear yourself during the game.
+func _show_unmute_reminder() -> void:
+	var cover := ColorRect.new()
+	cover.color = Color(0, 0, 0, 0.6)
+	cover.position = Vector2.ZERO
+	cover.size = get_viewport_rect().size
+	cover.name = "UnmuteReminder"
+	add_child(cover)
+	cover.add_child(UI.panel(Vector2(70, 400), Vector2(580, 470), UI.PANEL, 24))
+	cover.add_child(UI.label("🔊  Hear yourself play", Vector2(70, 430), Vector2(580, 56), 34, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
+	var vol := _volume()
+	var msg := ""
+	if vol >= 0.0 and vol < 0.05:
+		msg = "Your volume is turned all the way down. Turn it up so you can hear your voice when %s's card is played." % Profile.face_name(slot)
+	else:
+		msg = "Gem Heist stays quiet when your iPhone's ring/silent switch is set to silent. Flip it back (and turn the volume up) to hear your voice when %s's card is played." % Profile.face_name(slot)
+	var body := UI.label(msg, Vector2(110, 500), Vector2(500, 230), 23, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	cover.add_child(body)
+	var ok := UI.button("Got it, I'll unmute", Vector2(130, 760), Vector2(460, 76), UI.ACCENT.darkened(0.02), 26)
+	ok.pressed.connect(_finish)
+	cover.add_child(ok)

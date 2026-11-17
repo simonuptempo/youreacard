@@ -7,6 +7,7 @@
 #if TARGET_OS_IOS
 #import <UIKit/UIKit.h>
 #import <PhotosUI/PhotosUI.h>
+#import <AVFoundation/AVFoundation.h>
 #include <dlfcn.h>
 #endif
 
@@ -144,6 +145,8 @@ void NativePhotosIOS::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("has_camera"), &NativePhotosIOS::has_camera);
 	ClassDB::bind_method(D_METHOD("pick_photo"), &NativePhotosIOS::pick_photo);
 	ClassDB::bind_method(D_METHOD("take_photo", "front"), &NativePhotosIOS::take_photo, DEFVAL(true));
+	ClassDB::bind_method(D_METHOD("set_recording_mode", "on"), &NativePhotosIOS::set_recording_mode);
+	ClassDB::bind_method(D_METHOD("output_volume"), &NativePhotosIOS::output_volume);
 	ADD_SIGNAL(MethodInfo("photo_ready", PropertyInfo(Variant::PACKED_BYTE_ARRAY, "jpeg")));
 	ADD_SIGNAL(MethodInfo("photo_cancelled"));
 	ADD_SIGNAL(MethodInfo("photo_failed", PropertyInfo(Variant::STRING, "reason")));
@@ -238,6 +241,34 @@ void NativePhotosIOS::take_photo(bool p_front) {
 	[host presentViewController:picker animated:YES completion:nil];
 #else
 	report_failure("The camera opens on iPhone and iPad.");
+#endif
+}
+
+bool NativePhotosIOS::set_recording_mode(bool p_on) {
+#if TARGET_OS_IOS
+	AVAudioSession *session = [AVAudioSession sharedInstance];
+	NSError *error = nil;
+	BOOL ok;
+	if (p_on) {
+		ok = [session setCategory:AVAudioSessionCategoryPlayAndRecord
+					  withOptions:(AVAudioSessionCategoryOptionDefaultToSpeaker | AVAudioSessionCategoryOptionAllowBluetoothA2DP)
+							error:&error];
+	} else {
+		// Ambient follows the ring/silent switch, like Godot's default.
+		ok = [session setCategory:AVAudioSessionCategoryAmbient error:&error];
+	}
+	[session setActive:YES error:nil];
+	return ok;
+#else
+	return false;
+#endif
+}
+
+float NativePhotosIOS::output_volume() const {
+#if TARGET_OS_IOS
+	return [AVAudioSession sharedInstance].outputVolume;
+#else
+	return -1.0f;
 #endif
 }
 
