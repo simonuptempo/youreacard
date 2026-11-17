@@ -106,18 +106,13 @@ func slot_kind(slot: String) -> String:
 	return "wild"
 
 
-## Your card, ready for a CardView: setup(me_card(), me_face()), and placeholder = me_placeholder().
+## Your card, ready for a CardView: setup(me_card(), me_face()).
 func me_card() -> Dictionary:
 	return {"id": 0, "kind": slot_kind(me_slot)}
 
 
 func me_face() -> Dictionary:
 	return slot_face(me_slot)
-
-
-## An uncustomized Wild shows "Your face here"; any other card shows its character.
-func me_placeholder() -> bool:
-	return me_slot == "you" and not is_custom("you")
 
 
 ## Your picture during a game: your card's face, or its character art.

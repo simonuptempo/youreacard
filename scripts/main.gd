@@ -88,7 +88,7 @@ func _ready() -> void:
 	card.size = Vector2(220, 308)
 	add_child(card)
 	card.setup(Profile.me_card(), Profile.me_face())
-	card.placeholder = Profile.me_placeholder()
+	card.editable = true
 	card.tapped.connect(func(_v):
 		Profile.edit_slot = Profile.me_slot
 		Profile.creator_return = "main"

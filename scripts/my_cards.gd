@@ -242,8 +242,9 @@ func _card_name(slot: String, typed: String) -> String:
 func _refresh_preview() -> void:
 	var typed := _name_edit.text.strip_edges()
 	_preview.preview_name = _card_name(_slot, typed) if typed != "" else ""
+	if _slot == "you" and not Profile.is_custom("you"):
+		_preview.preview_name = ""   # the regular Wild is Nana Bea until it has your photo
 	_preview.setup({"id": 0, "kind": kind_for(_slot)}, Profile.slot_face(_slot))
-	_preview.placeholder = _slot == "you" and Profile.me_placeholder()
 	if _preview._overlay != null and _is_pet(_slot):
 		_preview._overlay.name_text = typed
 		_preview._overlay.queue_redraw()
@@ -252,7 +253,7 @@ func _refresh_preview() -> void:
 func _refresh_grid_card(slot: String) -> void:
 	var cv: CardView = _grid_cards[slot]
 	cv.setup({"id": SLOTS.find(slot), "kind": kind_for(slot)}, Profile.slot_face(slot))
-	cv.placeholder = slot == "you" and Profile.me_placeholder()
+	cv.editable = true
 
 
 # ------------------------------------------------------------------ name
@@ -437,8 +438,6 @@ func _make_me() -> void:
 		_refresh_grid_card(old)
 	Profile.me_slot = _slot
 	Profile.save_profile()
-	if old == "you" or _slot == "you":
-		_refresh_grid_card("you")   # the Wild's "your face here" comes and goes
 	_select(_slot)
 
 

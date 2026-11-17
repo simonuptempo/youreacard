@@ -32,7 +32,7 @@ func _ready() -> void:
 	card.size = Vector2(264, 370)
 	add_child(card)
 	card.setup(Profile.me_card(), Profile.me_face())
-	card.placeholder = Profile.me_placeholder()
+	card.editable = true
 	add_child(UI.label("Your cards", Vector2(332, 140), Vector2(350, 44), 30, UI.TEXT))
 	add_child(UI.label("Name", Vector2(332, 196), Vector2(350, 30), 20, UI.MUTED))
 	_name_edit = LineEdit.new()

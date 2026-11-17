@@ -16,6 +16,12 @@ var placeholder := false:
 		placeholder = v
 		_sync_avatar()
 		queue_redraw()
+## Menus: a small pencil badge saying "tap to customize this card".
+var editable := false:
+	set(v):
+		editable = v
+		_sync_edit_badge()
+var _edit_badge: Control
 var selected := false:
 	set(v):
 		selected = v
@@ -71,6 +77,7 @@ func _sync_avatar() -> void:
 	_portrait = null
 	_overlay = null
 	if face_down or card.is_empty():
+		_sync_edit_badge()
 		return
 	var kind := _kind()
 	var role := _role()
@@ -95,12 +102,15 @@ func _sync_avatar() -> void:
 		_overlay.size = size
 		_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_overlay)
+		_sync_edit_badge()
 		return
 	if role == "" or placeholder:
+		_sync_edit_badge()
 		return
 	var f := face
 	if f.is_empty():
 		if not chip and Art.tex("role-" + role) != null:
+			_sync_edit_badge()
 			return  # the painted cast art is drawn by _draw_full_art
 		f = Profile.default_face(role)
 	_avatar = _make_avatar(f, role)
@@ -111,6 +121,7 @@ func _sync_avatar() -> void:
 	else:
 		_avatar.position = Vector2(size.x * 0.1, size.y * 0.17)
 		_avatar.size = Vector2(size.x * 0.8, size.y * (0.46 if kind == "wild" else 0.5))
+	_sync_edit_badge()
 
 
 func _make_avatar(f: Dictionary, role: String) -> AvatarView:
@@ -472,3 +483,39 @@ func _draw_placeholder(font: Font, w: float, hgt: float, ink: Color) -> void:
 	draw_string(font, Vector2(0, hgt * 0.715), "Your Face Here", HORIZONTAL_ALIGNMENT_CENTER, w, fs, ink)
 	draw_string(font, Vector2(0, hgt * 0.8), "Tap to make it yours", HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.075), Color("#2b2233"))
 	draw_string(font, Vector2(0, hgt * 0.925), "WILD", HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.062), Color(ink, 0.8))
+
+
+func _sync_edit_badge() -> void:
+	if not editable or face_down or card.is_empty():
+		if _edit_badge != null and is_instance_valid(_edit_badge):
+			_edit_badge.queue_free()
+		_edit_badge = null
+		return
+	if _edit_badge == null or not is_instance_valid(_edit_badge):
+		_edit_badge = Control.new()
+		_edit_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_edit_badge.draw.connect(_draw_edit_badge)
+		add_child(_edit_badge)
+	var w := size.x
+	var r := w * 0.095
+	# Bills: top middle, between the corner values. Characters: top left, opposite the cost.
+	var c := Vector2(w * 0.5, size.y * 0.085) if CardDB.is_money(_kind()) else Vector2(w * 0.2, size.y * 0.24)
+	_edit_badge.position = c - Vector2(r, r) * 1.15
+	_edit_badge.size = Vector2(r, r) * 2.3
+	move_child(_edit_badge, -1)
+	_edit_badge.queue_redraw()
+
+
+func _draw_edit_badge() -> void:
+	var b := _edit_badge
+	var bc := b.size / 2.0
+	var br := b.size.x / 2.3
+	b.draw_circle(bc, br, UI.ACCENT)
+	b.draw_arc(bc, br, 0, TAU, 24, Color("#7a5a00"), maxf(1.5, br * 0.1), true)
+	var d := Vector2(1, -1).normalized()
+	var p := Vector2(-d.y, d.x)
+	var tip := bc - d * br * 0.6
+	var tail := bc + d * br * 0.55
+	var hw := br * 0.17
+	b.draw_colored_polygon(PackedVector2Array([tail + p * hw, tail - p * hw, tip + d * br * 0.25 - p * hw, tip + d * br * 0.25 + p * hw]), Color("#2b2233"))
+	b.draw_colored_polygon(PackedVector2Array([tip + d * br * 0.25 + p * hw, tip + d * br * 0.25 - p * hw, tip]), Color("#2b2233"))

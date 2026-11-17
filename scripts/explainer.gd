@@ -451,7 +451,7 @@ func _rows(list: Array, free: bool) -> void:
 
 func _wild() -> void:
 	var cv := _card(_stage, "wild", Vector2(195, 10), Vector2(330, 462), Profile.slot_face("you"))
-	cv.placeholder = not Profile.is_custom("you")
+	cv.editable = true
 	# Tap the card to put your face on it right here.
 	cv.mouse_filter = Control.MOUSE_FILTER_STOP
 	cv.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND

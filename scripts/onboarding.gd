@@ -53,7 +53,7 @@ func _step_welcome() -> void:
 	card.pivot_offset = card.size / 2
 	_root.add_child(card)
 	card.setup(Profile.me_card(), Profile.me_face())
-	card.placeholder = Profile.me_placeholder()
+	card.editable = true
 	card.tapped.connect(func(_v): _step_name())
 	var pulse := create_tween().set_loops()
 	pulse.tween_property(card, "scale", Vector2(1.04, 1.04), 0.6).set_trans(Tween.TRANS_SINE)
@@ -137,7 +137,7 @@ func _step_name() -> void:
 	preview.position = Vector2(250, 500)
 	_root.add_child(preview)
 	preview.setup(Profile.me_card(), Profile.me_face())
-	preview.placeholder = Profile.me_placeholder()
+	preview.editable = true
 	_root.add_child(UI.label("Next, pick the card you'll be and put your face on it.", Vector2(80, 820), Vector2(560, 60), 20, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 
 	var next := UI.button("Next: make my face", Vector2(140, 920), Vector2(440, 92), UI.ACCENT, 32)
@@ -179,6 +179,7 @@ func _step_bills() -> void:
 		cv.position = spots[i]
 		_root.add_child(cv)
 		cv.setup({"id": i, "kind": "loot%d" % (i + 1)}, Profile.slot_face(slot))
+		cv.editable = true
 		cv.tapped.connect(func(_v): _edit(slot))
 		var tag := "Custom ✓" if Profile.is_custom(slot) else "Tap to add a face"
 		_root.add_child(UI.label(tag, spots[i] + Vector2(0, 284), Vector2(200, 30), 18, UI.ACCENT if Profile.is_custom(slot) else UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
@@ -207,7 +208,7 @@ func _step_reveal() -> void:
 	big.scale = Vector2.ZERO
 	_root.add_child(big)
 	big.setup(Profile.me_card(), Profile.me_face())
-	big.placeholder = Profile.me_placeholder()
+	big.editable = true
 	big.tapped.connect(func(_v): _edit(Profile.me_slot))
 	var tw := create_tween()
 	tw.tween_property(big, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
