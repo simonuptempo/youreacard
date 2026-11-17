@@ -53,7 +53,8 @@ func _step_welcome() -> void:
 	card.pivot_offset = card.size / 2
 	_root.add_child(card)
 	card.setup(Profile.me_card(), Profile.me_face())
-	card.editable = true
+	card.placeholder = Profile.me_placeholder()
+	card.editable = not card.placeholder
 	card.tapped.connect(func(_v): _step_name())
 	var pulse := create_tween().set_loops()
 	pulse.tween_property(card, "scale", Vector2(1.04, 1.04), 0.6).set_trans(Tween.TRANS_SINE)
@@ -137,7 +138,8 @@ func _step_name() -> void:
 	preview.position = Vector2(250, 500)
 	_root.add_child(preview)
 	preview.setup(Profile.me_card(), Profile.me_face())
-	preview.editable = true
+	preview.placeholder = Profile.me_placeholder()
+	preview.editable = not preview.placeholder
 	_root.add_child(UI.label("Next, pick the card you'll be and put your face on it.", Vector2(80, 820), Vector2(560, 60), 20, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 
 	var next := UI.button("Next: make my face", Vector2(140, 920), Vector2(440, 92), UI.ACCENT, 32)
@@ -208,7 +210,8 @@ func _step_reveal() -> void:
 	big.scale = Vector2.ZERO
 	_root.add_child(big)
 	big.setup(Profile.me_card(), Profile.me_face())
-	big.editable = true
+	big.placeholder = Profile.me_placeholder()
+	big.editable = not big.placeholder
 	big.tapped.connect(func(_v): _edit(Profile.me_slot))
 	var tw := create_tween()
 	tw.tween_property(big, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)

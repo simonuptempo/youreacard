@@ -248,7 +248,7 @@ func _draw_full_art(font: Font, kind: String, typ: String) -> void:
 	var role := _role()
 	draw_circle(Vector2(w * 0.5, hgt * 0.43), w * 0.3, ink.lerp(Art.CARD_IVORY, 0.86))
 	if placeholder:
-		_draw_placeholder(font, w, hgt, ink)
+		_draw_placeholder(font, w, hgt, ink, typ)
 		return
 	if role != "" and face.is_empty() and Art.tex("role-" + role) != null:
 		Art.draw_fit(self, Art.tex("role-" + role), Rect2(w * 0.1, hgt * 0.175, w * 0.8, hgt * 0.46))
@@ -448,7 +448,7 @@ func _role_label(role: String) -> String:
 	return "You"
 
 
-func _draw_placeholder(font: Font, w: float, hgt: float, ink: Color) -> void:
+func _draw_placeholder(font: Font, w: float, hgt: float, ink: Color, typ := "wild") -> void:
 	var c := Vector2(w * 0.5, hgt * 0.42)
 	var r := w * 0.3
 	draw_circle(c, r, Color("#fff7dd"))
@@ -479,10 +479,18 @@ func _draw_placeholder(font: Font, w: float, hgt: float, ink: Color) -> void:
 	var hw := br * 0.17
 	draw_colored_polygon(PackedVector2Array([tail + p * hw, tail - p * hw, tip + d * br * 0.25 - p * hw, tip + d * br * 0.25 + p * hw]), Color("#2b2233"))
 	draw_colored_polygon(PackedVector2Array([tip + d * br * 0.25 + p * hw, tip + d * br * 0.25 - p * hw, tip]), Color("#2b2233"))
-	var fs := int(w * 0.095)
-	draw_string(font, Vector2(0, hgt * 0.715), "Your Face Here", HORIZONTAL_ALIGNMENT_CENTER, w, fs, ink)
-	draw_string(font, Vector2(0, hgt * 0.8), "Tap to make it yours", HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.075), Color("#2b2233"))
-	draw_string(font, Vector2(0, hgt * 0.925), "WILD", HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.062), Color(ink, 0.8))
+	# a little camera on the silhouette: "your photo goes here"
+	var cam := c + Vector2(0, r * 0.12)
+	var cw := r * 0.62
+	draw_rect(Rect2(cam + Vector2(-cw * 0.5, -cw * 0.3), Vector2(cw, cw * 0.62)), Color("#2b2233"))
+	draw_rect(Rect2(cam + Vector2(-cw * 0.17, -cw * 0.42), Vector2(cw * 0.34, cw * 0.14)), Color("#2b2233"))
+	draw_circle(cam + Vector2(0, cw * 0.01), cw * 0.2, Color("#fff7dd"))
+	draw_circle(cam + Vector2(0, cw * 0.01), cw * 0.12, Color("#2b2233"))
+	var fs := int(w * 0.1)
+	draw_string(font, Vector2(0, hgt * 0.72), "This could be you!", HORIZONTAL_ALIGNMENT_CENTER, w, fs, ink)
+	draw_string(font, Vector2(0, hgt * 0.8), "Tap to add your photo", HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.075), Color("#2b2233"))
+	draw_string(font, Vector2(0, hgt * 0.865), "and join the crew", HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.075), Color("#2b2233"))
+	draw_string(font, Vector2(0, hgt * 0.94), ("TWIST" if typ == "trap" else typ.to_upper()), HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.062), Color(ink, 0.8))
 
 
 func _sync_edit_badge() -> void:

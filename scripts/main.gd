@@ -88,7 +88,15 @@ func _ready() -> void:
 	card.size = Vector2(220, 308)
 	add_child(card)
 	card.setup(Profile.me_card(), Profile.me_face())
-	card.editable = true
+	card.placeholder = Profile.me_placeholder()
+	card.editable = not card.placeholder
+	if card.placeholder:
+		# A gentle pulse invites the tap.
+		card.pivot_offset = card.size / 2.0
+		var pulse := card.create_tween().set_loops()
+		pulse.tween_interval(1.4)
+		pulse.tween_property(card, "scale", Vector2(1.05, 1.05), 0.35).set_trans(Tween.TRANS_SINE)
+		pulse.tween_property(card, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_SINE)
 	card.tapped.connect(func(_v):
 		Profile.edit_slot = Profile.me_slot
 		Profile.creator_return = "main"

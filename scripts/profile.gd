@@ -115,6 +115,11 @@ func me_face() -> Dictionary:
 	return slot_face(me_slot)
 
 
+## Until your card has your photo, menus show it as "This could be you!" to invite you in.
+func me_placeholder() -> bool:
+	return not is_custom(me_slot) and not me_slot.begins_with("bill")
+
+
 ## Your picture during a game: your card's face, or its character art.
 func me_portrait() -> Dictionary:
 	var face := slot_face(me_slot)
