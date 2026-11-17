@@ -126,12 +126,12 @@ func say(role: String, action := "", own_voice := false, alt := false) -> String
 
 
 ## Choose which line a character says next (no sound). -1 if the role has no lines.
-func pick_line(role: String, action := "", own_voice := false, alt := false) -> int:
+func pick_line(role: String, action := "", own_voice := false, alt := false, nana := false) -> int:
 	if not LINES.has(role):
 		return -1
 	var allowed: Array = BOSS_LINES.get(action, range(LINES[role].size())) if role == "boss" else range(LINES[role].size())
 	var pick_from: Array = []
-	for src in _sources(role, own_voice, alt):
+	for src in _sources(role, own_voice, alt, nana):
 		pick_from = allowed.filter(func(i): return src.call(i) != "")
 		if not pick_from.is_empty():
 			break
@@ -144,11 +144,11 @@ func pick_line(role: String, action := "", own_voice := false, alt := false) -> 
 
 
 ## Play a chosen line out loud, unless voices are off in Settings.
-func play_line(role: String, i: int, own_voice := false, alt := false) -> void:
+func play_line(role: String, i: int, own_voice := false, alt := false, nana := false) -> void:
 	if Profile.voices == "off" or i < 0:
 		return
 	var s: AudioStream = null
-	for src in _sources(role, own_voice, alt):
+	for src in _sources(role, own_voice, alt, nana):
 		var path: String = src.call(i)
 		if path != "":
 			s = AudioStreamWAV.load_from_file(path) if path.begins_with("user://") else _load(path)
@@ -160,12 +160,15 @@ func play_line(role: String, i: int, own_voice := false, alt := false) -> void:
 		_voice.play()
 
 
-## Where a line's recording can come from, best first: your own voice, the character's
-## other voice, then their regular voice. Each returns the file path, or "" if missing.
-func _sources(role: String, own_voice: bool, alt: bool) -> Array:
+## Where a line's recording can come from, best first: your own voice, Nana Bea (when the
+## Wild shows her), the character's other voice, then their regular voice (for the Wild, the
+## androgynous one). Each returns the file path, or "" if missing.
+func _sources(role: String, own_voice: bool, alt: bool, nana := false) -> Array:
 	var out: Array = []
 	if own_voice:
 		out.append(func(i): var p := "user://voices/%s_%d.wav" % [role, i]; return p if FileAccess.file_exists(p) else "")
+	if nana and role == "you":
+		out.append(func(i): return _real_path("you_nana_%d" % i))
 	if alt:
 		out.append(func(i): return _real_path("%s_alt_%d" % [role, i]))
 	out.append(func(i): return _real_path("%s_%d" % [role, i]))

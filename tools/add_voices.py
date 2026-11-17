@@ -4,7 +4,8 @@
   python3 tools/add_voices.py <clip files...>
 
 Each file is named <character>_<voice>_<words of the line>.mp3, e.g.
-pickpocket_boy_too_slow.mp3 or wildcard_androgynous_surprise.mp3. The character and
+pickpocket_boy_too_slow.mp3 or wildcard_androgynous_surprise.mp3 (wildcard_nanabea_... is
+Nana Bea, the Wild's own character, saved as you_nana_<n>). The character and
 the words pick the line from audio/voice_lines.json; the voice word decides whether it
 is the character's regular voice or the other-gender one (saved as <role>_alt_<n>).
 Clips are trimmed, volume-matched and written to audio/voice_real/<role>_<n>.ogg.
@@ -16,7 +17,7 @@ LINES = json.load(open(os.path.join(ROOT, "audio", "voice_lines.json")))
 ALIASES = {"wildcard": "you", "wild": "you"}
 REGULAR = {"you": "", "pickpocket": "boy", "trickster": "woman", "boss": "man", "mastermind": "woman",
            "bouncer": "man", "illusionist": "woman", "trapper": "woman", "locksmith": "woman"}
-VOICE_WORDS = {"boy", "girl", "man", "woman", "male", "female", "androgynous", "neutral"}
+VOICE_WORDS = {"boy", "girl", "man", "woman", "male", "female", "androgynous", "neutral", "nanabea"}
 NORMAL = {"male": "man", "female": "woman", "neutral": "", "androgynous": ""}
 FILTER = ("silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.03,areverse,"
           "silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08,areverse,"
@@ -37,13 +38,14 @@ def place(path):
     if rest and rest[0] in VOICE_WORDS:
         voice = NORMAL.get(rest[0], rest[0])
         rest = rest[1:]
-    alt = voice not in ("", REGULAR[role])
+    nana = voice == "nanabea"   # the Wild's own character, Nana Bea: saved as you_nana_<n>
+    alt = not nana and voice not in ("", REGULAR[role])
     said = squash("".join(rest))
     scores = [difflib.SequenceMatcher(None, said, squash(l)).ratio() for l in LINES[role]]
     i = max(range(len(scores)), key=scores.__getitem__)
     if scores[i] < 0.75:
         return None, f"no line matches '{' '.join(rest)}' (closest: {LINES[role][i]})"
-    stem = f"{role}_alt_{i}" if alt else f"{role}_{i}"
+    stem = f"{role}_nana_{i}" if nana else (f"{role}_alt_{i}" if alt else f"{role}_{i}")
     return stem, LINES[role][i]
 
 

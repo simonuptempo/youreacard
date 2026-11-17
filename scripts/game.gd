@@ -2099,14 +2099,19 @@ func _decide_line(e: Dictionary) -> void:
 	if not Sfx.should_speak(role, e, own):
 		return
 	var alt := mine and bool(Profile.voice_alt.get(role, false))
-	var i := Sfx.pick_line(role, str(e.get("card", "")), own, alt)
+	# The Wild speaks as Nana Bea when it shows her; any other face gets the androgynous voice.
+	var nana := false
+	if role == "you":
+		var f := face_for(who, "you")
+		nana = f.is_empty() or str(f.get("portrait_path", "")) == "res://art/role-you.png"
+	var i := Sfx.pick_line(role, str(e.get("card", "")), own, alt, nana)
 	if i < 0:
 		return
 	e["said"] = Sfx.LINES[role][i]
 	e["said_i"] = i
 	e["said_role"] = role
 	e["said_who"] = who
-	e["said_voice"] = [own, alt]
+	e["said_voice"] = [own, alt, nana]
 
 
 ## The face of whoever said an event's line (your custom face, the bot's, or the character art).
@@ -2126,8 +2131,8 @@ func _speak(card: Control, e: Dictionary, parent: Control, at: Vector2, width: f
 	if line == "":
 		return  # characters don't comment on every single play
 	# The bubble always shows; the voice plays only if voices are on (Settings).
-	var v: Array = e.get("said_voice", [false, false])
-	Sfx.play_line(str(e["said_role"]), int(e["said_i"]), bool(v[0]), bool(v[1]))
+	var v: Array = e.get("said_voice", [false, false, false])
+	Sfx.play_line(str(e["said_role"]), int(e["said_i"]), bool(v[0]), bool(v[1]), v.size() > 2 and bool(v[2]))
 	card.pivot_offset = card.size / 2.0
 	var wob := card.create_tween()
 	wob.tween_interval(0.2)
