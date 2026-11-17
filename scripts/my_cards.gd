@@ -10,6 +10,8 @@ const SLOTS := ["you", "pickpocket", "trickster", "boss", "mastermind", "bouncer
 const GRID_CARD := Vector2(180, 252)
 const RIGHT_X := 292.0
 const RIGHT_W := 400.0
+const CARD_TOP := 128.0
+const CARD_SIZE := Vector2(240, 336)
 
 ## "Change the look": the same options as the character builder. The server only accepts these.
 const COLORS := ["Red", "Orange", "Yellow", "Green", "Teal", "Blue", "Navy", "Purple", "Pink", "Brown", "Black", "White", "Gray"]
@@ -45,6 +47,8 @@ var _look_btn: Button
 var _reset_btn: Button
 var _badges := {}           # slot -> the "YOU" badge on its grid card
 var _status: Label
+var _heading: Label
+var _scroll: ScrollContainer
 var _frames := {}            # slot -> the gold frame behind its grid card
 var _grid_cards := {}        # slot -> CardView
 var _busy_slot := ""         # the card whose cartoon is being made
@@ -75,12 +79,14 @@ func _ready() -> void:
 	add_child(UI.label("Are you a card?  Join the crew!", Vector2(96, 28), Vector2(600, 60), 32, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
 
 	_preview = CardView.new()
-	_preview.position = Vector2(28, 108)
-	_preview.size = Vector2(240, 336)
+	_preview.position = Vector2(28, CARD_TOP)
+	_preview.size = CARD_SIZE
 	_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_preview)
 
-	add_child(UI.label("Make this your card", Vector2(RIGHT_X, 106), Vector2(RIGHT_W, 44), 27, UI.ACCENT))
+	_heading = UI.label("Make this your card", Vector2(RIGHT_X, CARD_TOP), Vector2(RIGHT_W, 40), 27, UI.ACCENT)
+	_heading.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	add_child(_heading)
 	_name_edit = LineEdit.new()
 	_name_edit.position = Vector2(RIGHT_X, 154)
 	_name_edit.size = Vector2(RIGHT_W, 64)
@@ -103,11 +109,11 @@ func _ready() -> void:
 	_voice_btn.pressed.connect(_record_voice)
 	_voice_btn.add_child(Icon.make("mic", Vector2(14, 10), Vector2(36, 36)))
 	add_child(_voice_btn)
-	_look_btn = UI.button("     Change the look", Vector2(RIGHT_X, 346), Vector2(RIGHT_W, 56), Color("#7a4fd6"), 21)
+	_look_btn = UI.button("     Change the look", Vector2(28, 0), Vector2(326, 52), Color("#7a4fd6"), 21)
 	_look_btn.pressed.connect(_open_look)
 	_look_btn.add_child(Icon.make("wand", Vector2(14, 10), Vector2(36, 36)))
 	add_child(_look_btn)
-	_reset_btn = UI.button("", Vector2(RIGHT_X, 346), Vector2(RIGHT_W, 44), Color("#2f3866"), 18)
+	_reset_btn = UI.button("", Vector2(366, 0), Vector2(326, 52), Color("#2f3866"), 19)
 	_reset_btn.pressed.connect(_reset_card)
 	add_child(_reset_btn)
 
@@ -115,8 +121,7 @@ func _ready() -> void:
 	add_child(_status)
 
 	var scroll := ScrollContainer.new()
-	scroll.position = Vector2(0, 566)
-	scroll.size = Vector2(720, 714)
+	_scroll = scroll
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
 	var page := Control.new()
@@ -203,24 +208,53 @@ func _refresh() -> void:
 	_camera_btn.get_meta("label").text = "Take a photo" if _is_pet(_slot) else "Take a selfie"
 	_camera_btn.disabled = busy
 	_upload_btn.disabled = busy
-	var y := 346.0
 	_voice_btn.visible = VoiceRecorder.speaks(_slot)
 	if _voice_btn.visible:
 		var n := VoiceRecorder.recorded_count(_slot)
 		_voice_btn.text = "     Record your voice" if n == 0 else "     Your voice: %d of %d lines" % [n, VoiceRecorder.LINE_COUNT]
-		_voice_btn.position.y = y
-		y += 66.0
 	_look_btn.visible = _has_photo(_slot)
 	_look_btn.disabled = busy
-	if _look_btn.visible:
-		_look_btn.position.y = y
-		y += 66.0
 	_reset_btn.visible = Profile.is_custom(_slot) and _busy_slot != _slot
 	_reset_btn.text = "Change back to %s" % _original_name(_slot)
-	_reset_btn.position.y = y
 	for b in _badges:
 		_badges[b].visible = b == Profile.me_slot
+	_layout()
 	_refresh_preview()
+
+
+## The right-hand rows fill exactly the card's height (top of the heading to the bottom of the
+## last row). Change the look / Change back sit in one row under the card, then the status line,
+## then the grid of cards.
+func _layout() -> void:
+	var rows: Array = [_heading, _name_edit, _camera_btn]
+	if _voice_btn.visible:
+		rows.append(_voice_btn)
+	var used := 0.0
+	for r in rows:
+		used += r.size.y
+	var gap := minf(40.0, (CARD_SIZE.y - used) / (rows.size() - 1))
+	var y := CARD_TOP
+	if gap == 40.0:
+		y += (CARD_SIZE.y - used - gap * (rows.size() - 1)) / 2.0   # fewer rows: centered beside the card
+	for r in rows:
+		r.position.y = y
+		if r == _camera_btn:
+			_upload_btn.position.y = y
+		y += r.size.y + gap
+	y = CARD_TOP + CARD_SIZE.y + 14.0
+	var extras: Array = [_look_btn, _reset_btn].filter(func(b): return b.visible)
+	for k in extras.size():
+		var b: Button = extras[k]
+		b.position = Vector2(28 + k * 338, y)
+		b.size.x = 664.0 if extras.size() == 1 else 326.0
+	if not extras.is_empty():
+		y += 52.0 + 10.0
+	if _status.text != "":
+		_status.position.y = y
+		_status.size.y = 32.0
+		y += 36.0
+	_scroll.position = Vector2(0, y)
+	_scroll.size = Vector2(720, 1280 - y)
 
 
 func _card_name(slot: String, typed: String) -> String:
@@ -406,6 +440,7 @@ func _say(text: String, error: bool, pulse := false) -> void:
 			old.kill()
 		_status.remove_meta("tween")
 	_status.text = text
+	_layout()
 	_status.add_theme_color_override("font_color", Color("#ff9f8f") if error else UI.ACCENT)
 	_status.modulate.a = 1.0
 	if pulse:
