@@ -160,7 +160,7 @@ func _name_next() -> void:
 func _edit(slot: String) -> void:
 	Profile.edit_slot = slot
 	Profile.creator_return = "onboarding"
-	Profile.go("avatar_creator")
+	Profile.go("my_cards")
 
 
 # ------------------------------------------------------------------ step 2: faces on bills

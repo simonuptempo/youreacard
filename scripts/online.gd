@@ -105,6 +105,15 @@ func call_fn(action: String, payload: Dictionary = {}) -> Dictionary:
 ## kind: "me" / "person" or "pet". Returns {"ok", "image": Image, "error"}.
 ## The photo is only sent to make the cartoon; neither is stored on the server.
 func cartoonize(photo: Image, kind: String, role: String) -> Dictionary:
+	return await _cartoon_request(photo, {"kind": "pet" if kind == "pet" else "person", "role": role})
+
+
+## "Change the look": redraws a card's cartoon with options from our own lists.
+func cartoon_edit(picture: Image, kind: String, edits: Dictionary) -> Dictionary:
+	return await _cartoon_request(picture, {"kind": "pet" if kind == "pet" else "person", "mode": "edit", "edits": edits})
+
+
+func _cartoon_request(photo: Image, extra: Dictionary) -> Dictionary:
 	var img := photo.duplicate() as Image
 	var longest := maxi(img.get_width(), img.get_height())
 	if longest > 1024:
@@ -113,7 +122,8 @@ func cartoonize(photo: Image, kind: String, role: String) -> Dictionary:
 	if img.get_format() != Image.FORMAT_RGB8 and img.get_format() != Image.FORMAT_RGBA8:
 		img.convert(Image.FORMAT_RGBA8)
 	var body := {"image": Marshalls.raw_to_base64(img.save_jpg_to_buffer(0.88)), "mime": "image/jpeg",
-		"kind": "pet" if kind == "pet" else "person", "role": role, "device": OS.get_unique_id().sha256_text().substr(0, 32)}
+		"device": OS.get_unique_id().sha256_text().substr(0, 32)}
+	body.merge(extra)
 	var req := HTTPRequest.new()
 	req.timeout = 90.0
 	add_child(req)

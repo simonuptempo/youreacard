@@ -48,7 +48,10 @@ func _ready() -> void:
 	_name_edit.text_changed.connect(_on_name_changed)
 	add_child(_name_edit)
 	var edit := UI.button("My Cards", Vector2(332, 316), Vector2(344, 72), UI.ACCENT, 28)
-	edit.pressed.connect(func(): Profile.go("my_cards"))
+	edit.pressed.connect(func():
+		Profile.edit_slot = "you"
+		Profile.creator_return = "settings"
+		Profile.go("my_cards"))
 	add_child(edit)
 	add_child(UI.label("%d of 14 cards customized: your wild, 5 bills, 8 characters." % Profile.custom_count(), Vector2(332, 396), Vector2(344, 70), 18, UI.MUTED))
 	add_child(UI.label("Saved only on this device.", Vector2(332, 474), Vector2(344, 30), 17, UI.MUTED))

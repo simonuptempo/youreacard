@@ -47,6 +47,49 @@ function prompt(kind: string, role: string): string {
     "Keep their likeness: the same face shape, skin tone, eye color, hair style and color, and any glasses or facial hair. " + STYLE;
 }
 
+// "Change the look": the same options as the in-game character builder, and nothing else,
+// so the request can never carry free text to the image model.
+const COLORS = ["Red", "Orange", "Yellow", "Green", "Teal", "Blue", "Navy", "Purple", "Pink", "Brown", "Black", "White", "Gray"];
+const PERSON_LOOKS: Record<string, [string, string[]]> = {
+  hair: ["Hair style", ["Bald", "Buzz", "Short", "Side part", "Fade", "Wavy", "Long straight", "Curly", "Coily",
+    "Afro", "Locs", "Box braids", "Two puffs", "Bun", "Ponytail", "Bob", "Mohawk", "Receding"]],
+  hair_color: ["Hair color", ["Black", "Dark brown", "Brown", "Light brown", "Auburn", "Red", "Blonde", "Platinum blonde",
+    "Gray", "White", "Blue", "Pink", "Purple", "Green"]],
+  facial: ["Facial hair", ["None", "Stubble", "Mustache", "Goatee", "Full beard", "Long beard"]],
+  hat: ["Hat", ["None", "Cap", "Beanie", "Sun hat", "Cowboy hat", "Bucket hat", "Crown", "Party hat"]],
+  head: ["Head covering", ["None", "Hijab", "Turban", "Patka", "Kippah", "Headwrap", "Durag", "Bonnet"]],
+  eyewear: ["Glasses", ["None", "Round glasses", "Square glasses", "Cat-eye glasses", "Sunglasses", "Eye patch"]],
+  ears: ["Ears", ["None", "Hearing aid", "Cochlear implant", "Earrings", "Hoops"]],
+  shirt: ["Outfit", ["Tee", "Hoodie", "Collar", "Sweater", "Overalls", "Jersey", "Blazer", "Henley", "Cardigan"]],
+  shirt_color: ["Outfit color", COLORS],
+  bowtie: ["Bow tie", ["None", "Bow tie"]],
+  braces: ["Braces", ["None", "Braces"]],
+  details: ["Face detail", ["Freckles", "Vitiligo", "Rosy cheeks", "Smile lines", "Birthmark", "Bindi", "Nose ring", "Makeup"]],
+};
+const PET_LOOKS: Record<string, [string, string[]]> = {
+  hat: PERSON_LOOKS.hat,
+  eyewear: PERSON_LOOKS.eyewear,
+  collar: ["Collar", ["None", "Collar", "Bell collar", "Bandana", "Bow tie"]],
+  collar_color: ["Collar color", COLORS],
+};
+
+function editPrompt(kind: string, edits: Record<string, unknown>): string | null {
+  const looks = kind === "pet" ? PET_LOOKS : PERSON_LOOKS;
+  const lines: string[] = [];
+  for (const [key, value] of Object.entries(edits ?? {})) {
+    const look = looks[key];
+    const v = String(value);
+    if (!look || !look[1].includes(v)) continue;
+    if (key === "details") lines.push(`- Add: ${v.toLowerCase()}`);
+    else if (v === "None") lines.push(`- ${look[0]}: none (remove it)`);
+    else lines.push(`- ${look[0]}: ${v.toLowerCase()}`);
+  }
+  if (lines.length === 0) return null;
+  return "Edit this cartoon portrait. Make only these changes:\n" + lines.join("\n") + "\n" +
+    "Keep everything else exactly the same: the same character and likeness, face, expression, pose, art style, " +
+    "colors, background and framing. No text, no frame, no border.";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
@@ -57,6 +100,9 @@ Deno.serve(async (req) => {
     const mime = body.mime === "image/png" ? "image/png" : "image/jpeg";
     const kind = body.kind === "pet" ? "pet" : "person";
     const role = String(body.role ?? "");
+    const editing = body.mode === "edit";
+    const text = editing ? editPrompt(kind, body.edits) : prompt(kind, role);
+    if (!text) return json({ error: "Pick at least one change." }, 400);
     const device = String(body.device ?? "").replace(/[^A-Za-z0-9_.:-]/g, "").slice(0, 64) ||
       (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
     if (image.length < 100) return json({ error: "No photo was sent." }, 400);
@@ -72,7 +118,7 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { "x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt(kind, role) }, { inline_data: { mime_type: mime, data: image } }] }],
+        contents: [{ parts: [{ text }, { inline_data: { mime_type: mime, data: image } }] }],
         generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "1:1" } },
       }),
     });
@@ -86,7 +132,7 @@ Deno.serve(async (req) => {
     if (!pic) {
       // Usually a safety block (for example, photos of young children) or no clear face.
       console.error("gemini no image", JSON.stringify(out).slice(0, 500));
-      return json({ error: "Couldn't make a cartoon from that photo. Try a clear, well-lit photo, or use Create instead." }, 422);
+      return json({ error: "Couldn't make a cartoon from that photo. Try a clear, well-lit photo." }, 422);
     }
     const d = pic.inlineData ?? pic.inline_data;
     return json({ image: d.data, mime: d.mimeType ?? d.mime_type ?? "image/png" });

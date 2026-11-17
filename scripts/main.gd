@@ -92,7 +92,7 @@ func _ready() -> void:
 	card.tapped.connect(func(_v):
 		Profile.edit_slot = "you"
 		Profile.creator_return = "main"
-		Profile.go("avatar_creator"))
+		Profile.go("my_cards"))
 
 	var online := UI.button("Play Online", Vector2(160, 790), Vector2(400, 88), UI.ACCENT, 36)
 	online.pressed.connect(func(): Profile.go("online"))

@@ -476,4 +476,4 @@ func _edit_wild() -> void:
 	_stop_animations()
 	Profile.edit_slot = "you"
 	Profile.creator_return = "explainer"
-	Profile.go("avatar_creator")
+	Profile.go("my_cards")

@@ -51,3 +51,30 @@ func _draw() -> void:
 			draw_circle(c + Vector2(0, r * 0.7), r * 0.15, color)
 		"check":
 			draw_polyline(PackedVector2Array([c + Vector2(-r * 0.55, 0), c + Vector2(-r * 0.15, r * 0.45), c + Vector2(r * 0.6, -r * 0.5)]), color, r * 0.25, true)
+		"camera":
+			var body := Rect2(c + Vector2(-r * 0.9, -r * 0.45), Vector2(r * 1.8, r * 1.2))
+			draw_rect(Rect2(c + Vector2(-r * 0.32, -r * 0.68), Vector2(r * 0.64, r * 0.3)), color)
+			draw_rect(body, color)
+			draw_circle(c + Vector2(0, r * 0.15), r * 0.42, Color("#1b2038"))
+			draw_circle(c + Vector2(0, r * 0.15), r * 0.28, color)
+			draw_circle(c + Vector2(r * 0.62, -r * 0.25), r * 0.08, Color("#1b2038"))
+		"photos":
+			var back := Rect2(c + Vector2(-r * 0.7, -r * 0.85), Vector2(r * 1.55, r * 1.2))
+			draw_rect(back, color, false, maxf(2.0, r * 0.1))
+			var front := Rect2(c + Vector2(-r * 0.9, -r * 0.55), Vector2(r * 1.55, r * 1.25))
+			draw_rect(front, color)
+			draw_circle(front.position + Vector2(r * 0.45, r * 0.38), r * 0.16, Color("#1b2038"))
+			draw_colored_polygon(PackedVector2Array([front.position + Vector2(r * 0.1, front.size.y - r * 0.1),
+				front.position + Vector2(r * 0.7, r * 0.55), front.position + Vector2(front.size.x - r * 0.1, front.size.y - r * 0.1)]), Color("#1b2038"))
+		"mic":
+			draw_rect(Rect2(c + Vector2(-r * 0.26, -r * 0.85), Vector2(r * 0.52, r * 1.0)), color)
+			draw_circle(c + Vector2(0, -r * 0.6), r * 0.26, color)
+			draw_circle(c + Vector2(0, r * 0.15), r * 0.26, color)
+			draw_arc(c + Vector2(0, r * 0.05), r * 0.5, 0.0, PI, 16, color, maxf(2.0, r * 0.1), true)
+			draw_line(c + Vector2(0, r * 0.55), c + Vector2(0, r * 0.85), color, maxf(2.0, r * 0.1))
+			draw_line(c + Vector2(-r * 0.3, r * 0.85), c + Vector2(r * 0.3, r * 0.85), color, maxf(2.0, r * 0.1))
+		"wand":
+			draw_line(c + Vector2(-r * 0.75, r * 0.75), c + Vector2(r * 0.3, -r * 0.3), color, maxf(3.0, r * 0.16), true)
+			for t in 4:
+				var a := TAU * t / 4.0 + PI / 4.0
+				draw_line(c + Vector2(r * 0.5, -r * 0.5), c + Vector2(r * 0.5, -r * 0.5) + Vector2(cos(a), sin(a)) * r * 0.38, color, maxf(2.0, r * 0.09), true)
