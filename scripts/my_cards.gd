@@ -241,18 +241,19 @@ func _layout() -> void:
 		if r == _camera_btn:
 			_upload_btn.position.y = y
 		y += r.size.y + gap
-	y = CARD_TOP + CARD_SIZE.y + 14.0
+	y = CARD_TOP + CARD_SIZE.y + 22.0
 	var extras: Array = [_look_btn, _reset_btn].filter(func(b): return b.visible)
 	for k in extras.size():
 		var b: Button = extras[k]
 		b.position = Vector2(28 + k * 338, y)
 		b.size.x = 664.0 if extras.size() == 1 else 326.0
 	if not extras.is_empty():
-		y += 52.0 + 10.0
+		y += 52.0 + 12.0
 	if _status.text != "":
 		_status.position.y = y
 		_status.size.y = 32.0
 		y += 36.0
+	y += 16.0   # breathing room above the first row of cards
 	_scroll.position = Vector2(0, y)
 	_scroll.size = Vector2(720, 1280 - y)
 
