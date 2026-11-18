@@ -57,7 +57,10 @@ export const ACTIONS: [string, string, string, number][] = [
   ["loot3", "3 Bills", "money", 4],
   ["loot4", "4 Bills", "money", 3],
   ["loot5", "5 Bills", "money", 2],
+  // Kept last so every other card keeps its id. Plays itself the moment it's drawn.
+  ["windfall", "Windfall", "tool", 2],
 ];
+const WINDFALL_CAP = 10;
 const ACTION_NAME: Record<string, string> = Object.fromEntries(ACTIONS.map((a) => [a[0], a[1]]));
 const COSTS: Record<string, number> = { swipe: 2, swap: 1, shakedown: 1, grand: 5, lockpick: 2 };
 export const HEISTS = ["swipe", "swap", "shakedown", "grand", "payup"];
@@ -187,8 +190,37 @@ export class Game {
       this.shuffle(this.s.deck);
       this.ev(p, () => "The discard pile was shuffled into a new deck.", "", -1, false);
     }
-    this.hand(p).push(this.s.deck.pop()!);
+    const card = this.s.deck.pop()!;
+    if (card.kind === "windfall") {
+      this.windfall(p);
+      const got = this.drawOne(p); // a card in its place (drawn before Windfall reaches the discard pile)
+      this.s.discard.push(card);
+      return got;
+    }
+    this.hand(p).push(card);
     return true;
+  }
+
+  // Windfall: the drawer takes the bills spent so far (sitting in the discard pile), biggest first,
+  // up to WINDFALL_CAP bills in all.
+  windfall(p: number) {
+    const loot = this.s.discard.filter((c) => isMoney(c.kind));
+    loot.sort((a, b) => (value(b.kind) - value(a.kind)) || (a.id - b.id));
+    let total = 0;
+    for (const c of loot) {
+      const v = value(c.kind);
+      if (total + v <= WINDFALL_CAP) {
+        total += v;
+        this.s.discard.splice(this.s.discard.indexOf(c), 1);
+        this.bank(p).push(c);
+      }
+    }
+    if (total > 0) {
+      this.ev(p, (v) => `Windfall! ${this.nm(p, v)} scooped up ${bills(total)} that were spent earlier in the game.`, "windfall", p, true);
+      this.collectDebt(p);
+    } else {
+      this.ev(p, (v) => `Windfall! But no spent bills were lying around yet, so ${p === v ? "you" : this.s.players[p].name} drew another card.`, "windfall", p, true);
+    }
   }
   draw(p: number, n: number) {
     let got = 0;

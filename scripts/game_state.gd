@@ -432,8 +432,36 @@ func _draw_one(p: int) -> bool:
 		discard = []
 		_shuffle(deck)
 		_event(p, "The discard pile was shuffled into a new deck.", "", -1, false)
-	hand(p).append(deck.pop_back())
+	var card: Dictionary = deck.pop_back()
+	if card["kind"] == "windfall":
+		_windfall(p)
+		var got := _draw_one(p)   # a card in its place (drawn before Windfall reaches the discard pile)
+		discard.append(card)
+		return got
+	hand(p).append(card)
 	return true
+
+
+## Windfall: the drawer takes the bills spent so far (sitting in the discard pile), biggest first,
+## up to CardDB.WINDFALL_CAP bills in all.
+func _windfall(p: int) -> void:
+	var loot: Array = discard.filter(func(c): return CardDB.is_money(c["kind"]))
+	loot.sort_custom(func(a, b):
+		var va := CardDB.value(a["kind"])
+		var vb := CardDB.value(b["kind"])
+		return va > vb if va != vb else int(a["id"]) < int(b["id"]))
+	var total := 0
+	for c in loot:
+		var v := CardDB.value(c["kind"])
+		if total + v <= CardDB.WINDFALL_CAP:
+			total += v
+			discard.erase(c)
+			bank(p).append(c)
+	if total > 0:
+		_event(p, "Windfall! %s scooped up %s that were spent earlier in the game." % [nm(p), CardDB.bills(total)], "windfall", p, true)
+		_collect_debt(p)
+	else:
+		_event(p, "Windfall! But no spent bills were lying around yet, so %s drew another card." % ("you" if nm(p) == "You" else nm(p)), "windfall", p, true)
 
 
 func _draw(p: int, n: int) -> int:

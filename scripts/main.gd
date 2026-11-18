@@ -17,6 +17,7 @@ const RULES := """[b]Goal:[/b] Complete 4 sets of gems before anyone else. 2 rub
 [b]Other considerations:[/b]
  • End each hand with 7 or fewer cards
  • Taking a vault card back or moving a wild between sets does not count as one of your %d moves per turn
+ • Windfall plays itself when you draw it: you take the bills already spent this game (sitting in the discard pile), up to 10 bills, then draw another card.
  • A Heist takes one gem from a set they haven't finished. A Grand Heist takes all the gems in a finished set.
  • Add an extra gem to a finished set and your opponent pays you 2 bills (3 bills for a second extra).
  • Need cash? Pawn a gem from your hand or your collection into your bank: 1 bill each (Rubies and Diamonds: 2). Gems a finished set needs, and wilds, can't be pawned.

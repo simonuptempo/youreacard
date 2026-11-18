@@ -212,7 +212,7 @@ func for_event(e: Dictionary, viewer := 0) -> String:
 		if text.contains(" added a"):
 			return "payup"
 		return "gem"
-	if card.begins_with("loot"):
+	if card.begins_with("loot") or card == "windfall":
 		return "bank"
 	match card:
 		"wild": return "wild"

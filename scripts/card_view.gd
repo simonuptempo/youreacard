@@ -199,7 +199,7 @@ func _draw_full(font: Font, kind: String, typ: String) -> void:
 		return
 	var role := _role()
 	if role == "":
-		_clover(Vector2(w * 0.5, hgt * 0.42), w * 0.18)
+		_no_character_art(kind, w, hgt)
 	elif face.is_empty():
 		draw_circle(Vector2(w * 0.5, hgt * 0.42), w * 0.22, Color(1, 1, 1, 0.5))
 	if role != "":
@@ -253,7 +253,7 @@ func _draw_full_art(font: Font, kind: String, typ: String) -> void:
 	if role != "" and face.is_empty() and Art.tex("role-" + role) != null:
 		Art.draw_fit(self, Art.tex("role-" + role), Rect2(w * 0.1, hgt * 0.175, w * 0.8, hgt * 0.46))
 	if role == "":
-		_clover(Vector2(w * 0.5, hgt * 0.42), w * 0.18)
+		_no_character_art(kind, w, hgt)
 	var cost := CardDB.cost(kind)
 	if cost > 0:
 		Art.draw_badge(self, Vector2(w * 0.8, hgt * 0.24), w * 0.095, cost)
@@ -407,6 +407,16 @@ static func oval(c: Vector2, rx: float, ry: float) -> PackedVector2Array:
 		var a := TAU * k / 32.0
 		pts.append(c + Vector2(cos(a) * rx, sin(a) * ry))
 	return pts
+
+
+## Cards without a character: Windfall shows a heap of coins, Lucky Break a clover.
+func _no_character_art(kind: String, w: float, hgt: float) -> void:
+	if kind == "windfall":
+		Art.draw_coin(self, "loot2", Vector2(w * 0.36, hgt * 0.47), w * 0.15)
+		Art.draw_coin(self, "loot3", Vector2(w * 0.64, hgt * 0.47), w * 0.15)
+		Art.draw_coin(self, "loot5", Vector2(w * 0.5, hgt * 0.37), w * 0.17)
+	else:
+		_clover(Vector2(w * 0.5, hgt * 0.42), w * 0.18)
 
 
 func _clover(c: Vector2, r: float) -> void:
