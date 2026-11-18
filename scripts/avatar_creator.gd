@@ -41,12 +41,13 @@ var _original: Image          # the photo as taken, before the cartoon
 var _cartoon_busy := false
 var _cartoon_note := ""       # "", "cartoon", "original", or an error message
 var _kind := "me"             # whose photo: me, pet or person
+var _before: Dictionary = {}  # the card as it was, for Cancel
 const GROUPS := [["skin", "face", "face_size", "eyes", "eye_color", "brows", "nose", "mouth", "face_details"], ["hair", "hair_color", "facial"], ["shirt", "shirt_color", "head", "head_color", "hat", "hat_color", "bowtie"], ["eyewear", "ears", "accessory_details", "braces"]]
 
 func _ready() -> void:
 	theme = UI.make_theme()
 	slot = Profile.edit_slot
-	# Until it's customized, a card shows its own character (Pip on Swipe, and so on).
+	# Until it's customized, a card shows its own character (Pip on Heist, and so on).
 	var own_art := "res://art/role-%s.png" % (slot if slot in CardDB.ROLES else "you")
 	data = Profile.slot_face(slot).duplicate(true) if Profile.is_custom(slot) else {"portrait_path": own_art}
 	_manual_data = AvatarView.normalized(Profile.default_face(slot))
@@ -59,11 +60,14 @@ func _ready() -> void:
 	else:
 		_portrait_data = data.duplicate(true)
 	_kind = Profile.photo_kind if Profile.creator_mode != "" else "me"
+	_before = Profile.slots.get(slot, {}).duplicate(true)   # put back on Cancel
 	# My Cards may have chosen how to customize: a photo (yours, a pet's or a friend's) or Create.
 	var wanted := Profile.creator_mode
 	Profile.creator_mode = ""
 	add_child(UI.panel(Vector2.ZERO, Vector2(720, 1280), UI.BG, 0))
 	var title := "Create your Wild card" if slot == "you" else "Make this card yours"
+	if Profile.creator_via_crew:
+		title = "Create a character"
 	var sub := "You're part of the crew. Choose how you'll appear."
 	if wanted == "photo":
 		title = {"me": "Put yourself on this card", "pet": "Put your pet on this card", "person": "Put someone you know on this card"}.get(_kind, title)
@@ -97,6 +101,7 @@ func _ready() -> void:
 		b.pressed.connect(_set_mode.bind(["photo", "gallery", "builder"][i]))
 		add_child(b)
 		_source_buttons.append(b)
+		b.visible = not Profile.creator_via_crew   # photos live on the crew screen
 	_body = Control.new()
 	_body.position = Vector2(28, 660)
 	_body.size = Vector2(664, 490)
@@ -525,14 +530,20 @@ func _use_default() -> void:
 
 
 func _cancel() -> void:
-	if _mode == "builder":
+	# Put the card back exactly as it was before you started.
+	if _before.is_empty():
 		Profile.clear_slot(slot)
-		_leave(true)
 	else:
-		_leave(false)
+		Profile.slots[slot] = _before.duplicate(true)
+		Profile.save_profile()
+	_leave(false)
 
 
 func _leave(saved: bool) -> void:
+	if Profile.creator_via_crew:
+		Profile.creator_via_crew = false
+		Profile.go("my_cards")
+		return
 	match Profile.creator_return:
 		"onboarding":
 			# Your wild card leads on to the bills step; bills return to it.

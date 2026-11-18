@@ -741,7 +741,7 @@ func _do_tool(p: int, move: Dictionary) -> void:
 		vault(o)[move["slot"]] = null
 		hand(p).append(target)
 		var what: String = CardDB.display_name(target["kind"])
-		var label := "a %s twist" % what if target["kind"] in CardDB.TRAPS else "a decoy (%s)" % what
+		var label := "a %s (Defense)" % what if target["kind"] in CardDB.TRAPS else "a decoy (%s)" % what
 		_event(p, "%s picked %s vault, found %s, and stole it!" % [nm(p), poss(o), label], "lockpick", p, true)
 
 
@@ -893,7 +893,7 @@ func _best_unfinished_set(a: int, v: int) -> String:
 	return best
 
 
-## For a reflected Swipe: pick the victim's card the beneficiary most wants.
+## For a reflected Heist (swipe): pick the victim's card the beneficiary most wants.
 func _best_steal_target(a: int, v: int) -> int:
 	var best_id := -1
 	var best_score := -1.0

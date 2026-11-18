@@ -42,6 +42,7 @@ var _preview: CardView
 var _name_edit: LineEdit
 var _camera_btn: Button
 var _upload_btn: Button
+var _create_btn: Button
 var _voice_btn: Button
 var _look_btn: Button
 var _reset_btn: Button
@@ -100,10 +101,13 @@ func _ready() -> void:
 	_name_edit.text_submitted.connect(func(_t): _name_edit.release_focus())
 	add_child(_name_edit)
 
-	_camera_btn = _icon_button("camera", "Take a selfie", Vector2(RIGHT_X, 230))
+	var third := (RIGHT_W - 16.0) / 3.0
+	_camera_btn = _icon_button("camera", "Take a selfie", Vector2(RIGHT_X, 230), third)
 	_camera_btn.pressed.connect(_take_photo)
-	_upload_btn = _icon_button("photos", "Upload a photo", Vector2(RIGHT_X + RIGHT_W / 2 + 6, 230))
+	_upload_btn = _icon_button("photos", "Upload a photo", Vector2(RIGHT_X + third + 8, 230), third)
 	_upload_btn.pressed.connect(_choose_photo)
+	_create_btn = _icon_button("face", "Create", Vector2(RIGHT_X + 2 * (third + 8), 230), third)
+	_create_btn.pressed.connect(_create)
 
 	_voice_btn = UI.button("", Vector2(RIGHT_X, 346), Vector2(RIGHT_W, 56), Color("#c0392b"), 21)
 	_voice_btn.pressed.connect(_record_voice)
@@ -152,11 +156,10 @@ func _ready() -> void:
 	_select(_slot)
 
 
-func _icon_button(icon: String, text: String, pos: Vector2) -> Button:
-	var w := RIGHT_W / 2 - 6
+func _icon_button(icon: String, text: String, pos: Vector2, w: float) -> Button:
 	var b := UI.button("", pos, Vector2(w, 104), UI.PANEL, 18)
-	b.add_child(Icon.make(icon, Vector2(w / 2 - 27, 10), Vector2(54, 54)))
-	var l := UI.label(text, Vector2(0, 66), Vector2(w, 32), 18, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	b.add_child(Icon.make(icon, Vector2(w / 2 - 25, 8), Vector2(50, 50)))
+	var l := UI.label(text, Vector2(2, 62), Vector2(w - 4, 38), 16, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(l)
 	b.set_meta("label", l)
@@ -208,6 +211,7 @@ func _refresh() -> void:
 	_camera_btn.get_meta("label").text = "Take a photo" if _is_pet(_slot) else "Take a selfie"
 	_camera_btn.disabled = busy
 	_upload_btn.disabled = busy
+	_create_btn.disabled = busy
 	_voice_btn.visible = VoiceRecorder.speaks(_slot)
 	if _voice_btn.visible:
 		var n := VoiceRecorder.recorded_count(_slot)
@@ -217,7 +221,7 @@ func _refresh() -> void:
 	_reset_btn.visible = Profile.is_custom(_slot) and _busy_slot != _slot
 	_reset_btn.text = "Change back to %s" % _original_name(_slot)
 	for b in _badges:
-		_badges[b].visible = b == Profile.me_slot
+		_badges[b].visible = b == Profile.me_slot and Profile.is_custom(b)   # only once it's really you
 	_layout()
 	_refresh_preview()
 
@@ -240,6 +244,7 @@ func _layout() -> void:
 		r.position.y = y
 		if r == _camera_btn:
 			_upload_btn.position.y = y
+			_create_btn.position.y = y
 		y += r.size.y + gap
 	y = CARD_TOP + CARD_SIZE.y + 22.0
 	var extras: Array = [_look_btn, _reset_btn].filter(func(b): return b.visible)
@@ -536,6 +541,17 @@ func _make_me(slot: String) -> void:
 	Profile.me_slot = slot
 	Profile.save_profile()
 	_select(_slot)
+
+
+## Create: the character builder (face, hair, facial hair, clothes, accessories…) for this card.
+func _create() -> void:
+	if _name_edit.has_focus():
+		_name_edit.release_focus()
+	Profile.edit_slot = _slot
+	Profile.creator_mode = "builder"
+	Profile.photo_kind = "pet" if _is_pet(_slot) else "me"
+	Profile.creator_via_crew = true
+	Profile.go("avatar_creator")
 
 
 # ------------------------------------------------------------------ voice

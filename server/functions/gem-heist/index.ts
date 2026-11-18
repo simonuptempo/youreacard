@@ -1,7 +1,7 @@
 // Gem Heist server: every online action goes through here.
 // Players never read the games table directly; this function hands each seat only
 // what that seat may see (see Game.view in engine.ts).
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { Game, type Move } from "./engine.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {

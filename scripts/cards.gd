@@ -16,14 +16,14 @@ const TREASURES := {
 
 const ACTIONS := {
 	"wild":      {"name": "Wild", "type": "wild",  "count": 2, "role": "you",         "text": "Counts as any gem"},
-	"swipe":     {"name": "Swipe",          "type": "heist", "count": 7, "role": "pickpocket",  "text": "Steal 1 gem from an incomplete set"},
+	"swipe":     {"name": "Heist",          "type": "heist", "count": 7, "role": "pickpocket",  "text": "Take 1 gem from a set they haven't finished"},
 	"swap":      {"name": "Trade",          "type": "heist", "count": 4, "role": "trickster",   "text": "Trade one of your gems for one of theirs"},
 	"shakedown": {"name": "Shakedown",      "type": "heist", "count": 4, "role": "boss",        "text": "Take a random card from their hand"},
-	"grand":     {"name": "Grand Heist",    "type": "heist", "count": 2, "role": "mastermind",  "text": "Steal a COMPLETE set"},
+	"grand":     {"name": "Grand Heist",    "type": "heist", "count": 2, "role": "mastermind",  "text": "Take ALL the gems in one of their finished sets"},
 	"payup":     {"name": "Pay Up!",        "type": "heist", "count": 4, "role": "boss",        "text": "They pay you 2 bills (or gems, if they have no bills)"},
-	"shield":    {"name": "Shield",         "type": "trap",  "count": 5, "role": "bouncer",     "text": "Twist: blocks an action"},
-	"mirror":    {"name": "Mirror",         "type": "trap",  "count": 3, "role": "illusionist", "text": "Twist: bounces an action back"},
-	"snare":     {"name": "Snare",          "type": "trap",  "count": 2, "role": "trapper",     "text": "Twist: blocks an action and you keep their card"},
+	"shield":    {"name": "Shield",         "type": "trap",  "count": 5, "role": "bouncer",     "text": "Defense: blocks an action"},
+	"mirror":    {"name": "Mirror",         "type": "trap",  "count": 3, "role": "illusionist", "text": "Defense: bounces an action back"},
+	"snare":     {"name": "Snare",          "type": "trap",  "count": 2, "role": "trapper",     "text": "Defense: blocks an action and you keep their card"},
 	"lockpick":  {"name": "Lockpick",       "type": "tool",  "count": 4, "role": "locksmith",   "text": "Steal a random card from their vault"},
 	"lucky":     {"name": "Lucky Break",    "type": "tool",  "count": 4, "role": "",            "text": "Draw 2 cards"},
 	"loot1":     {"name": "1 Bill",          "type": "money", "count": 6, "role": "",            "text": "Bank it to pay for Heists"},
@@ -45,6 +45,13 @@ const ROLE_TITLES := {
 const ROLES := ["you", "pickpocket", "trickster", "boss", "mastermind", "bouncer", "illusionist", "trapper", "locksmith"]
 
 const HEISTS := ["swipe", "swap", "shakedown", "grand", "payup"]
+
+## What a card type is called on the card and in menus.
+static func type_label(typ: String) -> String:
+	match typ:
+		"heist": return "ACTION"
+		"trap": return "DEFENSE"
+	return typ.to_upper()
 const TRAPS := ["shield", "mirror", "snare"]
 
 const TYPE_COLORS := {

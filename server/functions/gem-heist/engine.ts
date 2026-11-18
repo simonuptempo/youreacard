@@ -42,7 +42,7 @@ export const TREASURES: Record<string, { name: string; one: string; size: number
 // Same order as cards.gd ACTIONS, so card ids match the Godot build.
 export const ACTIONS: [string, string, string, number][] = [
   ["wild", "Wild", "wild", 2],
-  ["swipe", "Swipe", "heist", 7],
+  ["swipe", "Heist", "heist", 7],
   ["swap", "Trade", "heist", 4],
   ["shakedown", "Shakedown", "heist", 4],
   ["grand", "Grand Heist", "heist", 2],
@@ -570,7 +570,7 @@ export class Game {
       this.vault(o)[slot] = null;
       this.hand(p).push(target);
       const what = displayName(target.kind);
-      const label = TRAPS.includes(target.kind) ? `a ${what} twist` : `a decoy (${what})`;
+      const label = TRAPS.includes(target.kind) ? `a ${what} (Defense)` : `a decoy (${what})`;
       this.ev(p, (v) => `${this.nm(p, v)} picked ${this.poss(o, v)} vault, found ${label}, and stole it!`, "lockpick", p, true);
     }
   }

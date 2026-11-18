@@ -78,3 +78,9 @@ func _draw() -> void:
 			for t in 4:
 				var a := TAU * t / 4.0 + PI / 4.0
 				draw_line(c + Vector2(r * 0.5, -r * 0.5), c + Vector2(r * 0.5, -r * 0.5) + Vector2(cos(a), sin(a)) * r * 0.38, color, maxf(2.0, r * 0.09), true)
+		"face":
+			draw_circle(c, r * 0.82, color)
+			draw_circle(c + Vector2(-r * 0.3, -r * 0.18), r * 0.11, Color("#1b2038"))
+			draw_circle(c + Vector2(r * 0.3, -r * 0.18), r * 0.11, Color("#1b2038"))
+			draw_arc(c + Vector2(0, r * 0.05), r * 0.38, 0.35, PI - 0.35, 14, Color("#1b2038"), maxf(2.0, r * 0.1), true)
+			draw_arc(c + Vector2(0, -r * 0.15), r * 0.86, PI + 0.25, TAU - 0.25, 18, Color("#1b2038"), maxf(3.0, r * 0.2), true)

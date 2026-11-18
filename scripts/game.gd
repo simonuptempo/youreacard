@@ -20,10 +20,10 @@ var _practice_completed := 0
 var _practice_panel: Control
 const PRACTICE_TIPS := [
 	"Tap a card to see what you can do. Try banking a bill or collecting a gem.",
-	"Banked bills pay for heists. Banking a bill uses one play.",
+	"Banked bills pay for action cards. Banking a bill uses one play.",
 	"Build matching gem sets. The dots show how many you need.",
-	"Try a heist when you can afford its cost. Tap a highlighted target.",
-	"Hide a twist in your vault to protect yourself on the bot's turn.",
+	"Try an action card when you can afford its cost. Tap a highlighted target.",
+	"Hide a Defense card in your vault to protect yourself on the bot's turn.",
 	"Wild cards can count as any gem. Tap one to see its choices.",
 	"Watch the bot's replay to see what changed and why.",
 	"Moving your Wilds and taking back vault cards are free actions.",
@@ -849,7 +849,7 @@ func _on_opp_vault_tapped(_v: CardView, slot: int) -> void:
 				_apply_and_clear(m)
 				return
 	else:
-		_set_msg("A face-down card. A twist… or a bluff? A Lockpick would tell you.")
+		_set_msg("A face-down card. A Defense… or a bluff? A Lockpick would tell you.")
 
 
 func _on_my_vault_tapped(_v: CardView, slot: int) -> void:
@@ -1327,17 +1327,17 @@ func _show_recap() -> void:
 	if not _recap["you_gained"].is_empty():
 		section.call("YOU GAINED", _recap["you_gained"], Color("#8fe3a0"), "")
 	if not _recap["twists"].is_empty():
-		section.call("YOUR TWISTS", _recap["twists"], Color("#b9a7ff"), "")
+		section.call("YOUR DEFENSES", _recap["twists"], Color("#b9a7ff"), "")
 	section.call("EVERYTHING THEY DID", _recap["did"], UI.MUTED, "They just drew cards.")
 	var armed := 0
 	for c in g.vault(0):
 		if c != null and c["kind"] in CardDB.TRAPS:
 			armed += 1
-	var note := "Twists can't undo a turn that already happened. They fire on their own, mid-turn, if they're hidden in your vault beforehand."
+	var note := "Defense cards can't undo a turn that already happened. They fire on their own, mid-turn, if they're hidden in your vault beforehand."
 	if armed > 0:
-		note += " You have %d twist%s set for %s's next turn." % [armed, "" if armed == 1 else "s", bot_name]
+		note += " You have %d Defense card%s set for %s's next turn." % [armed, "" if armed == 1 else "s", bot_name]
 	else:
-		note += " Right now you have no twists set for their next turn."
+		note += " Right now you have no Defense cards set for their next turn."
 	_recap_layer.add_child(UI.label(note, Vector2(56, 1012), Vector2(608, 30), 17, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 	var ok := UI.button("Got it — my turn", Vector2(170, 1150), Vector2(380, 80), UI.ACCENT, 28)
 	ok.pressed.connect(_close_recap)

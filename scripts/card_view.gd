@@ -209,7 +209,7 @@ func _draw_full(font: Font, kind: String, typ: String) -> void:
 	for line in lines:
 		draw_string(font, Vector2(0, y), line, HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.082), Color("#222222"))
 		y += w * 0.095
-	draw_string(font, Vector2(w * 0.07, hgt * 0.975), ("TWIST" if typ == "trap" else typ.to_upper()), HORIZONTAL_ALIGNMENT_LEFT, w, int(w * 0.065), Color("#555555"))
+	draw_string(font, Vector2(w * 0.07, hgt * 0.975), CardDB.type_label(typ), HORIZONTAL_ALIGNMENT_LEFT, w, int(w * 0.065), Color("#555555"))
 
 
 ## Card face built from the painted frame: ivory base → frame → native title, art and rules.
@@ -258,7 +258,7 @@ func _draw_full_art(font: Font, kind: String, typ: String) -> void:
 	if cost > 0:
 		Art.draw_badge(self, Vector2(w * 0.8, hgt * 0.24), w * 0.095, cost)
 	if small:
-		draw_string(font, Vector2(0, hgt * 0.9), ("TWIST" if typ == "trap" else typ.to_upper()), HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.09), Color(ink, 0.8))
+		draw_string(font, Vector2(0, hgt * 0.9), CardDB.type_label(typ), HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.09), Color(ink, 0.8))
 		return
 	if kind == "wild":
 		draw_string(font, Vector2(0, hgt * 0.715), _role_label(role), HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.09), ink)
@@ -298,7 +298,7 @@ func _draw_full_art(font: Font, kind: String, typ: String) -> void:
 		draw_string(font, Vector2(0, y), line, HORIZONTAL_ALIGNMENT_CENTER, w, fs, body)
 		y += fs * 1.15
 	if y < hgt * 0.9:
-		draw_string(font, Vector2(0, hgt * 0.925), ("TWIST" if typ == "trap" else typ.to_upper()), HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.062), Color(ink, 0.8))
+		draw_string(font, Vector2(0, hgt * 0.925), CardDB.type_label(typ), HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.062), Color(ink, 0.8))
 
 
 func _draw_chip(font: Font, kind: String, typ: String) -> void:
@@ -490,7 +490,7 @@ func _draw_placeholder(font: Font, w: float, hgt: float, ink: Color, typ := "wil
 	draw_string(font, Vector2(0, hgt * 0.72), "This could be you!", HORIZONTAL_ALIGNMENT_CENTER, w, fs, ink)
 	draw_string(font, Vector2(0, hgt * 0.8), "Tap to add your photo", HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.075), Color("#2b2233"))
 	draw_string(font, Vector2(0, hgt * 0.865), "and join the crew", HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.075), Color("#2b2233"))
-	draw_string(font, Vector2(0, hgt * 0.94), ("TWIST" if typ == "trap" else typ.to_upper()), HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.062), Color(ink, 0.8))
+	draw_string(font, Vector2(0, hgt * 0.94), CardDB.type_label(typ), HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.062), Color(ink, 0.8))
 
 
 func _sync_edit_badge() -> void:

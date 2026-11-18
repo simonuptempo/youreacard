@@ -7,18 +7,18 @@ const STEPS := [
 	["BE THE FIRST TO COLLECT FOUR SETS", ""],
 	["START YOUR TURN", "Draw 2 cards and play up to %d cards"],
 	["ACTION CARDS", "Pay for each one with bills from your bank"],
-	["TWISTS", "Move them to your vault. They spring on attack."],
+	["DEFENSE CARDS", "Move them to your vault. They spring on attack."],
 	["YOU'RE A CARD", "...and you are wild"],
 ]
 const TABS := ["Bank a bill", "Play a gem", "Move to vault", "Take an action"]
 const ACTIONS := [
 	["swap", "Trade one of your gems for one of theirs. Both must come from sets that aren't finished."],
 	["shakedown", "Take a random card from your opponent's hand."],
-		["swipe", "Steal one gem from a set your opponent hasn't finished."],
-	["lockpick", "Steal a random face-down card from their vault. Twists can't stop it."],
-	["grand", "Steal an entire finished set."],
+		["swipe", "Heist: take one gem from a set your opponent hasn't finished."],
+	["lockpick", "Steal a random face-down card from their vault. Defense cards can't stop it."],
+	["grand", "Grand Heist: take ALL the gems in one of their finished sets."],
 ]
-const TWISTS := [
+const DEFENSES := [
 	["shield", "Blocks the action."],
 	["mirror", "Bounces the action back at the player who played it. A bounced Trade gives you a free counter-trade. A bounced Grand Heist takes their best unfinished set if they have no finished one."],
 	["snare", "Blocks the action, and you keep their card."],
@@ -149,7 +149,7 @@ func _show_step(index: int) -> void:
 		1: _sets()
 		2: _turn()
 		3: _rows(ACTIONS, false)
-		4: _rows(TWISTS, true)
+		4: _rows(DEFENSES, true)
 		5: _wild()
 
 
@@ -397,7 +397,7 @@ func _tab_vault() -> void:
 	tw.tween_callback(func(): c.setup({"id": 0, "kind": "shield"}, {}, true))
 	tw.tween_property(c, "scale:x", 1.0, 0.16)
 	tw.tween_property(c, "position", Vector2(50, 64), 0.65).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	_label(_tab_root, "Move any card to your vault. Your opponent only sees its back, so it could be a twist... or a bluff. Move it back to your hand any time for free.", Vector2(30, 330), Vector2(620, 120), 24)
+	_label(_tab_root, "Move any card to your vault. Your opponent only sees its back, so it could be a Defense card... or a bluff. Move it back to your hand any time for free.", Vector2(30, 330), Vector2(620, 120), 24)
 
 
 func _tab_action() -> void:

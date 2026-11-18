@@ -21,6 +21,7 @@ var beaten: Array = []           # names of characters you have beaten (cycles y
 
 ## Navigation hints (not saved): where the avatar creator / explainer return to,
 ## and which onboarding step to show.
+var creator_via_crew := false     # Create on the crew screen: the builder returns there
 var creator_return := "main"       # where the crew screen (my_cards) goes back to: main | settings | onboarding | explainer
 var creator_mode := ""         # open the card maker on "photo", "builder" or "gallery"
 var photo_kind := "me"          # whose photo: "me", "pet" or "person" (a friend or family member)

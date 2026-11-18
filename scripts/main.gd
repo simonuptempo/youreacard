@@ -5,19 +5,19 @@ const RULES := """[b]Goal:[/b] Complete 4 sets of gems before anyone else. 2 rub
 
 [b]On your turn:[/b] Draw 2 cards, then play up to %d cards. You can...
  • Add a gem to your collection or a bill to your bank
- • Play a heist or tool (if you have enough bills to afford it)
+ • Play an action or tool (if you have enough bills to afford it)
  • Move any card to one of the two slots in your vault (your opponent sees it face-down)
 
 [b]Costs[/b]
- • 0 bills: Twists, Pay Up!
+ • 0 bills: Defense cards, Pay Up!
  • 1 bill: Trade, Shakedown
- • 2 bills: Swipe, Lockpick
+ • 2 bills: Heist, Lockpick
  • 5 bills: Grand Heist
 
 [b]Other considerations:[/b]
  • End each hand with 7 or fewer cards
  • Taking a vault card back or moving a wild between sets does not count as one of your %d moves per turn
- • Heists can steal from an incomplete set. Grand Heists steal a complete set.
+ • A Heist takes one gem from a set they haven't finished. A Grand Heist takes all the gems in a finished set.
  • Add an extra gem to a finished set and your opponent pays you 2 bills (3 bills for a second extra).
  • Need cash? Pawn a gem from your hand or your collection into your bank: 1 bill each (Rubies and Diamonds: 2). Gems a finished set needs, and wilds, can't be pawned.
  • Payments make change when they can. Out of bills? They pay with gems from unfinished sets (at pawn value), then owe the rest from the next bills they get.
@@ -81,7 +81,7 @@ func _ready() -> void:
 	add_child(UI.label(hello, Vector2(24, 34), Vector2(508, 50), 26, UI.MUTED))
 	add_child(Art.logo(Vector2(140, 176), Vector2(440, 192)))
 	add_child(UI.label("GEM HEIST", Vector2(40, 362), Vector2(640, 48), 38, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
-	add_child(UI.label("Collect. Steal. Twist. Star in your own deck.", Vector2(40, 410), Vector2(640, 32), 20, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	add_child(UI.label("Collect. Steal. Defend. Star in your own deck.", Vector2(40, 410), Vector2(640, 32), 20, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 
 	var card := CardView.new()
 	card.position = Vector2(250, 452)

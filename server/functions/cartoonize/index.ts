@@ -1,7 +1,7 @@
 // Turns a photo into a cartoon portrait for a card, using Google Gemini 2.5 Flash Image.
 // The photo is sent to Gemini and the cartoon comes back to the phone; nothing is stored
 // here except a count per device per day (limits keep the cost predictable).
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
