@@ -1432,98 +1432,87 @@ func _build_my_recap(before: Dictionary, after: Dictionary, evs: Array) -> Dicti
 		"twists": twists, "did": did, "quotes": quotes}
 
 
-## After End Turn: a recap of your turn. Returns false (nothing shown) if you didn't play anything.
+## After End Turn: a recap of your turn, laid out exactly like the opponent's recap panel
+## (same box, title, list, quotes and button row). Returns false if you didn't play anything.
 func _show_my_recap() -> bool:
-	var r := _build_my_recap(_my_before, _snapshot(), _my_turn_events())
+	var evs := _my_turn_events()
+	var r := _build_my_recap(_my_before, _snapshot(), evs)
 	if r["did"].is_empty() and r["twists"].is_empty():
 		return false
 	if is_instance_valid(_recap_layer):
 		_recap_layer.queue_free()
 	_recap_layer = Control.new()
-	_recap_layer.z_index = 40
 	_recap_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_recap_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_recap_layer.z_index = 25
 	add_child(_recap_layer)
-	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.05, 0.06, 0.88)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_recap_layer.add_child(dim)
-	_recap_layer.add_child(UI.panel(Vector2(30, 90), Vector2(660, 1040), Color("#1d2a2c"), 22))
-	_recap_layer.add_child(UI.label("YOUR TURN", Vector2(30, 110), Vector2(660, 50), 34, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
+	var y := HAND_Y - 46.0
+	var bg := Panel.new()
+	bg.position = Vector2(16, y)
+	bg.size = Vector2(688, 1150 - y)
+	bg.add_theme_stylebox_override("panel", UI.box(Color("#14302c"), 18, UI.ACCENT, 2))
+	_recap_layer.add_child(bg)
+	_recap_layer.add_child(UI.label("YOUR TURN", Vector2(36, y + 12), Vector2(420, 36), 26, UI.ACCENT))
+	_recap_layer.add_child(UI.label("here's what happened", Vector2(36, y + 46), Vector2(420, 24), 15, UI.MUTED))
 	var scroll := ScrollContainer.new()
-	scroll.position = Vector2(56, 176)
-	scroll.size = Vector2(608, 940)
+	scroll.position = Vector2(36, y + 80)
+	scroll.size = Vector2(448, 1150 - y - 180)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_recap_layer.add_child(scroll)
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(590, 0)
+	box.custom_minimum_size = Vector2(440, 0)
 	box.add_theme_constant_override("separation", 6)
 	scroll.add_child(box)
-	var section := func(title: String, lines: Array, color: Color, empty: String):
-		if lines.is_empty() and empty == "":
-			return
-		var h := Label.new()
-		h.text = title
-		h.add_theme_font_size_override("font_size", 22)
-		h.add_theme_color_override("font_color", color)
-		box.add_child(h)
-		var items: Array = lines if not lines.is_empty() else [empty]
-		for line in items:
-			var l := Label.new()
-			l.text = ("•  " + str(line)) if not lines.is_empty() else str(line)
-			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			l.custom_minimum_size = Vector2(590, 0)
-			l.add_theme_font_size_override("font_size", 22)
-			l.add_theme_color_override("font_color", UI.TEXT if not lines.is_empty() else UI.MUTED)
-			box.add_child(l)
-		var gap := Control.new()
-		gap.custom_minimum_size = Vector2(0, 14)
-		box.add_child(gap)
-	var who := bot_name.to_upper()
-	var known := not _my_before.is_empty()   # after resuming a saved game, only the plays are known
-	section.call("YOU GAINED", r["you_gained"], Color("#8fe3a0"), "Nothing new this turn." if known else "")
-	section.call("%s LOST" % who, r["they_lost"], Color("#f0b27a"), "Nothing." if known else "")
-	section.call("%s'S TWISTS" % who, r["twists"], Color("#b9a7ff"), "")
-	section.call("YOU LOST", r["you_lost"], Color("#ff8a7a"), "")
-	section.call("%s GAINED" % who, r["they_gained"], Color("#f0b27a"), "")
-	section.call("EVERYTHING YOU DID", r["did"], UI.MUTED, "")
-	# Who said what: each character's face with their line in a bubble.
+	# Everything that happened this turn, in order (your plays and any Twist that answered them).
+	for e in evs:
+		var t := str(e["text"])
+		if t.contains(" drew "):
+			continue
+		var l := Label.new()
+		l.text = "•  " + t
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(440, 0)
+		l.add_theme_font_size_override("font_size", 19)
+		l.add_theme_color_override("font_color", UI.TEXT)
+		box.add_child(l)
+	# The summary, worded like the opponent's: what changed hands.
+	var lines: Array = []
+	if not _my_before.is_empty():
+		var g_: Array = r["you_gained"]
+		var l_: Array = r["they_lost"]
+		lines.append("You gained: " + (", ".join(g_) if not g_.is_empty() else "nothing"))
+		lines.append("%s lost: " % bot_name + (", ".join(l_) if not l_.is_empty() else "nothing"))
+		if not r["you_lost"].is_empty():
+			lines.append("You lost: " + ", ".join(r["you_lost"]))
+		if not r["they_gained"].is_empty():
+			lines.append("%s gained: " % bot_name + ", ".join(r["they_gained"]))
+	var text := "\n".join(lines)
 	var quotes: Array = r["quotes"]
-	if not quotes.is_empty():
-		var h := Label.new()
-		h.text = "WHO SAID WHAT"
-		h.add_theme_font_size_override("font_size", 22)
-		h.add_theme_color_override("font_color", Color("#f3ca89"))
-		box.add_child(h)
-		for e in quotes.slice(maxi(0, quotes.size() - 6)):
-			var row := HBoxContainer.new()
-			row.add_theme_constant_override("separation", 12)
-			var face := AvatarView.new()
-			face.data = _speaker_face(e)
-			face.custom_minimum_size = Vector2(60, 70)
-			face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			row.add_child(face)
-			var bubble := PanelContainer.new()
-			var style := UI.box(Color("#fffaf0"), 14, Color("#1b2038"), 2)
-			style.content_margin_left = 14
-			style.content_margin_right = 14
-			style.content_margin_top = 8
-			style.content_margin_bottom = 8
-			bubble.add_theme_stylebox_override("panel", style)
-			bubble.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			var l := Label.new()
-			l.text = "“%s”" % str(e["said"])
-			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			l.custom_minimum_size = Vector2(470, 0)
-			l.add_theme_font_size_override("font_size", 20)
-			l.add_theme_color_override("font_color", Color("#1b2038"))
-			bubble.add_child(l)
-			row.add_child(bubble)
-			box.add_child(row)
-	var ok := UI.button("Got it — %s's turn" % bot_name, Vector2(150, 1150), Vector2(420, 80), UI.ACCENT, 28)
-	ok.pressed.connect(func():
+	if quotes.is_empty():
+		if text != "":
+			_recap_layer.add_child(UI.label(text, Vector2(494, y + 76), Vector2(196, 260), 17, Color("#f3ca89")))
+	else:
+		if text != "":
+			var sep := HSeparator.new()
+			sep.custom_minimum_size = Vector2(440, 10)
+			box.add_child(sep)
+			var sum := UI.label(text, Vector2.ZERO, Vector2(440, 0), 18, Color("#f3ca89"))
+			sum.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			sum.custom_minimum_size = Vector2(440, 0)
+			box.add_child(sum)
+		_show_quotes(quotes.slice(maxi(0, quotes.size() - 4)), Vector2(492, y + 70), _recap_layer)
+	# Same button row as the opponent's recap.
+	var back := UI.button("Back to my turn", Vector2(40, 1150 - 82), Vector2(250, 62), Color("#314742"), 21)
+	back.pressed.connect(func():
+		_close_recap_layer_only()
+		mode = "play"
+		refresh())
+	_recap_layer.add_child(back)
+	var done := UI.button("End turn", Vector2(310, 1150 - 82), Vector2(370, 62), UI.ACCENT, 23)
+	done.pressed.connect(func():
 		_close_recap_layer_only()
 		_finish_end_turn())
-	_recap_layer.add_child(ok)
+	_recap_layer.add_child(done)
 	return true
 
 
@@ -1813,7 +1802,9 @@ func _replay_summary() -> void:
 
 
 ## Up to four little faces down the right side, each with what they said.
-func _show_quotes(quotes: Array, at: Vector2) -> void:
+func _show_quotes(quotes: Array, at: Vector2, parent: Control = null) -> void:
+	if parent == null:
+		parent = _replay_panel
 	var y := at.y
 	for e in quotes:
 		var face := AvatarView.new()
@@ -1821,7 +1812,7 @@ func _show_quotes(quotes: Array, at: Vector2) -> void:
 		face.position = Vector2(at.x, y + 4)
 		face.size = Vector2(56, 66)
 		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_replay_panel.add_child(face)
+		parent.add_child(face)
 		var lbl := UI.label(str(e["said"]), Vector2(at.x + 76, y + 8), Vector2(118, 0), 16, Color("#1b2038"), HORIZONTAL_ALIGNMENT_CENTER)
 		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var font := lbl.get_theme_font("font")
@@ -1832,14 +1823,14 @@ func _show_quotes(quotes: Array, at: Vector2) -> void:
 		bubble.size = Vector2(134, h)
 		bubble.add_theme_stylebox_override("panel", UI.box(Color("#fffaf0"), 14, Color("#1b2038"), 2))
 		bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_replay_panel.add_child(bubble)
+		parent.add_child(bubble)
 		var tail := Polygon2D.new()
 		tail.polygon = PackedVector2Array([Vector2(at.x + 70, y + 16), Vector2(at.x + 70, y + 34), Vector2(at.x + 56, y + 30)])
 		tail.color = Color("#fffaf0")
-		_replay_panel.add_child(tail)
+		parent.add_child(tail)
 		lbl.size = Vector2(118, h - 14)
 		lbl.position = Vector2(at.x + 76, y + 7)
-		_replay_panel.add_child(lbl)
+		parent.add_child(lbl)
 		for n in [face, bubble, tail, lbl]:
 			n.modulate.a = 0.0
 			n.create_tween().tween_property(n, "modulate:a", 1.0, 0.25).set_delay(0.12 * quotes.find(e))
