@@ -59,6 +59,7 @@ export const ACTIONS: [string, string, string, number][] = [
   ["loot5", "5 Bills", "money", 2],
   // Kept last so every other card keeps its id. Plays itself the moment it's drawn.
   ["windfall", "Windfall", "tool", 2],
+  ["doublecross", "Double Crossed", "tool", 2],
 ];
 const WINDFALL_CAP = 10;
 const ACTION_NAME: Record<string, string> = Object.fromEntries(ACTIONS.map((a) => [a[0], a[1]]));
@@ -191,14 +192,36 @@ export class Game {
       this.ev(p, () => "The discard pile was shuffled into a new deck.", "", -1, false);
     }
     const card = this.s.deck.pop()!;
-    if (card.kind === "windfall") {
-      this.windfall(p);
+    if (card.kind === "windfall" || card.kind === "doublecross") {
+      if (card.kind === "windfall") this.windfall(p);
+      else this.doubleCross(p);
       const got = this.drawOne(p); // a card in its place (drawn before Windfall reaches the discard pile)
       this.s.discard.push(card);
       return got;
     }
     this.hand(p).push(card);
     return true;
+  }
+
+  // Double Crossed: someone steals bills from the drawer's bank, biggest first, up to WINDFALL_CAP
+  // bills in all. They land in the discard pile (where a Windfall can find them).
+  doubleCross(p: number) {
+    const loot = this.bank(p).filter((c) => isMoney(c.kind));
+    loot.sort((a, b) => (value(b.kind) - value(a.kind)) || (a.id - b.id));
+    let total = 0;
+    for (const c of loot) {
+      const v = value(c.kind);
+      if (total + v <= WINDFALL_CAP) {
+        total += v;
+        this.bank(p).splice(this.bank(p).indexOf(c), 1);
+        this.s.discard.push(c);
+      }
+    }
+    if (total > 0) {
+      this.ev(p, (v) => `Double Crossed! Someone stole ${bills(total)} from ${this.poss(p, v)} bank.`, "doublecross", p, true);
+    } else {
+      this.ev(p, (v) => `Double Crossed! But ${this.poss(p, v)} bank had no bills to steal, so ${p === v ? "you" : this.s.players[p].name} drew another card.`, "doublecross", p, true);
+    }
   }
 
   // Windfall: the drawer takes the bills spent so far (sitting in the discard pile), biggest first,
@@ -216,7 +239,7 @@ export class Game {
       }
     }
     if (total > 0) {
-      this.ev(p, (v) => `Windfall! ${this.nm(p, v)} scooped up ${bills(total)} that were spent earlier in the game.`, "windfall", p, true);
+      this.ev(p, (v) => `Windfall! ${this.nm(p, v)} "found" ${bills(total)} in the discard pile.`, "windfall", p, true);
       this.collectDebt(p);
     } else {
       this.ev(p, (v) => `Windfall! But no spent bills were lying around yet, so ${p === v ? "you" : this.s.players[p].name} drew another card.`, "windfall", p, true);

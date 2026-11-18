@@ -433,13 +433,38 @@ func _draw_one(p: int) -> bool:
 		_shuffle(deck)
 		_event(p, "The discard pile was shuffled into a new deck.", "", -1, false)
 	var card: Dictionary = deck.pop_back()
-	if card["kind"] == "windfall":
-		_windfall(p)
+	if card["kind"] == "windfall" or card["kind"] == "doublecross":
+		if card["kind"] == "windfall":
+			_windfall(p)
+		else:
+			_double_cross(p)
 		var got := _draw_one(p)   # a card in its place (drawn before Windfall reaches the discard pile)
 		discard.append(card)
 		return got
 	hand(p).append(card)
 	return true
+
+
+## Double Crossed: someone steals bills from the drawer's bank, biggest first, up to
+## CardDB.WINDFALL_CAP bills in all. They land in the discard pile (where a Windfall can find them).
+func _double_cross(p: int) -> void:
+	var loot: Array = bank(p).filter(func(c): return CardDB.is_money(c["kind"]))
+	loot.sort_custom(func(a, b):
+		var va := CardDB.value(a["kind"])
+		var vb := CardDB.value(b["kind"])
+		return va > vb if va != vb else int(a["id"]) < int(b["id"]))
+	var total := 0
+	for c in loot:
+		var v := CardDB.value(c["kind"])
+		if total + v <= CardDB.WINDFALL_CAP:
+			total += v
+			bank(p).erase(c)
+			discard.append(c)
+	var who := "you" if nm(p) == "You" else nm(p)
+	if total > 0:
+		_event(p, "Double Crossed! Someone stole %s from %s bank." % [CardDB.bills(total), poss(p)], "doublecross", p, true)
+	else:
+		_event(p, "Double Crossed! But %s bank had no bills to steal, so %s drew another card." % [poss(p), who], "doublecross", p, true)
 
 
 ## Windfall: the drawer takes the bills spent so far (sitting in the discard pile), biggest first,
@@ -458,7 +483,7 @@ func _windfall(p: int) -> void:
 			discard.erase(c)
 			bank(p).append(c)
 	if total > 0:
-		_event(p, "Windfall! %s scooped up %s that were spent earlier in the game." % [nm(p), CardDB.bills(total)], "windfall", p, true)
+		_event(p, "Windfall! %s \"found\" %s in the discard pile." % [nm(p), CardDB.bills(total)], "windfall", p, true)
 		_collect_debt(p)
 	else:
 		_event(p, "Windfall! But no spent bills were lying around yet, so %s drew another card." % ("you" if nm(p) == "You" else nm(p)), "windfall", p, true)

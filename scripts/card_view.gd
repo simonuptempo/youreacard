@@ -411,6 +411,19 @@ static func oval(c: Vector2, rx: float, ry: float) -> PackedVector2Array:
 
 ## Cards without a character: Windfall shows a heap of coins, Lucky Break a clover.
 func _no_character_art(kind: String, w: float, hgt: float) -> void:
+	if kind == "doublecross":
+		# Coins leaving your bank: a heap with a red arrow heading out, and a red minus.
+		Art.draw_coin(self, "loot1", Vector2(w * 0.38, hgt * 0.5), w * 0.13)
+		Art.draw_coin(self, "loot2", Vector2(w * 0.6, hgt * 0.52), w * 0.13)
+		Art.draw_coin(self, "loot4", Vector2(w * 0.47, hgt * 0.39), w * 0.15)
+		var red := Color("#c0392b")
+		var a := Vector2(w * 0.68, hgt * 0.36)
+		var b := Vector2(w * 0.82, hgt * 0.24)
+		draw_line(a, b, red, w * 0.03, true)
+		draw_colored_polygon(PackedVector2Array([b + Vector2(w * 0.035, -w * 0.035), b + Vector2(-w * 0.075, -w * 0.01), b + Vector2(w * 0.01, w * 0.075)]), red)
+		draw_circle(Vector2(w * 0.25, hgt * 0.29), w * 0.075, red)
+		draw_line(Vector2(w * 0.21, hgt * 0.29), Vector2(w * 0.29, hgt * 0.29), Color.WHITE, w * 0.022)
+		return
 	if kind == "windfall":
 		Art.draw_coin(self, "loot2", Vector2(w * 0.36, hgt * 0.47), w * 0.15)
 		Art.draw_coin(self, "loot3", Vector2(w * 0.64, hgt * 0.47), w * 0.15)

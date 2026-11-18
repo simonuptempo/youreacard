@@ -32,10 +32,12 @@ const ACTIONS := {
 	"loot4":     {"name": "4 Bills",            "type": "money", "count": 3, "role": "",            "text": "Bank it to pay for Heists"},
 	"loot5":     {"name": "5 Bills",         "type": "money", "count": 2, "role": "",            "text": "Bank it to pay for Heists"},
 	# Kept last so every other card keeps its id. Plays itself the moment it's drawn.
-	"windfall":  {"name": "Windfall",       "type": "tool",  "count": 2, "role": "",            "text": "Grab up to 10 bills from the discard pile"},
+	"windfall":  {"name": "Windfall",       "type": "tool",  "count": 2, "role": "",            "text": "You \"found\" up to 10 bills from the discard pile"},
+	"doublecross": {"name": "Double Crossed", "type": "tool", "count": 2, "role": "",           "text": "Someone stole up to 10 bills from your bank"},
 }
 
 ## Windfall: the most bills (by value) it can take from the discard pile.
+## Double Crossed: the most bills it can take from your bank.
 const WINDFALL_CAP := 10
 
 ## Bills each card costs to play, paid automatically from your bank.

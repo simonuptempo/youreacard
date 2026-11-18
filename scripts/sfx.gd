@@ -216,7 +216,7 @@ func for_event(e: Dictionary, viewer := 0) -> String:
 		return "bank"
 	match card:
 		"wild": return "wild"
-		"swipe": return "steal"
+		"swipe", "doublecross": return "steal"
 		"swap": return "trade"
 		"shakedown", "payup", "grand", "shield", "mirror", "snare", "lockpick", "lucky":
 			return card
