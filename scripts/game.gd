@@ -315,7 +315,17 @@ func _draw_header(p: int, pos: Vector2) -> void:
 	board.add_child(avatar)
 	var who:="You" if p==0 else bot_name
 	board.add_child(UI.label(who,pos+Vector2(86,2),Vector2(206,34),26,UI.ACCENT if p==g.current else UI.TEXT))
-	board.add_child(UI.label("%d of %d sets complete" % [g.complete_count(p),GameState.SETS_TO_WIN],pos+Vector2(86,40),Vector2(300,28),20,UI.TEXT))
+	# Sets: one dot per set needed to win, filled in gold as each set is finished.
+	board.add_child(UI.label("Sets",pos+Vector2(86,42),Vector2(60,28),20,UI.MUTED))
+	var done_sets:=g.complete_count(p)
+	for k in GameState.SETS_TO_WIN:
+		var dot:=Panel.new()
+		dot.position=pos+Vector2(140+k*30,47)
+		dot.size=Vector2(22,22)
+		dot.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		var filled:=k<done_sets
+		dot.add_theme_stylebox_override("panel",UI.box(UI.ACCENT if filled else Color(0,0,0,0),11,UI.ACCENT if filled else Color("#6f8f86"),2))
+		board.add_child(dot)
 	if p==1:
 		# Their hand size: a little stack of card backs with the count, beside their name.
 		var name_w:=ThemeDB.fallback_font.get_string_size(who,HORIZONTAL_ALIGNMENT_LEFT,-1,26).x
