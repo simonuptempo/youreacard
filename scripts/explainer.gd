@@ -12,11 +12,11 @@ const STEPS := [
 ]
 const TABS := ["Bank a bill", "Play a gem", "Move to vault", "Take an action"]
 const ACTIONS := [
-	["swap", "Trade one of your gems for one of theirs. Both must come from sets that aren't finished."],
+	["swap", "Trade your gem for one of theirs. Both must come from unfinished sets."],
 	["shakedown", "Take a random card from your opponent's hand."],
 	["lockpick", "Break into their vault and pick a face-down card. A Defense gets defused (discarded). Anything else is a decoy, and you keep it. Defense cards can't stop a Lockpick."],
-	["swipe", "Heist: take one gem from a set your opponent hasn't finished."],
-	["grand", "Grand Heist: take ALL the gems in one of their finished sets."],
+	["swipe", "Heist: take a gem from their unfinished set."],
+	["grand", "Grand Heist: take a finished set of gems, every gem in it."],
 	["windfall", "Lucky you! When you draw it, you \"find\" up to 10 spent bills from the discard pile. Then draw another card.", "Plays itself when drawn"],
 	["doublecross", "Uh-oh! When you draw it, someone steals up to 10 bills from your bank. Then draw another card.", "Plays itself when drawn"],
 ]

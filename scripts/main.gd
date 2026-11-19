@@ -19,7 +19,7 @@ const RULES := """[b]Goal:[/b] Complete 4 sets of gems before anyone else. 2 rub
  • Taking a vault card back or moving a wild between sets does not count as one of your %d moves per turn
  • Windfall plays itself when you draw it: you "find" up to 10 bills in the discard pile, then draw another card.
  • Double Crossed plays itself when you draw it: someone steals up to 10 bills from your bank, then you draw another card.
- • A Heist takes one gem from a set they haven't finished. A Grand Heist takes all the gems in a finished set.
+ • A Heist takes a gem from their unfinished set. A Grand Heist takes a finished set of gems.
  • Add an extra gem to a finished set and your opponent pays you 2 bills (3 bills for a second extra).
  • Need cash? Pawn a gem from your hand or your collection into your bank: 1 bill each (Rubies and Diamonds: 2). Gems a finished set needs, and wilds, can't be pawned.
  • Payments make change when they can. Out of bills? They pay with gems from unfinished sets (at pawn value), then owe the rest from the next bills they get.
