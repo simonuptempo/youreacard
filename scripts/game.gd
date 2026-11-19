@@ -299,6 +299,8 @@ func refresh() -> void:
 	_turn_label.text="Your turn · %d play%s left" % [g.plays_left,"" if g.plays_left==1 else "s"] if my_turn else "%s's turn" % bot_name
 	if _replaying: _turn_label.text="Replaying %s's turn" % bot_name
 	if mode=="target": _turn_label.text="Choose a highlighted target"
+	if mode=="target" and g.counter_owed[0]: _turn_label.text="Your free counter-trade"
+	_sync_counter_panel()
 	if mode=="discard": _turn_label.text="Choose cards to discard"
 	info_lbl.text="Tap a card to see your options" if my_turn else "Waiting for %s…" % bot_name
 	if my_turn and g.plays_left==0: info_lbl.text="No plays left · End your turn"
@@ -847,7 +849,7 @@ func _on_chip_tapped(_v: CardView, p: int, id: int, color: String) -> void:
 					swap_step = 1
 					var gave := g.find_collection_card(0, id)
 					var gave_name := CardDB.one_name(color) if color != "" else (CardDB.display_name(gave[1]["kind"]) if not gave.is_empty() else "that gem")
-					_set_msg("Giving your %s. Now tap one of %s glowing gems to take in return." % [gave_name, bot_name + "'s"])
+					_set_msg("" if g.counter_owed[0] else "Giving your %s. Now tap one of %s glowing gems to take in return." % [gave_name, bot_name + "'s"])
 					refresh()
 					return
 				if swap_step == 1 and p == 1 and m["mine"] == swap_mine and m["their"] == id:
@@ -1158,9 +1160,63 @@ func _start_counter() -> void:
 	swap_step = 0
 	swap_mine = -1
 	mode = "target"
-	_set_msg("Counter-trade! Tap one of YOUR glowing gems to give away (free).")
+	_set_msg("")
 	refresh()
-	_bar_buttons([["Skip counter-trade", _apply_and_clear.bind({"type": "counter_skip"}), Color("#3a4166")]])
+
+
+## The counter-trade explained in a panel over your hand (your hand isn't used for it):
+## why you got it, and the two taps it takes. Rebuilt on every refresh, gone when it's done.
+var _counter_panel: Control
+
+func _sync_counter_panel() -> void:
+	if is_instance_valid(_counter_panel):
+		_counter_panel.queue_free()
+	_counter_panel = null
+	if not (mode == "target" and g != null and g.counter_owed[0] and g.current == 0):
+		return
+	_counter_panel = Control.new()
+	_counter_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_counter_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_counter_panel.z_index = 25
+	add_child(_counter_panel)
+	var y := HAND_Y - 46.0
+	var bg := Panel.new()
+	bg.position = Vector2(16, y)
+	bg.size = Vector2(688, 1150 - y)
+	bg.add_theme_stylebox_override("panel", UI.box(Color("#14302c"), 18, UI.ACCENT, 2))
+	_counter_panel.add_child(bg)
+	_counter_panel.add_child(_recap_title("FREE COUNTER-TRADE", y))
+	var why := UI.label("Your Mirror bounced %s's Trade, so now you get a trade of your own, for free." % bot_name, Vector2(RC_X, y + 62), Vector2(RC_W, 80), 25, UI.TEXT)
+	why.add_theme_font_override("font", UI.font(600))
+	_counter_panel.add_child(why)
+	var steps := [["1", "Tap one of YOUR glowing gems to give away."], ["2", "Tap one of %s's glowing gems to take." % bot_name]]
+	var sy := y + 160.0
+	for i in steps.size():
+		var active := i == swap_step
+		var done := i < swap_step
+		var row := Panel.new()
+		row.position = Vector2(RC_X, sy)
+		row.size = Vector2(RC_W, 76)
+		row.add_theme_stylebox_override("panel", _row_style(active))
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_counter_panel.add_child(row)
+		var num := Panel.new()
+		num.position = Vector2(RC_X + 14, sy + 16)
+		num.size = Vector2(44, 44)
+		num.add_theme_stylebox_override("panel", UI.box(UI.ACCENT if active or done else Color(1, 1, 1, 0.12), 22))
+		_counter_panel.add_child(num)
+		var nl := UI.label("✓" if done else steps[i][0], num.position, num.size, 24, Color("#1b2038") if active or done else UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+		nl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		nl.add_theme_font_override("font", UI.font(800))
+		_counter_panel.add_child(nl)
+		var tl := UI.label(steps[i][1], Vector2(RC_X + 74, sy + 6), Vector2(RC_W - 90, 64), 24, UI.TEXT if active else UI.MUTED)
+		tl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		tl.add_theme_font_override("font", UI.font(700 if active else 600))
+		_counter_panel.add_child(tl)
+		sy += 88.0
+	var skip := UI.button("Skip counter-trade", Vector2(40, 1150 - 82), Vector2(640, 62), Color("#314742"), 22)
+	skip.pressed.connect(_apply_and_clear.bind({"type": "counter_skip"}))
+	_counter_panel.add_child(skip)
 
 
 func _show_game_over() -> void:
