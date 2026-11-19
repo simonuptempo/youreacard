@@ -1475,31 +1475,11 @@ func _show_my_recap() -> bool:
 		l.add_theme_font_size_override("font_size", 19)
 		l.add_theme_color_override("font_color", UI.TEXT)
 		box.add_child(l)
-	# The summary, worded like the opponent's: what changed hands.
-	var lines: Array = []
+	# What changed hands, as the same two-column table the opponent's recap uses.
 	if not _my_before.is_empty():
-		var g_: Array = r["you_gained"]
-		var l_: Array = r["they_lost"]
-		lines.append("You gained: " + (", ".join(g_) if not g_.is_empty() else "nothing"))
-		lines.append("%s lost: " % bot_name + (", ".join(l_) if not l_.is_empty() else "nothing"))
-		if not r["you_lost"].is_empty():
-			lines.append("You lost: " + ", ".join(r["you_lost"]))
-		if not r["they_gained"].is_empty():
-			lines.append("%s gained: " % bot_name + ", ".join(r["they_gained"]))
-	var text := "\n".join(lines)
+		_gains_losses_table(box, r["you_gained"], r["you_lost"], r["they_gained"], r["they_lost"])
 	var quotes: Array = r["quotes"]
-	if quotes.is_empty():
-		if text != "":
-			_recap_layer.add_child(UI.label(text, Vector2(494, y + 76), Vector2(196, 260), 17, Color("#f3ca89")))
-	else:
-		if text != "":
-			var sep := HSeparator.new()
-			sep.custom_minimum_size = Vector2(440, 10)
-			box.add_child(sep)
-			var sum := UI.label(text, Vector2.ZERO, Vector2(440, 0), 18, Color("#f3ca89"))
-			sum.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			sum.custom_minimum_size = Vector2(440, 0)
-			box.add_child(sum)
+	if not quotes.is_empty():
 		_show_quotes(quotes.slice(maxi(0, quotes.size() - 4)), Vector2(492, y + 70), _recap_layer)
 	# Same button row as the opponent's recap.
 	var back := UI.button("Back to my turn", Vector2(40, 1150 - 82), Vector2(250, 62), Color("#314742"), 21)
@@ -1514,6 +1494,64 @@ func _show_my_recap() -> bool:
 		_finish_end_turn())
 	_recap_layer.add_child(done)
 	return true
+
+
+## The bottom of both recaps: gains on the left, losses on the right, each split into you and
+## your opponent. Empty rows are left out; an empty column says "Nothing".
+func _gains_losses_table(box: VBoxContainer, you_gained: Array, you_lost: Array, they_gained: Array, they_lost: Array) -> void:
+	var sep := HSeparator.new()
+	sep.custom_minimum_size = Vector2(440, 14)
+	box.add_child(sep)
+	var table := HBoxContainer.new()
+	table.add_theme_constant_override("separation", 12)
+	table.custom_minimum_size = Vector2(440, 0)
+	box.add_child(table)
+	var cols := [["GAINS", Color("#8fe3a0"), [["You", you_gained], [bot_name, they_gained]]],
+		["LOSSES", Color("#ff8a7a"), [["You", you_lost], [bot_name, they_lost]]]]
+	for col in cols:
+		var panel := PanelContainer.new()
+		var style := UI.box(Color(col[1], 0.10), 12, Color(col[1], 0.55), 2)
+		style.content_margin_left = 12
+		style.content_margin_right = 10
+		style.content_margin_top = 8
+		style.content_margin_bottom = 10
+		panel.add_theme_stylebox_override("panel", style)
+		panel.custom_minimum_size = Vector2(214, 0)
+		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		table.add_child(panel)
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 4)
+		panel.add_child(v)
+		var head := Label.new()
+		head.text = col[0]
+		head.add_theme_font_size_override("font_size", 20)
+		head.add_theme_color_override("font_color", col[1])
+		v.add_child(head)
+		var any := false
+		for who in col[2]:
+			var items: Array = who[1]
+			if items.is_empty():
+				continue
+			any = true
+			var who_l := Label.new()
+			who_l.text = who[0]
+			who_l.add_theme_font_size_override("font_size", 17)
+			who_l.add_theme_color_override("font_color", UI.MUTED)
+			v.add_child(who_l)
+			for it in items:
+				var l := Label.new()
+				l.text = "•  " + str(it)
+				l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				l.custom_minimum_size = Vector2(190, 0)
+				l.add_theme_font_size_override("font_size", 18)
+				l.add_theme_color_override("font_color", UI.TEXT)
+				v.add_child(l)
+		if not any:
+			var none := Label.new()
+			none.text = "Nothing"
+			none.add_theme_font_size_override("font_size", 18)
+			none.add_theme_color_override("font_color", UI.MUTED)
+			v.add_child(none)
 
 
 func _close_recap_layer_only() -> void:
@@ -1772,25 +1810,15 @@ func _replay_summary() -> void:
 	var y := HAND_Y - 46.0
 	var lost: Array = _recap.get("lost", [])
 	var gained: Array = _recap.get("they_gained", [])
-	var text := "You lost: " + (", ".join(lost) if not lost.is_empty() else "nothing")
-	text += "\n%s gained: " % bot_name + (", ".join(gained) if not gained.is_empty() else "nothing you can see")
 	# Who said what this turn: each character's face with their line in a bubble.
 	var quotes: Array = []
 	for step in _replay_steps():
 		for e in step[2]:
 			if str(e.get("said", "")) != "":
 				quotes.append(e)
-	if quotes.is_empty():
-		_replay_panel.add_child(UI.label(text, Vector2(494, y + 76), Vector2(196, 260), 17, Color("#f3ca89")))
-	else:
-		var sep := HSeparator.new()
-		sep.custom_minimum_size = Vector2(440, 10)
-		_replay_box.add_child(sep)
-		var sum := UI.label(text, Vector2.ZERO, Vector2(440, 0), 18, Color("#f3ca89"))
-		sum.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		sum.custom_minimum_size = Vector2(440, 0)
-		_replay_box.add_child(sum)
-		_replay_scroll.mouse_filter = Control.MOUSE_FILTER_PASS  # scroll if it runs long
+	_gains_losses_table(_replay_box, _recap.get("you_gained", []), lost, gained, [])
+	_replay_scroll.mouse_filter = Control.MOUSE_FILTER_PASS  # scroll down to the table
+	if not quotes.is_empty():
 		_show_quotes(quotes.slice(maxi(0, quotes.size() - 4)), Vector2(492, y + 70))
 	var again := UI.button("Watch again", Vector2(40, 1150 - 82), Vector2(250, 62), Color("#314742"), 21)
 	again.pressed.connect(_watch_again)
