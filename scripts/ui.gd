@@ -78,3 +78,21 @@ static func panel(pos: Vector2, sz: Vector2, col := PANEL, radius := 16) -> Pane
 	p.add_theme_stylebox_override("panel", box(col, radius))
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return p
+
+
+static var _fonts := {}
+
+## The rounded UI font (Nunito) at a given weight: 400 regular, 600 semibold, 800 extra bold.
+## Falls back to the default font if the file is missing.
+static func font(weight := 600) -> Font:
+	if _fonts.has(weight):
+		return _fonts[weight]
+	var base = load("res://fonts/Nunito.ttf")
+	if base == null:
+		return ThemeDB.fallback_font
+	var fv := FontVariation.new()
+	fv.base_font = base
+	fv.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
+	_fonts[weight] = fv
+	return fv
+

@@ -1512,7 +1512,7 @@ func _show_my_recap() -> bool:
 	bg.size = Vector2(688, 1150 - y)
 	bg.add_theme_stylebox_override("panel", UI.box(Color("#14302c"), 18, UI.ACCENT, 2))
 	_recap_layer.add_child(bg)
-	_recap_layer.add_child(UI.label("YOUR TURN", Vector2(RC_X, y + 12), Vector2(RC_W, 40), 30, UI.ACCENT))
+	_recap_layer.add_child(_recap_title("YOUR TURN", y))
 	var quotes: Array = r["quotes"]
 	var strip := _quote_strip_height(quotes)
 	var scroll := ScrollContainer.new()
@@ -1529,13 +1529,7 @@ func _show_my_recap() -> bool:
 		var t := str(e["text"])
 		if t.contains(" drew "):
 			continue
-		var l := Label.new()
-		l.text = "•  " + t
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size = Vector2(RC_TEXT_W, 0)
-		l.add_theme_font_size_override("font_size", RC_FONT)
-		l.add_theme_color_override("font_color", UI.TEXT)
-		box.add_child(l)
+		box.add_child(_event_row(e))
 	# What changed hands, as the same two-column table the opponent's recap uses.
 	if not _my_before.is_empty():
 		_gains_losses_table(box, r["you_gained"], r["you_lost"], r["they_gained"], r["they_lost"])
@@ -1553,6 +1547,70 @@ func _show_my_recap() -> bool:
 		_finish_end_turn())
 	_recap_layer.add_child(done)
 	return true
+
+
+## Recap heading in the rounded extra-bold font.
+func _recap_title(text: String, y: float) -> Label:
+	var t := UI.label(text, Vector2(RC_X, y + 12), Vector2(RC_W, 40), 30, UI.ACCENT)
+	t.add_theme_font_override("font", UI.font(800))
+	return t
+
+
+func _row_style(active: bool) -> StyleBoxFlat:
+	var sb := UI.box(Color(1, 1, 1, 0.10 if active else 0.04), 12, UI.ACCENT if active else Color(0, 0, 0, 0), 2 if active else 0)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 12
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	return sb
+
+
+## One line of a recap: a tiny picture of the card involved, then the sentence.
+func _event_row(e: Dictionary) -> PanelContainer:
+	var row := PanelContainer.new()
+	row.add_theme_stylebox_override("panel", _row_style(false))
+	row.custom_minimum_size = Vector2(RC_TEXT_W, 0)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 14)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(h)
+	var slot := Control.new()
+	slot.custom_minimum_size = Vector2(32, 45)
+	slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(slot)
+	var kind := str(e.get("card", ""))
+	var text := str(e.get("text", "")).replace("!.", "!")
+	var face_down := kind == "" and (text.contains(" drew ") or text.contains("vault"))
+	if kind != "" or face_down:
+		var cv := CardView.new()
+		cv.size = Vector2(32, 45)
+		cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.add_child(cv)
+		var f := {}
+		if kind != "" and CardDB.slot_for(kind) != "":
+			var who: int = e["face"] if int(e.get("face", -1)) >= 0 else int(e.get("p", 0))
+			f = face_for(who, CardDB.slot_for(kind))
+		cv.setup({"id": -1, "kind": kind if kind != "" else "wild"}, f, face_down)
+	else:
+		var dot := Panel.new()
+		dot.position = Vector2(10, 16)
+		dot.size = Vector2(12, 12)
+		dot.add_theme_stylebox_override("panel", UI.box(UI.MUTED, 6))
+		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.add_child(dot)
+	var l := Label.new()
+	l.text = text
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	l.custom_minimum_size = Vector2(RC_TEXT_W - 80, 0)
+	l.add_theme_font_override("font", UI.font(600))
+	l.add_theme_font_size_override("font_size", RC_FONT)
+	l.add_theme_color_override("font_color", UI.TEXT)
+	h.add_child(l)
+	return row
 
 
 ## The bottom of both recaps: gains on the left, losses on the right, each split into you and
@@ -1584,6 +1642,7 @@ func _gains_losses_table(box: VBoxContainer, you_gained: Array, you_lost: Array,
 		var head := Label.new()
 		head.text = col[0]
 		head.add_theme_font_size_override("font_size", 25)
+		head.add_theme_font_override("font", UI.font(800))
 		head.add_theme_color_override("font_color", col[1])
 		v.add_child(head)
 		var any := false
@@ -1595,11 +1654,13 @@ func _gains_losses_table(box: VBoxContainer, you_gained: Array, you_lost: Array,
 			var who_l := Label.new()
 			who_l.text = who[0]
 			who_l.add_theme_font_size_override("font_size", 21)
+			who_l.add_theme_font_override("font", UI.font(700))
 			who_l.add_theme_color_override("font_color", UI.MUTED)
 			v.add_child(who_l)
 			for it in items:
 				var l := Label.new()
-				l.text = "•  " + str(it)
+				l.text = ("+  " if col[0] == "GAINS" else "–  ") + str(it)
+				l.add_theme_font_override("font", UI.font(600))
 				l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				l.custom_minimum_size = Vector2((RC_TEXT_W - 12) / 2.0 - 26, 0)
 				l.add_theme_font_size_override("font_size", 23)
@@ -1609,6 +1670,7 @@ func _gains_losses_table(box: VBoxContainer, you_gained: Array, you_lost: Array,
 			var none := Label.new()
 			none.text = "Nothing"
 			none.add_theme_font_size_override("font_size", 23)
+			none.add_theme_font_override("font", UI.font(600))
 			none.add_theme_color_override("font_color", UI.MUTED)
 			v.add_child(none)
 
@@ -1747,7 +1809,7 @@ func _build_replay_panel() -> void:
 	bg.add_theme_stylebox_override("panel", UI.box(Color("#14302c"), 18, UI.ACCENT, 2))
 	bg.gui_input.connect(_on_replay_panel_input)
 	_replay_panel.add_child(bg)
-	_replay_panel.add_child(UI.label("%s'S TURN" % bot_name.to_upper(), Vector2(RC_X, y + 12), Vector2(RC_W, 40), 30, UI.ACCENT))
+	_replay_panel.add_child(_recap_title("%s'S TURN" % bot_name.to_upper(), y))
 	_replay_scroll = ScrollContainer.new()
 	_replay_scroll.position = Vector2(RC_X, y + 60)
 	_replay_scroll.size = Vector2(RC_W, 1150 - 16 - RC_CARD.y - 12 - (y + 60))
@@ -1764,12 +1826,7 @@ func _build_replay_panel() -> void:
 	for step in _replay_steps():
 		var group: Array = []
 		for e in step[2]:
-			var l := Label.new()
-			l.text = "•  " + str(e["text"])
-			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			l.custom_minimum_size = Vector2(RC_TEXT_W, 0)
-			l.add_theme_font_size_override("font_size", RC_FONT)
-			l.add_theme_color_override("font_color", UI.MUTED)
+			var l := _event_row(e)
 			l.modulate.a = 0.35
 			box.add_child(l)
 			group.append(l)
@@ -1843,7 +1900,7 @@ func _run_replay() -> void:
 		for j in _replay_lines.size():
 			for l in _replay_lines[j]:
 				l.modulate.a = 1.0 if j <= i else 0.35
-				l.add_theme_color_override("font_color", UI.TEXT if j == i else UI.MUTED)
+				l.add_theme_stylebox_override("panel", _row_style(j == i))
 		if i < _replay_lines.size() and not _replay_lines[i].is_empty():
 			_replay_scroll.ensure_control_visible.call_deferred(_replay_lines[i][-1])
 		for se in step[2]:
@@ -1874,7 +1931,7 @@ func _replay_summary() -> void:
 	for group in _replay_lines:
 		for l in group:
 			l.modulate.a = 1.0
-			l.add_theme_color_override("font_color", UI.TEXT)
+			l.add_theme_stylebox_override("panel", _row_style(false))
 	var y := HAND_Y - 46.0
 	var lost: Array = _recap.get("lost", [])
 	var gained: Array = _recap.get("they_gained", [])
@@ -1903,9 +1960,14 @@ const QUOTE_W := 212.0   # one face + bubble in the bottom row (three fit across
 const QUOTE_FONT := 18
 
 
-func _quote_text_h(text: String) -> float:
-	var f := ThemeDB.fallback_font
-	return f.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, QUOTE_W - 76, QUOTE_FONT).y
+## Width of one face + bubble: wider when fewer people spoke.
+func _quote_w(n: int) -> float:
+	return clampf((RC_W - 6.0 * (n - 1)) / maxf(1.0, n), QUOTE_W, 330.0)
+
+
+func _quote_text_h(text: String, w := QUOTE_W) -> float:
+	var f := UI.font(700)
+	return f.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, w - 76, QUOTE_FONT).y
 
 
 ## Height of the row of quotes (0 if nobody spoke).
@@ -1913,8 +1975,9 @@ func _quote_strip_height(quotes: Array) -> float:
 	if quotes.is_empty():
 		return 0.0
 	var h := 60.0
-	for e in quotes.slice(maxi(0, quotes.size() - 3)):
-		h = maxf(h, _quote_text_h(str(e["said"])) + 18.0)
+	var shown := quotes.slice(maxi(0, quotes.size() - 3))
+	for e in shown:
+		h = maxf(h, _quote_text_h(str(e["said"]), _quote_w(shown.size())) + 18.0)
 	return h + 12.0
 
 
@@ -1923,6 +1986,7 @@ func _show_quotes(quotes: Array, top: float, parent: Control = null) -> void:
 	if parent == null:
 		parent = _replay_panel
 	quotes = quotes.slice(maxi(0, quotes.size() - 3))
+	var qw := _quote_w(quotes.size())
 	var x := RC_X
 	for i in quotes.size():
 		var e: Dictionary = quotes[i]
@@ -1932,8 +1996,8 @@ func _show_quotes(quotes: Array, top: float, parent: Control = null) -> void:
 		face.size = Vector2(50, 58)
 		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		parent.add_child(face)
-		var bw := QUOTE_W - 64.0
-		var h := maxf(48.0, _quote_text_h(str(e["said"])) + 18.0)
+		var bw := qw - 64.0
+		var h := maxf(48.0, _quote_text_h(str(e["said"]), qw) + 18.0)
 		var bubble := Panel.new()
 		bubble.position = Vector2(x + 60, top)
 		bubble.size = Vector2(bw, h)
@@ -1946,11 +2010,12 @@ func _show_quotes(quotes: Array, top: float, parent: Control = null) -> void:
 		parent.add_child(tail)
 		var lbl := UI.label(str(e["said"]), Vector2(x + 66, top + 7), Vector2(bw - 12, h - 14), QUOTE_FONT, Color("#1b2038"), HORIZONTAL_ALIGNMENT_CENTER)
 		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbl.add_theme_font_override("font", UI.font(700))
 		parent.add_child(lbl)
 		for n in [face, bubble, tail, lbl]:
 			n.modulate.a = 0.0
 			n.create_tween().tween_property(n, "modulate:a", 1.0, 0.25).set_delay(0.12 * i)
-		x += QUOTE_W + 6.0
+		x += qw + 6.0
 
 
 func _on_replay_panel_input(ev: InputEvent) -> void:
@@ -2254,6 +2319,7 @@ func _speak(card: Control, e: Dictionary, parent: Control, at: Vector2, width: f
 	bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var lbl := UI.label(line, Vector2(18, 10), Vector2(width - 36, 0), 26, Color("#1b2038"), HORIZONTAL_ALIGNMENT_CENTER)
 	lbl.add_theme_font_size_override("font_size", 26)
+	lbl.add_theme_font_override("font", UI.font(700))
 	var h := maxf(58.0, lbl.get_minimum_size().y + 20.0)
 	var box := Panel.new()
 	box.size = Vector2(width, h)
