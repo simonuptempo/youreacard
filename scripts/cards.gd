@@ -32,8 +32,8 @@ const ACTIONS := {
 	"loot4":     {"name": "4 Bills",            "type": "money", "count": 3, "role": "",            "text": "Bank it to pay for Heists"},
 	"loot5":     {"name": "5 Bills",         "type": "money", "count": 2, "role": "",            "text": "Bank it to pay for Heists"},
 	# Kept last so every other card keeps its id. Plays itself the moment it's drawn.
-	"windfall":  {"name": "Windfall",       "type": "tool",  "count": 2, "role": "",            "text": "You \"found\" up to 10 bills from the discard pile"},
-	"doublecross": {"name": "Double Crossed", "type": "tool", "count": 2, "role": "",           "text": "Someone stole up to 10 bills from your bank"},
+	"windfall":  {"name": "Windfall",       "type": "tool",  "count": 1, "role": "",            "text": "You \"found\" up to 10 bills from the discard pile"},
+	"doublecross": {"name": "Double Crossed", "type": "tool", "count": 1, "role": "",           "text": "Someone stole up to 10 bills from your bank"},
 }
 
 ## Windfall: the most bills (by value) it can take from the discard pile.

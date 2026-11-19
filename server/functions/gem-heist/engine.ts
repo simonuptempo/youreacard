@@ -58,8 +58,8 @@ export const ACTIONS: [string, string, string, number][] = [
   ["loot4", "4 Bills", "money", 3],
   ["loot5", "5 Bills", "money", 2],
   // Kept last so every other card keeps its id. Plays itself the moment it's drawn.
-  ["windfall", "Windfall", "tool", 2],
-  ["doublecross", "Double Crossed", "tool", 2],
+  ["windfall", "Windfall", "tool", 1],
+  ["doublecross", "Double Crossed", "tool", 1],
 ];
 const WINDFALL_CAP = 10;
 const ACTION_NAME: Record<string, string> = Object.fromEntries(ACTIONS.map((a) => [a[0], a[1]]));

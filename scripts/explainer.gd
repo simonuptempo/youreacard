@@ -14,9 +14,11 @@ const TABS := ["Bank a bill", "Play a gem", "Move to vault", "Take an action"]
 const ACTIONS := [
 	["swap", "Trade one of your gems for one of theirs. Both must come from sets that aren't finished."],
 	["shakedown", "Take a random card from your opponent's hand."],
-		["swipe", "Heist: take one gem from a set your opponent hasn't finished."],
 	["lockpick", "Steal a random face-down card from their vault. Defense cards can't stop it."],
 	["grand", "Grand Heist: take ALL the gems in one of their finished sets."],
+	["swipe", "Heist: take one gem from a set your opponent hasn't finished."],
+	["windfall", "Lucky you! When you draw it, you \"find\" up to 10 spent bills from the discard pile. Then draw another card.", "Plays itself when drawn"],
+	["doublecross", "Uh-oh! When you draw it, someone steals up to 10 bills from your bank. Then draw another card.", "Plays itself when drawn"],
 ]
 const DEFENSES := [
 	["shield", "Blocks the action."],
@@ -440,6 +442,8 @@ func _rows(list: Array, free: bool) -> void:
 		row.add_child(UI.label(CardDB.display_name(kind), Vector2(190, 14), Vector2(470, 44), 30, UI.ACCENT))
 		var cost := CardDB.cost(kind)
 		var cost_text := "Free" if free or cost == 0 else "Costs " + CardDB.bills(cost)
+		if list[i].size() > 2:
+			cost_text = list[i][2]
 		row.add_child(UI.label(cost_text, Vector2(190, 58), Vector2(470, 34), 22, Color("#f0b27a")))
 		row.add_child(UI.label(list[i][1], Vector2(190, 96), Vector2(470, 110), 22, UI.TEXT))
 		_pop(row, i * 0.1)
