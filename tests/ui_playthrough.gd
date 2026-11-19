@@ -34,8 +34,7 @@ func _process(_d: float) -> bool:
 		return false
 	if is_instance_valid(s._recap_layer) and s.g.current == 0 and s.mode == "busy":
 		recaps += 1
-		s._close_recap_layer_only()   # "Got it" on your turn's recap
-		s._finish_end_turn()
+		s._continue_from_my_recap()   # "Continue" on your turn's recap
 		return false
 	if s.g.current != 0 or s.mode == "busy":
 		return false

@@ -294,7 +294,7 @@ func refresh() -> void:
 	_draw_hand()
 	var my_turn:=g.current==0 and g.winner<0
 	end_btn.disabled=not my_turn or mode in ["busy","over","target"]
-	if _replaying: end_btn.disabled=false  # End Turn also ends the replay
+	if _replaying or _my_recap_open: end_btn.disabled=false  # End Turn also ends the replay / your recap
 	end_btn.text="Discard" if mode=="discard" else "End Turn"
 	_turn_label.text="Your turn · %d play%s left" % [g.plays_left,"" if g.plays_left==1 else "s"] if my_turn else "%s's turn" % bot_name
 	if _replaying: _turn_label.text="Replaying %s's turn" % bot_name
@@ -986,6 +986,9 @@ func _apply(m: Dictionary) -> void:
 
 
 func _on_end_pressed() -> void:
+	if _my_recap_open:
+		_continue_from_my_recap()
+		return
 	if _replaying:
 		_end_replay_now()  # End Turn during the replay ends the replay
 		return
@@ -1534,19 +1537,18 @@ func _show_my_recap() -> bool:
 	if not _my_before.is_empty():
 		_gains_losses_table(box, r["you_gained"], r["you_lost"], r["they_gained"], r["they_lost"])
 	_show_quotes(quotes, 1150.0 - 94.0 - strip + 6.0, _recap_layer)
-	# Same button row as the opponent's recap.
-	var back := UI.button("Back to my turn", Vector2(40, 1150 - 82), Vector2(250, 62), Color("#314742"), 21)
-	back.pressed.connect(func():
-		_close_recap_layer_only()
-		mode = "play"
-		refresh())
-	_recap_layer.add_child(back)
-	var done := UI.button("End turn", Vector2(310, 1150 - 82), Vector2(370, 62), UI.ACCENT, 23)
-	done.pressed.connect(func():
-		_close_recap_layer_only()
-		_finish_end_turn())
+	var done := UI.button("Continue", Vector2(40, 1150 - 82), Vector2(640, 62), UI.ACCENT, 23)
+	done.pressed.connect(_continue_from_my_recap)
 	_recap_layer.add_child(done)
+	_my_recap_open = true
+	end_btn.disabled = false  # the bottom button carries on too
 	return true
+
+
+func _continue_from_my_recap() -> void:
+	_my_recap_open = false
+	_close_recap_layer_only()
+	_finish_end_turn()
 
 
 ## Recap heading in the rounded extra-bold font.
@@ -1676,6 +1678,7 @@ func _gains_losses_table(box: VBoxContainer, you_gained: Array, you_lost: Array,
 
 
 func _close_recap_layer_only() -> void:
+	_my_recap_open = false
 	if is_instance_valid(_recap_layer):
 		_recap_layer.queue_free()
 	_recap_layer = null
@@ -1699,6 +1702,7 @@ var _flash_rects: Dictionary = {}
 var _replay_panel: Control
 var _replay_lines: Array = []
 var _replay_card: Control
+var _my_recap_open := false
 var _hand_badge_rect := Rect2(260, 24, 66, 40)
 # Recap/replay panel layout: text runs the full width; the acting card and its speech
 # bubble (or, at the end, who said what) sit in a strip along the bottom.
