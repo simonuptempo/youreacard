@@ -1,6 +1,6 @@
 class_name CardDB
 extends RefCounted
-## Card definitions for You're a Card. 90 cards: 29 gems, 20 bills, 41 actions.
+## Card definitions for You're a Card. 89 cards: 29 gems, 20 bills, 40 actions (7 of them Defenses).
 ## (In code, gems are still called "treasures" and bills "money"/"loot".)
 
 const COLORS := ["ruby", "emerald", "sapphire", "topaz", "diamond", "amethyst"]
@@ -21,8 +21,8 @@ const ACTIONS := {
 	"shakedown": {"name": "Shakedown",      "type": "heist", "count": 4, "role": "boss",        "text": "Take a random card from their hand"},
 	"grand":     {"name": "Grand Heist",    "type": "heist", "count": 2, "role": "mastermind",  "text": "Take ALL the gems in one of their finished sets"},
 	"payup":     {"name": "Pay Up!",        "type": "heist", "count": 4, "role": "boss",        "text": "They pay you 2 bills (or gems, if they have no bills)"},
-	"shield":    {"name": "Shield",         "type": "trap",  "count": 5, "role": "bouncer",     "text": "Defense: blocks an action"},
-	"mirror":    {"name": "Mirror",         "type": "trap",  "count": 3, "role": "illusionist", "text": "Defense: bounces an action back"},
+	"shield":    {"name": "Shield",         "type": "trap",  "count": 3, "role": "bouncer",     "text": "Defense: blocks an action"},
+	"mirror":    {"name": "Mirror",         "type": "trap",  "count": 2, "role": "illusionist", "text": "Defense: bounces an action back"},
 	"snare":     {"name": "Snare",          "type": "trap",  "count": 2, "role": "trapper",     "text": "Defense: blocks an action and you keep their card"},
 	"lockpick":  {"name": "Lockpick",       "type": "tool",  "count": 4, "role": "locksmith",   "text": "Steal a random card from their vault"},
 	"lucky":     {"name": "Lucky Break",    "type": "tool",  "count": 4, "role": "",            "text": "Draw 2 cards"},

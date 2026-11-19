@@ -36,7 +36,7 @@ with role costumes. Online async play (Supabase + push) is milestone M3.
 ## New in v0.4
 - **Loot** (the Critter Crew: Mouse 1, Raccoon 2, Fox 3, Owl 4, Magpie 5). Bank it with a play;
   Heists cost Loot (Swipe 2, Swap 1, Shakedown 1, Lockpick 1, Grand Heist 5). New card: **Pay Up!**
-- **Rules:** draw 2, play up to 3, first to **4 sets**. Rubies need 2 cards, all other sets 3. Deck: 90 cards.
+- **Rules:** draw 2, play up to 3, first to **4 sets**. Rubies need 2 cards, all other sets 3. Deck: 89 cards.
 - Simulated pacing: ~13.7 turns per player for bots; expect ~15–20 with people.
 - New playful logo + masked-card app icon.
 
