@@ -792,10 +792,14 @@ func _do_tool(p: int, move: Dictionary) -> void:
 		var o := opp(p)
 		var target = vault(o)[move["slot"]]
 		vault(o)[move["slot"]] = null
-		hand(p).append(target)
 		var what: String = CardDB.display_name(target["kind"])
-		var label := "a %s (Defense)" % what if target["kind"] in CardDB.TRAPS else "a decoy (%s)" % what
-		_event(p, "%s picked %s vault, found %s, and stole it!" % [nm(p), poss(o), label], "lockpick", p, true)
+		if target["kind"] in CardDB.TRAPS:
+			# A Defense gets defused: it goes to the discard pile, not to the picker.
+			discard.append(target)
+			_event(p, "%s picked %s vault and defused a %s!" % [nm(p), poss(o), what], "lockpick", p, true)
+		else:
+			hand(p).append(target)
+			_event(p, "%s picked %s vault, found a decoy (%s), and stole it!" % [nm(p), poss(o), what], "lockpick", p, true)
 
 
 func _do_heist_play(p: int, move: Dictionary) -> void:

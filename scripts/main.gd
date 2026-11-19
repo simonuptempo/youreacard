@@ -26,7 +26,7 @@ const RULES := """[b]Goal:[/b] Complete 4 sets of gems before anyone else. 2 rub
  • Shields, Mirrors, and Snares sit face-down and fire automatically when you are targeted.
  • A Mirror that bounces a Trade earns you a free counter-trade on your next turn.
  • A Mirror that bounces a Grand Heist takes their best unfinished set if they have no finished one.
- • A Lockpick steals one random card from their vault.
+ • A Lockpick breaks into their vault and picks a face-down card: a Defense gets defused (discarded); a decoy, you keep.
  • You're a Card is wild - it can be any gem"""
 
 var _rules_overlay: Control

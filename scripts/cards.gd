@@ -24,7 +24,7 @@ const ACTIONS := {
 	"shield":    {"name": "Shield",         "type": "trap",  "count": 3, "role": "bouncer",     "text": "Defense: blocks an action"},
 	"mirror":    {"name": "Mirror",         "type": "trap",  "count": 2, "role": "illusionist", "text": "Defense: bounces an action back"},
 	"snare":     {"name": "Snare",          "type": "trap",  "count": 2, "role": "trapper",     "text": "Defense: blocks an action and you keep their card"},
-	"lockpick":  {"name": "Lockpick",       "type": "tool",  "count": 4, "role": "locksmith",   "text": "Steal a random card from their vault"},
+	"lockpick":  {"name": "Lockpick",       "type": "tool",  "count": 4, "role": "locksmith",   "text": "Defuse a Defense in their vault, or steal a decoy"},
 	"lucky":     {"name": "Lucky Break",    "type": "tool",  "count": 4, "role": "",            "text": "Draw 2 cards"},
 	"loot1":     {"name": "1 Bill",          "type": "money", "count": 6, "role": "",            "text": "Bank it to pay for Heists"},
 	"loot2":     {"name": "2 Bills",        "type": "money", "count": 5, "role": "",            "text": "Bank it to pay for Heists"},

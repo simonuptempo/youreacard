@@ -623,10 +623,15 @@ export class Game {
       const slot = move.slot as number;
       const target = this.vault(o)[slot]!;
       this.vault(o)[slot] = null;
-      this.hand(p).push(target);
       const what = displayName(target.kind);
-      const label = TRAPS.includes(target.kind) ? `a ${what} (Defense)` : `a decoy (${what})`;
-      this.ev(p, (v) => `${this.nm(p, v)} picked ${this.poss(o, v)} vault, found ${label}, and stole it!`, "lockpick", p, true);
+      if (TRAPS.includes(target.kind)) {
+        // A Defense gets defused: it goes to the discard pile, not to the picker.
+        s.discard.push(target);
+        this.ev(p, (v) => `${this.nm(p, v)} picked ${this.poss(o, v)} vault and defused a ${what}!`, "lockpick", p, true);
+      } else {
+        this.hand(p).push(target);
+        this.ev(p, (v) => `${this.nm(p, v)} picked ${this.poss(o, v)} vault, found a decoy (${what}), and stole it!`, "lockpick", p, true);
+      }
     }
   }
 

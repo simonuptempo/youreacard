@@ -742,7 +742,7 @@ func _build_bar() -> void:
 					items.append(["Play Lucky Break (draw 2)", _apply_and_clear.bind(m), CardDB.TYPE_COLORS["tool"]])
 				elif not seen.has("lockpick"):
 					seen["lockpick"] = true
-					items.append(["Steal a random card from their vault (2 bills)", _lockpick_random, CardDB.TYPE_COLORS["tool"]])
+					items.append(["Break into their vault (2 bills)", _lockpick_random, CardDB.TYPE_COLORS["tool"]])
 			"vault":
 				items.append(["Move to vault", _apply_and_clear.bind(m), Color("#4c8dff")])
 	if g.plays_left <= 0:
@@ -849,7 +849,7 @@ func _on_opp_vault_tapped(_v: CardView, slot: int) -> void:
 				_apply_and_clear(m)
 				return
 	else:
-		_set_msg("A face-down card. A Defense… or a bluff? A Lockpick would tell you.")
+		_set_msg("A face-down card. A Defense… or a bluff? A Lockpick would find out.")
 
 
 func _on_my_vault_tapped(_v: CardView, slot: int) -> void:
@@ -889,7 +889,7 @@ func _start_target(as_kind: String) -> void:
 		"swipe": _set_msg("Tap a glowing gem to steal it.")
 		"swap": _set_msg("Tap one of YOUR glowing gems to give away.")
 		"grand": _set_msg("Tap a complete set to steal it all!")
-		"lockpick": _set_msg("Tap one of their vault cards to steal it.")
+		"lockpick": _set_msg("Tap one of their vault cards to break in.")
 	refresh()
 	_bar_buttons([["Cancel", _cancel_selection, Color("#3a4166")]])
 
@@ -1223,6 +1223,20 @@ func _thing(info: Array, public_only: bool) -> String:
 	return "a card" if public_only else CardDB.display_name(kind)
 
 
+## True if a Lockpick defused this vault card during these events. Online, the other
+## player's vault cards are "hidden", so any defuse counts.
+func _defused(evs: Array, kind: String) -> bool:
+	for e in evs:
+		if e.get("card", "") != "lockpick":
+			continue
+		var t := str(e.get("text", ""))
+		if kind in CardDB.TRAPS and t.contains("defused a %s" % CardDB.display_name(kind)):
+			return true
+		if kind == "hidden" and t.contains("defused a "):
+			return true
+	return false
+
+
 ## Turns a before/after snapshot of the opponent's turn into plain lists.
 func _build_recap(before: Dictionary, after: Dictionary, evs: Array) -> Dictionary:
 	var lost: Array = []
@@ -1240,6 +1254,8 @@ func _build_recap(before: Dictionary, after: Dictionary, evs: Array) -> Dictiona
 					bills_lost += CardDB.value(b[2])
 				elif b[1] == "vault":
 					var how := " (used up)" if a == null else " (stolen from your vault)"
+					if a == null and _defused(evs, b[2]):
+						how = " (defused by a Lockpick)"
 					lost.append("Your " + CardDB.display_name(b[2]) + how)
 				else:
 					lost.append(_thing(b, false) + (" (from your hand)" if b[1] == "hand" else ""))
@@ -1404,7 +1420,13 @@ func _build_my_recap(before: Dictionary, after: Dictionary, evs: Array) -> Dicti
 					"bank": pass   # counted as bills taken
 					"coll": they_lost.append(_thing(b, true))
 					"hand": they_lost.append("a card from their hand")
-					"vault": they_lost.append("a face-down card from their vault" if a != null else "a vault card (used up)")
+					"vault":
+						if a != null:
+							they_lost.append("a face-down card from their vault")
+						elif _defused(evs, b[2]):
+							they_lost.append("a %s (defused by your Lockpick)" % CardDB.display_name(b[2]) if b[2] in CardDB.TRAPS else "a Defense (defused by your Lockpick)")
+						else:
+							they_lost.append("a vault card (used up)")
 			elif b[0] == 0 and b[1] in ["coll", "bank"] and a != null and a[0] == 1:
 				if b[1] == "bank":
 					bills_lost += CardDB.value(b[2])
