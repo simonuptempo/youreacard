@@ -294,6 +294,7 @@ func refresh() -> void:
 	_draw_hand()
 	var my_turn:=g.current==0 and g.winner<0
 	end_btn.disabled=not my_turn or mode in ["busy","over","target"]
+	if _replaying: end_btn.disabled=false  # End Turn also ends the replay
 	end_btn.text="Discard" if mode=="discard" else "End Turn"
 	_turn_label.text="Your turn · %d play%s left" % [g.plays_left,"" if g.plays_left==1 else "s"] if my_turn else "%s's turn" % bot_name
 	if _replaying: _turn_label.text="Replaying %s's turn" % bot_name
@@ -951,6 +952,9 @@ func _apply(m: Dictionary) -> void:
 
 
 func _on_end_pressed() -> void:
+	if _replaying:
+		_end_replay_now()  # End Turn during the replay ends the replay
+		return
 	if g == null or g.current != 0 or g.winner >= 0:
 		return
 	if g.hand(0).size() > GameState.HAND_LIMIT:
@@ -1474,15 +1478,16 @@ func _show_my_recap() -> bool:
 	bg.size = Vector2(688, 1150 - y)
 	bg.add_theme_stylebox_override("panel", UI.box(Color("#14302c"), 18, UI.ACCENT, 2))
 	_recap_layer.add_child(bg)
-	_recap_layer.add_child(UI.label("YOUR TURN", Vector2(36, y + 12), Vector2(420, 36), 26, UI.ACCENT))
-	_recap_layer.add_child(UI.label("here's what happened", Vector2(36, y + 46), Vector2(420, 24), 15, UI.MUTED))
+	_recap_layer.add_child(UI.label("YOUR TURN", Vector2(RC_X, y + 12), Vector2(RC_W, 40), 30, UI.ACCENT))
+	var quotes: Array = r["quotes"]
+	var strip := _quote_strip_height(quotes)
 	var scroll := ScrollContainer.new()
-	scroll.position = Vector2(36, y + 80)
-	scroll.size = Vector2(448, 1150 - y - 180)
+	scroll.position = Vector2(RC_X, y + 60)
+	scroll.size = Vector2(RC_W, 1150 - 94 - strip - (y + 60))
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_recap_layer.add_child(scroll)
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(440, 0)
+	box.custom_minimum_size = Vector2(RC_TEXT_W, 0)
 	box.add_theme_constant_override("separation", 6)
 	scroll.add_child(box)
 	# Everything that happened this turn, in order (your plays and any Twist that answered them).
@@ -1493,16 +1498,14 @@ func _show_my_recap() -> bool:
 		var l := Label.new()
 		l.text = "•  " + t
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size = Vector2(440, 0)
-		l.add_theme_font_size_override("font_size", 19)
+		l.custom_minimum_size = Vector2(RC_TEXT_W, 0)
+		l.add_theme_font_size_override("font_size", RC_FONT)
 		l.add_theme_color_override("font_color", UI.TEXT)
 		box.add_child(l)
 	# What changed hands, as the same two-column table the opponent's recap uses.
 	if not _my_before.is_empty():
 		_gains_losses_table(box, r["you_gained"], r["you_lost"], r["they_gained"], r["they_lost"])
-	var quotes: Array = r["quotes"]
-	if not quotes.is_empty():
-		_show_quotes(quotes.slice(maxi(0, quotes.size() - 4)), Vector2(492, y + 70), _recap_layer)
+	_show_quotes(quotes, 1150.0 - 94.0 - strip + 6.0, _recap_layer)
 	# Same button row as the opponent's recap.
 	var back := UI.button("Back to my turn", Vector2(40, 1150 - 82), Vector2(250, 62), Color("#314742"), 21)
 	back.pressed.connect(func():
@@ -1522,11 +1525,11 @@ func _show_my_recap() -> bool:
 ## your opponent. Empty rows are left out; an empty column says "Nothing".
 func _gains_losses_table(box: VBoxContainer, you_gained: Array, you_lost: Array, they_gained: Array, they_lost: Array) -> void:
 	var sep := HSeparator.new()
-	sep.custom_minimum_size = Vector2(440, 14)
+	sep.custom_minimum_size = Vector2(RC_TEXT_W, 16)
 	box.add_child(sep)
 	var table := HBoxContainer.new()
 	table.add_theme_constant_override("separation", 12)
-	table.custom_minimum_size = Vector2(440, 0)
+	table.custom_minimum_size = Vector2(RC_TEXT_W, 0)
 	box.add_child(table)
 	var cols := [["GAINS", Color("#8fe3a0"), [["You", you_gained], [bot_name, they_gained]]],
 		["LOSSES", Color("#ff8a7a"), [["You", you_lost], [bot_name, they_lost]]]]
@@ -1538,7 +1541,7 @@ func _gains_losses_table(box: VBoxContainer, you_gained: Array, you_lost: Array,
 		style.content_margin_top = 8
 		style.content_margin_bottom = 10
 		panel.add_theme_stylebox_override("panel", style)
-		panel.custom_minimum_size = Vector2(214, 0)
+		panel.custom_minimum_size = Vector2((RC_TEXT_W - 12) / 2.0, 0)
 		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		table.add_child(panel)
 		var v := VBoxContainer.new()
@@ -1546,7 +1549,7 @@ func _gains_losses_table(box: VBoxContainer, you_gained: Array, you_lost: Array,
 		panel.add_child(v)
 		var head := Label.new()
 		head.text = col[0]
-		head.add_theme_font_size_override("font_size", 20)
+		head.add_theme_font_size_override("font_size", 25)
 		head.add_theme_color_override("font_color", col[1])
 		v.add_child(head)
 		var any := false
@@ -1557,21 +1560,21 @@ func _gains_losses_table(box: VBoxContainer, you_gained: Array, you_lost: Array,
 			any = true
 			var who_l := Label.new()
 			who_l.text = who[0]
-			who_l.add_theme_font_size_override("font_size", 17)
+			who_l.add_theme_font_size_override("font_size", 21)
 			who_l.add_theme_color_override("font_color", UI.MUTED)
 			v.add_child(who_l)
 			for it in items:
 				var l := Label.new()
 				l.text = "•  " + str(it)
 				l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-				l.custom_minimum_size = Vector2(190, 0)
-				l.add_theme_font_size_override("font_size", 18)
+				l.custom_minimum_size = Vector2((RC_TEXT_W - 12) / 2.0 - 26, 0)
+				l.add_theme_font_size_override("font_size", 23)
 				l.add_theme_color_override("font_color", UI.TEXT)
 				v.add_child(l)
 		if not any:
 			var none := Label.new()
 			none.text = "Nothing"
-			none.add_theme_font_size_override("font_size", 18)
+			none.add_theme_font_size_override("font_size", 23)
 			none.add_theme_color_override("font_color", UI.MUTED)
 			v.add_child(none)
 
@@ -1600,6 +1603,13 @@ var _flash_rects: Dictionary = {}
 var _replay_panel: Control
 var _replay_lines: Array = []
 var _replay_card: Control
+# Recap/replay panel layout: text runs the full width; the acting card and its speech
+# bubble (or, at the end, who said what) sit in a strip along the bottom.
+const RC_X := 36.0
+const RC_W := 648.0
+const RC_FONT := 26
+const RC_CARD := Vector2(148, 207)
+const RC_TEXT_W := RC_W - 22.0  # leaves room for the scrollbar
 var _replay_skip := 0
 var _replay_from_mode := "busy"
 
@@ -1663,7 +1673,7 @@ func _start_replay() -> void:
 	for step in _replay_steps():
 		for e in step[2]:
 			_decide_line(e)
-	_set_msg("Watch what %s did. Tap the panel to skip ahead." % bot_name)
+	_set_msg("")
 	mode = "busy"
 	_real_g = g
 	_close_replay_panel()
@@ -1702,16 +1712,15 @@ func _build_replay_panel() -> void:
 	bg.add_theme_stylebox_override("panel", UI.box(Color("#14302c"), 18, UI.ACCENT, 2))
 	bg.gui_input.connect(_on_replay_panel_input)
 	_replay_panel.add_child(bg)
-	_replay_panel.add_child(UI.label("%s'S TURN" % bot_name.to_upper(), Vector2(36, y + 12), Vector2(420, 36), 26, UI.ACCENT))
-	_replay_panel.add_child(UI.label("tap to skip ahead", Vector2(36, y + 46), Vector2(420, 24), 15, UI.MUTED))
+	_replay_panel.add_child(UI.label("%s'S TURN" % bot_name.to_upper(), Vector2(RC_X, y + 12), Vector2(RC_W, 40), 30, UI.ACCENT))
 	_replay_scroll = ScrollContainer.new()
-	_replay_scroll.position = Vector2(36, y + 80)
-	_replay_scroll.size = Vector2(448, 1150 - y - 180)
+	_replay_scroll.position = Vector2(RC_X, y + 60)
+	_replay_scroll.size = Vector2(RC_W, 1150 - 16 - RC_CARD.y - 12 - (y + 60))
 	_replay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_replay_scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_replay_panel.add_child(_replay_scroll)
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(440, 0)
+	box.custom_minimum_size = Vector2(RC_TEXT_W, 0)
 	box.add_theme_constant_override("separation", 6)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_replay_scroll.add_child(box)
@@ -1723,16 +1732,16 @@ func _build_replay_panel() -> void:
 			var l := Label.new()
 			l.text = "•  " + str(e["text"])
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			l.custom_minimum_size = Vector2(440, 0)
-			l.add_theme_font_size_override("font_size", 19)
+			l.custom_minimum_size = Vector2(RC_TEXT_W, 0)
+			l.add_theme_font_size_override("font_size", RC_FONT)
 			l.add_theme_color_override("font_color", UI.MUTED)
 			l.modulate.a = 0.35
 			box.add_child(l)
 			group.append(l)
 		_replay_lines.append(group)
 	_replay_card = Control.new()
-	_replay_card.position = Vector2(494, y + 70)
-	_replay_card.size = Vector2(190, 266)
+	_replay_card.position = Vector2(RC_X, 1150 - 16 - RC_CARD.y)
+	_replay_card.size = RC_CARD
 	_replay_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_replay_panel.add_child(_replay_card)
 
@@ -1776,7 +1785,7 @@ func _show_step_card(evs: Array) -> void:
 		cv.scale = Vector2(0.7, 0.7)
 		cv.create_tween().tween_property(cv, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		Sfx.play_event(e)
-		_speak(cv, e, _replay_panel, Vector2(_replay_card.position.x - 150, _replay_card.position.y - 92), 330)
+		_speak(cv, e, _replay_panel, Vector2(RC_X + RC_CARD.x + 30, _replay_card.position.y + 18), RC_W - RC_CARD.x - 34, true)
 
 
 func _step_speakers(evs: Array) -> int:
@@ -1800,6 +1809,8 @@ func _run_replay() -> void:
 			for l in _replay_lines[j]:
 				l.modulate.a = 1.0 if j <= i else 0.35
 				l.add_theme_color_override("font_color", UI.TEXT if j == i else UI.MUTED)
+		if i < _replay_lines.size() and not _replay_lines[i].is_empty():
+			_replay_scroll.ensure_control_visible.call_deferred(_replay_lines[i][-1])
 		for se in step[2]:
 			if Sfx.speaker(se) == "":
 				Sfx.play_event(se)  # characters' own sounds play as each one appears
@@ -1840,8 +1851,10 @@ func _replay_summary() -> void:
 				quotes.append(e)
 	_gains_losses_table(_replay_box, _recap.get("you_gained", []), lost, gained, [])
 	_replay_scroll.mouse_filter = Control.MOUSE_FILTER_PASS  # scroll down to the table
-	if not quotes.is_empty():
-		_show_quotes(quotes.slice(maxi(0, quotes.size() - 4)), Vector2(492, y + 70))
+	var strip := _quote_strip_height(quotes)
+	_replay_scroll.size.y = 1150 - 94 - strip - _replay_scroll.position.y
+	_replay_scroll.scroll_vertical = 0
+	_show_quotes(quotes, 1150.0 - 94.0 - strip + 6.0)
 	var again := UI.button("Watch again", Vector2(40, 1150 - 82), Vector2(250, 62), Color("#314742"), 21)
 	again.pressed.connect(_watch_again)
 	_replay_panel.add_child(again)
@@ -1851,40 +1864,58 @@ func _replay_summary() -> void:
 	_replay_panel.add_child(done)
 
 
-## Up to four little faces down the right side, each with what they said.
-func _show_quotes(quotes: Array, at: Vector2, parent: Control = null) -> void:
+const QUOTE_W := 212.0   # one face + bubble in the bottom row (three fit across)
+const QUOTE_FONT := 18
+
+
+func _quote_text_h(text: String) -> float:
+	var f := ThemeDB.fallback_font
+	return f.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, QUOTE_W - 76, QUOTE_FONT).y
+
+
+## Height of the row of quotes (0 if nobody spoke).
+func _quote_strip_height(quotes: Array) -> float:
+	if quotes.is_empty():
+		return 0.0
+	var h := 60.0
+	for e in quotes.slice(maxi(0, quotes.size() - 3)):
+		h = maxf(h, _quote_text_h(str(e["said"])) + 18.0)
+	return h + 12.0
+
+
+## Who said what this turn: up to three faces in a row along the bottom, each with their line.
+func _show_quotes(quotes: Array, top: float, parent: Control = null) -> void:
 	if parent == null:
 		parent = _replay_panel
-	var y := at.y
-	for e in quotes:
+	quotes = quotes.slice(maxi(0, quotes.size() - 3))
+	var x := RC_X
+	for i in quotes.size():
+		var e: Dictionary = quotes[i]
 		var face := AvatarView.new()
 		face.data = _speaker_face(e)
-		face.position = Vector2(at.x, y + 4)
-		face.size = Vector2(56, 66)
+		face.position = Vector2(x, top + 2)
+		face.size = Vector2(50, 58)
 		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		parent.add_child(face)
-		var lbl := UI.label(str(e["said"]), Vector2(at.x + 76, y + 8), Vector2(118, 0), 16, Color("#1b2038"), HORIZONTAL_ALIGNMENT_CENTER)
-		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var font := lbl.get_theme_font("font")
-		var text_h := font.get_multiline_string_size(str(e["said"]), HORIZONTAL_ALIGNMENT_CENTER, 118, 16).y
-		var h := maxf(48.0, text_h + 18.0)
+		var bw := QUOTE_W - 64.0
+		var h := maxf(48.0, _quote_text_h(str(e["said"])) + 18.0)
 		var bubble := Panel.new()
-		bubble.position = Vector2(at.x + 68, y)
-		bubble.size = Vector2(134, h)
+		bubble.position = Vector2(x + 60, top)
+		bubble.size = Vector2(bw, h)
 		bubble.add_theme_stylebox_override("panel", UI.box(Color("#fffaf0"), 14, Color("#1b2038"), 2))
 		bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		parent.add_child(bubble)
 		var tail := Polygon2D.new()
-		tail.polygon = PackedVector2Array([Vector2(at.x + 70, y + 16), Vector2(at.x + 70, y + 34), Vector2(at.x + 56, y + 30)])
+		tail.polygon = PackedVector2Array([Vector2(x + 62, top + 16), Vector2(x + 62, top + 34), Vector2(x + 48, top + 30)])
 		tail.color = Color("#fffaf0")
 		parent.add_child(tail)
-		lbl.size = Vector2(118, h - 14)
-		lbl.position = Vector2(at.x + 76, y + 7)
+		var lbl := UI.label(str(e["said"]), Vector2(x + 66, top + 7), Vector2(bw - 12, h - 14), QUOTE_FONT, Color("#1b2038"), HORIZONTAL_ALIGNMENT_CENTER)
+		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		parent.add_child(lbl)
 		for n in [face, bubble, tail, lbl]:
 			n.modulate.a = 0.0
-			n.create_tween().tween_property(n, "modulate:a", 1.0, 0.25).set_delay(0.12 * quotes.find(e))
-		y += maxf(h, 70.0) + 12.0
+			n.create_tween().tween_property(n, "modulate:a", 1.0, 0.25).set_delay(0.12 * i)
+		x += QUOTE_W + 6.0
 
 
 func _on_replay_panel_input(ev: InputEvent) -> void:
@@ -2164,7 +2195,7 @@ func _speaker_face(e: Dictionary) -> Dictionary:
 	return f if not f.is_empty() else {"portrait_path": "res://art/role-%s.png" % role}
 
 
-func _speak(card: Control, e: Dictionary, parent: Control, at: Vector2, width: float) -> void:
+func _speak(card: Control, e: Dictionary, parent: Control, at: Vector2, width: float, tail_left := false) -> void:
 	if not is_instance_valid(parent):
 		return
 	_decide_line(e)
@@ -2196,12 +2227,14 @@ func _speak(card: Control, e: Dictionary, parent: Control, at: Vector2, width: f
 	bubble.add_child(box)
 	var tail := Polygon2D.new()
 	tail.polygon = PackedVector2Array([Vector2(width * 0.42, h - 3), Vector2(width * 0.58, h - 3), Vector2(width * 0.47, h + 26)])
+	if tail_left:
+		tail.polygon = PackedVector2Array([Vector2(3, h * 0.3), Vector2(3, h * 0.62), Vector2(-26, h * 0.52)])
 	tail.color = Color("#fffaf0")
 	bubble.add_child(tail)
 	lbl.size = Vector2(width - 36, h - 20)
 	bubble.add_child(lbl)
 	parent.add_child(bubble)
-	bubble.pivot_offset = Vector2(width * 0.5, h)
+	bubble.pivot_offset = Vector2(0, h * 0.5) if tail_left else Vector2(width * 0.5, h)
 	bubble.scale = Vector2(0.2, 0.2)
 	bubble.modulate.a = 0.0
 	var pop := bubble.create_tween()
