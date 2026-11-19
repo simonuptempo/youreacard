@@ -1248,7 +1248,14 @@ func _snapshot(st: GameState = null) -> Dictionary:
 		for c in gs.vault(p):
 			if c != null:
 				out[c["id"]] = [p, "vault", c["kind"], ""]
+		# The bank is one running total; recaps compare totals, not which bills moved.
+		out[-1000 - p] = [p, "total", "", gs.bank_total(p)]
 	return out
+
+
+func _total_in(snap: Dictionary, p: int) -> int:
+	var t = snap.get(-1000 - p)
+	return int(t[3]) if t != null else 0
 
 
 func _thing(info: Array, public_only: bool) -> String:
@@ -1292,7 +1299,7 @@ func _build_recap(before: Dictionary, after: Dictionary, evs: Array) -> Dictiona
 		if b[0] == 0:
 			if a == null or a[0] != 0:
 				if b[1] == "bank":
-					bills_lost += CardDB.value(b[2])
+					pass  # bills are counted from the bank totals below
 				elif b[1] == "vault":
 					var how := " (used up)" if a == null else " (stolen from your vault)"
 					if a == null and _defused(evs, b[2]):
@@ -1313,7 +1320,8 @@ func _build_recap(before: Dictionary, after: Dictionary, evs: Array) -> Dictiona
 			if b != null and b[0] == 1 and b[1] == a[1]:
 				continue
 			if a[1] == "bank":
-				bills_gained += CardDB.value(a[2])
+				if b == null or b[0] == 1:
+					bills_gained += CardDB.value(a[2])  # banked or pawned their own cards
 			elif a[1] == "coll":
 				they_gained.append(_thing(a, true) + (" (from you)" if b != null and b[0] == 0 else ""))
 			elif a[1] == "vault":
@@ -1322,6 +1330,13 @@ func _build_recap(before: Dictionary, after: Dictionary, evs: Array) -> Dictiona
 				they_gained.append("your %s (into their hand)" % CardDB.display_name(a[2]))
 		elif a[0] == 0 and b == null:
 			pass  # your own draw, shown elsewhere
+	# What you paid them (or they paid you) is the change in your bank's total.
+	var yd := _total_in(after, 0) - _total_in(before, 0)
+	if yd < 0:
+		bills_lost = -yd
+		bills_gained += -yd
+	elif yd > 0:
+		you_gained.append(CardDB.bills(yd) + " from %s" % bot_name)
 	if bills_lost > 0:
 		lost.append(CardDB.bills(bills_lost) + " from your bank")
 	if bills_gained > 0:
@@ -1438,10 +1453,8 @@ func _build_my_recap(before: Dictionary, after: Dictionary, evs: Array) -> Dicti
 				var from_them: bool = b != null and b[0] == 1
 				match a[1]:
 					"bank":
-						if from_them:
-							bills_taken += CardDB.value(a[2])
-						else:
-							banked += CardDB.value(a[2])
+						if not from_them:
+							banked += CardDB.value(a[2])  # bills from them are counted from the totals
 					"coll":
 						you_gained.append(_thing(a, false) + (" (from %s)" % bot_name if from_them else ""))
 					"vault":
@@ -1468,11 +1481,14 @@ func _build_my_recap(before: Dictionary, after: Dictionary, evs: Array) -> Dicti
 							they_lost.append("a %s (defused by your Lockpick)" % CardDB.display_name(b[2]) if b[2] in CardDB.TRAPS else "a Defense (defused by your Lockpick)")
 						else:
 							they_lost.append("a vault card (used up)")
-			elif b[0] == 0 and b[1] in ["coll", "bank"] and a != null and a[0] == 1:
-				if b[1] == "bank":
-					bills_lost += CardDB.value(b[2])
-				else:
-					you_lost.append(_thing(b, false))
+			elif b[0] == 0 and b[1] == "coll" and a != null and a[0] == 1:
+				you_lost.append(_thing(b, false))
+		# Bills that changed hands are the change in their bank's total.
+		var td := _total_in(after, 1) - _total_in(before, 1)
+		if td < 0:
+			bills_taken = -td
+		elif td > 0:
+			bills_lost = td
 	if banked > 0:
 		you_gained.append(CardDB.bills(banked) + " banked")
 	if bills_taken > 0:
@@ -1724,6 +1740,7 @@ func _zone_key(info: Array) -> String:
 		"coll": return "coll_%d_%s" % [info[0], info[3]]
 		"bank": return "bank_%d" % info[0]
 		"vault": return "vault_%d" % info[0]
+		"total": return "bank_%d" % info[0]
 	return "hand_%d" % info[0]
 
 
@@ -1732,7 +1749,7 @@ func _changed_zones(a: GameState, b: GameState) -> Dictionary:
 	var sb := _snapshot(b)
 	var keys := {}
 	for id in sa:
-		if not sb.has(id) or _zone_key(sb[id]) != _zone_key(sa[id]):
+		if not sb.has(id) or _zone_key(sb[id]) != _zone_key(sa[id]) or (sa[id][1] == "total" and sa[id][3] != sb[id][3]):
 			keys[_zone_key(sa[id])] = true
 			if sb.has(id):
 				keys[_zone_key(sb[id])] = true

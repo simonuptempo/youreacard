@@ -41,7 +41,7 @@ func setup(names: Array, seed_value: int, first: int, plays: int = 3) -> void:
 		var coll := {}
 		for c in CardDB.COLORS:
 			coll[c] = []
-		players.append({"name": n, "hand": [], "collection": coll, "vault": [null, null], "bank": []})
+		players.append({"name": n, "hand": [], "collection": coll, "vault": [null, null], "bank": [], "credit": 0})
 	for i in START_HAND:
 		for p in players.size():
 			_draw_one(p)
@@ -62,7 +62,7 @@ static func from_view(v: Dictionary) -> GameState:
 		for c in pv.get("vault", [null, null]):
 			vault.append(null if c == null else _card(c))
 		g.players.append({"name": str(pv.get("name", "")), "hand": _cards(pv.get("hand", [])),
-			"collection": coll, "vault": vault, "bank": _cards(pv.get("bank", []))})
+			"collection": coll, "vault": vault, "bank": _cards(pv.get("bank", [])), "credit": int(pv.get("credit", 0))})
 	g.current = int(v.get("current", 0))
 	g.plays_left = int(v.get("plays_left", 0))
 	g.plays_per_turn = int(v.get("plays_per_turn", 3))
@@ -145,23 +145,38 @@ func bank(p: int) -> Array:
 	return players[p]["bank"]
 
 
+## The bank is one running total: its bill (and pawned gem) cards plus "credit", the
+## leftover when a bill had to be broken. Credit can dip below zero while a payee
+## gives change; the total never does.
+func credit(p: int) -> int:
+	return int(players[p].get("credit", 0))
+
+
 func bank_total(p: int) -> int:
-	var t := 0
+	var t := credit(p)
 	for c in bank(p):
 		t += CardDB.value(c["kind"])
 	return t
 
 
-## Pay `amount` from p's bank automatically: the combination that overpays least
-## (then uses fewest cards). No change is given. Returns the cards paid.
-func _pay(p: int, amount: int) -> Array:
+## Pay `amount` from p's bank. The total drops by exactly that much: the cards that cover
+## it leave the bank, and anything left over from a broken bill stays behind as credit.
+## Returns {"cards": the cards handed over, "value": what was actually paid}.
+func _pay(p: int, amount: int) -> Dictionary:
 	var b := bank(p)
-	if amount <= 0 or b.is_empty():
-		return []
-	if bank_total(p) <= amount:
+	var total := bank_total(p)
+	if amount <= 0 or total <= 0:
+		return {"cards": [], "value": 0}
+	if total <= amount:
 		var everything := b.duplicate()
 		b.clear()
-		return everything
+		players[p]["credit"] = 0
+		return {"cards": everything, "value": total}
+	var cr := credit(p)
+	if cr >= amount:
+		players[p]["credit"] = cr - amount
+		return {"cards": [], "value": amount}
+	var need := amount - cr
 	var n := mini(b.size(), 12)
 	var best_mask := -1
 	var best_sum := 1 << 30
@@ -173,18 +188,19 @@ func _pay(p: int, amount: int) -> Array:
 			if m & (1 << i):
 				sm += CardDB.value(b[i]["kind"])
 				cnt += 1
-		if sm >= amount and (sm < best_sum or (sm == best_sum and cnt < best_count)):
+		if sm >= need and (sm < best_sum or (sm == best_sum and cnt < best_count)):
 			best_sum = sm
 			best_mask = m
 			best_count = cnt
 	var paid: Array = []
 	if best_mask < 0:
-		return paid
+		return {"cards": [], "value": 0}
 	for i in range(n - 1, -1, -1):
 		if best_mask & (1 << i):
 			paid.append(b[i])
 			b.remove_at(i)
-	return paid
+	players[p]["credit"] = cr + best_sum - amount
+	return {"cards": paid, "value": amount}
 
 
 ## Bills for an extra gem on a finished set: 2 for the first extra, 3 after that.
@@ -200,51 +216,20 @@ static func ordinal(n: int) -> String:
 	return "%dth" % n
 
 
-## The bills in `pool` that add up to exactly `target` (fewest cards), or [] if none do.
-func _exact_subset(pool: Array, target: int) -> Array:
-	if target <= 0:
-		return []
-	var n := mini(pool.size(), 12)
-	var best := -1
-	var best_count := 99
-	for m in range(1, 1 << n):
-		var sm := 0
-		var cnt := 0
-		for i in n:
-			if m & (1 << i):
-				sm += CardDB.value(pool[i]["kind"])
-				cnt += 1
-		if sm == target and cnt < best_count:
-			best = m
-			best_count = cnt
-	var out: Array = []
-	if best >= 0:
-		for i in n:
-			if best & (1 << i):
-				out.append(pool[i])
-	return out
-
-
-## One player pays another. Overpayment comes back as change when the payee's bank has
-## the right bills; anything the payer can't cover is owed and taken from the next bills
-## they get. Returns a sentence describing what happened.
+## One player pays another: the payer's total drops by what they pay and the payee's
+## rises by exactly the same. Anything the payer can't cover is paid in gems (at pawn
+## value), then owed and taken from the next bills they get. Returns a sentence.
 func transfer(payer: int, payee: int, amount: int) -> String:
-	var got := _pay(payer, amount)
-	var sum := _loot_sum(got)
-	var change: Array = []
-	if sum > amount:
-		change = _exact_subset(bank(payee), sum - amount)
-		for c in change:
-			bank(payee).erase(c)
-		bank(payer).append_array(change)
+	var r := _pay(payer, amount)
+	var got: Array = r["cards"]
+	var sum: int = r["value"]
 	bank(payee).append_array(got)
+	players[payee]["credit"] = credit(payee) + sum - _loot_sum(got)
 	var parts: Array = []
-	if got.is_empty():
+	if sum == 0:
 		parts.append("%s had no bills" % nm(payer))
 	else:
 		parts.append("%s paid %s" % [nm(payer), CardDB.bills(sum)])
-	if not change.is_empty():
-		parts.append("got %s back in change" % CardDB.bills(_loot_sum(change)))
 	# Out of bills? Pay the rest with gems at their pawn value, taken from the payer's
 	# least-built unfinished sets (finished sets are never broken up).
 	var gems: Array = []
@@ -264,17 +249,17 @@ func transfer(payer: int, payee: int, amount: int) -> String:
 		var names: Array = []
 		for k in counts:
 			names.append(a_an(CardDB.one_name(k)) if counts[k] == 1 else "%d %s" % [counts[k], CardDB.display_name(k)])
-		if got.is_empty():
+		if sum == 0:
 			parts[0] = "%s paid with %s" % [nm(payer), " and ".join(names)]
 		else:
 			parts.append("handed over %s" % " and ".join(names))
-	if gem_sum > 0 and sum + gem_sum > amount and change.is_empty():
-		change = _exact_subset(bank(payee), sum + gem_sum - amount)
-		for c in change:
-			bank(payee).erase(c)
-		bank(payer).append_array(change)
-		if not change.is_empty():
-			parts.append("got %s back in change" % CardDB.bills(_loot_sum(change)))
+	if gem_sum > 0 and sum + gem_sum > amount:
+		# A gem worth more than what was left to pay: the payee gives the difference back.
+		var refund := mini(sum + gem_sum - amount, bank_total(payee))
+		if refund > 0:
+			players[payee]["credit"] = credit(payee) - refund
+			players[payer]["credit"] = credit(payer) + refund
+			parts.append("got %s back in change" % CardDB.bills(refund))
 	sum += gem_sum
 	var text := " and ".join(parts) + "."
 	var short := amount - sum
@@ -285,8 +270,8 @@ func transfer(payer: int, payee: int, amount: int) -> String:
 		short -= cancel
 		owes[payer] += short
 		if short > 0:
-			text += " %s %s %s%s, taken from the next bills %s get." % [nm(payer), "owe" if nm(payer) == "You" else "owes", CardDB.bills(short), "" if got.is_empty() else " more", "you" if nm(payer) == "You" else "they"]
-	if not got.is_empty() and owes[payee] > 0:
+			text += " %s %s %s%s, taken from the next bills %s get." % [nm(payer), "owe" if nm(payer) == "You" else "owes", CardDB.bills(short), "" if r["value"] == 0 else " more", "you" if nm(payer) == "You" else "they"]
+	if r["value"] > 0 and owes[payee] > 0:
 		_collect_debt(payee)
 	return text
 
@@ -321,7 +306,7 @@ func _gem_for_payment(p: int, payee: int) -> Dictionary:
 
 ## A player who owes bills hands them over as soon as they bank some.
 func _collect_debt(p: int) -> void:
-	if owes[p] <= 0 or bank(p).is_empty():
+	if owes[p] <= 0 or bank_total(p) <= 0:
 		return
 	var amount: int = owes[p]
 	owes[p] = 0
@@ -445,21 +430,11 @@ func _draw_one(p: int) -> bool:
 	return true
 
 
-## Double Crossed: someone steals bills from the drawer's bank, biggest first, up to
-## CardDB.WINDFALL_CAP bills in all. They land in the discard pile (where a Windfall can find them).
+## Double Crossed: someone steals up to CardDB.WINDFALL_CAP bills from the drawer's bank. They land in the discard pile (where a Windfall can find them).
 func _double_cross(p: int) -> void:
-	var loot: Array = bank(p).filter(func(c): return CardDB.is_money(c["kind"]))
-	loot.sort_custom(func(a, b):
-		var va := CardDB.value(a["kind"])
-		var vb := CardDB.value(b["kind"])
-		return va > vb if va != vb else int(a["id"]) < int(b["id"]))
-	var total := 0
-	for c in loot:
-		var v := CardDB.value(c["kind"])
-		if total + v <= CardDB.WINDFALL_CAP:
-			total += v
-			bank(p).erase(c)
-			discard.append(c)
+	var r := _pay(p, mini(CardDB.WINDFALL_CAP, bank_total(p)))
+	discard.append_array(r["cards"])
+	var total: int = r["value"]
 	var who := "you" if nm(p) == "You" else nm(p)
 	if total > 0:
 		_event(p, "Double Crossed! Someone stole %s from %s bank." % [CardDB.bills(total), poss(p)], "doublecross", p, true)
@@ -668,7 +643,7 @@ func _heist_moves(p: int, id: int, kind: String) -> Array:
 					out.append({"type": "heist", "card": id, "as": "grand", "color": color})
 		"payup":
 			# No bills? They pay with a gem at its pawn value instead (never from a finished set).
-			if not bank(o).is_empty() or not _gem_for_payment(o, p).is_empty():
+			if bank_total(o) > 0 or not _gem_for_payment(o, p).is_empty():
 				out.append({"type": "heist", "card": id, "as": "payup"})
 	return out
 
@@ -784,7 +759,7 @@ func _do_tool(p: int, move: Dictionary) -> void:
 	var c := _remove_from_hand(p, move["card"])
 	discard.append(c)
 	plays_left -= 1
-	discard.append_array(_pay(p, CardDB.cost(c["kind"])))
+	discard.append_array(_pay(p, CardDB.cost(c["kind"]))["cards"])
 	if c["kind"] == "lucky":
 		var got := _draw(p, 2)
 		_event(p, "%s played Lucky Break and drew %d." % [nm(p), got], "lucky", p, false)
@@ -810,11 +785,11 @@ func _do_heist_play(p: int, move: Dictionary) -> void:
 		card["face"] = p
 	plays_left -= 1
 	var paid := _pay(p, CardDB.cost(kind))
-	discard.append_array(paid)
+	discard.append_array(paid["cards"])
 	var as_text := CardDB.display_name(kind)
 	if card["kind"] == "wild":
 		as_text = "You're a Card! (as %s)" % as_text
-	var paid_txt := " (paid %s)" % CardDB.bills(_loot_sum(paid)) if not paid.is_empty() else ""
+	var paid_txt := " (paid %s)" % CardDB.bills(paid["value"]) if paid["value"] > 0 else ""
 	_event(p, "%s played %s on %s%s." % [nm(p), as_text, nm(o) if nm(o) != "You" else "you", paid_txt], kind, card.get("face", p), true)
 	# Traps fire automatically, first real trap in slot order.
 	for s in 2:

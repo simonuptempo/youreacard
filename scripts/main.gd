@@ -22,7 +22,7 @@ const RULES := """[b]Goal:[/b] Complete 4 sets of gems before anyone else. 2 rub
  • A Heist takes a gem from their unfinished set. A Grand Heist takes a finished set of gems.
  • Add an extra gem to a finished set and your opponent pays you 2 bills (3 bills for a second extra).
  • Need cash? Pawn a gem from your hand or your collection into your bank: 1 bill each (Rubies and Diamonds: 2). Gems a finished set needs, and wilds, can't be pawned.
- • Payments make change when they can. Out of bills? They pay with gems from unfinished sets (at pawn value), then owe the rest from the next bills they get.
+ • Your bank is one total: paying 2 bills from 5 leaves 3, whatever bills you banked. Out of bills? You pay with gems from unfinished sets (at pawn value), then owe the rest from the next bills you get.
  • Shields, Mirrors, and Snares sit face-down and fire automatically when you are targeted.
  • A Mirror that bounces a Trade earns you a free counter-trade on your next turn.
  • A Mirror that bounces a Grand Heist takes their best unfinished set if they have no finished one.

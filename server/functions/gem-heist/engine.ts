@@ -10,6 +10,7 @@ export type Player = {
   collection: Record<string, Card[]>;
   vault: (Card | null)[];
   bank: Card[];
+  credit?: number; // leftover from broken bills: the bank is one running total
 };
 export type Ev = { p: number; t: [string, string]; card: string; face: number; big: boolean; turn: number; kept?: string };
 export type State = {
@@ -112,7 +113,7 @@ export class Game {
     const g = new Game({
       deck: buildDeck(), discard: [], current: first, plays_left: 0, plays_per_turn: plays, winner: -1,
       turn_number: 0, counter_owed: [false, false], owes: [0, 0], events: [], rng: seed >>> 0 || 1,
-      players: names.map((n) => ({ name: n, hand: [], collection: coll(), vault: [null, null], bank: [] })),
+      players: names.map((n) => ({ name: n, hand: [], collection: coll(), vault: [null, null], bank: [], credit: 0 })),
     });
     g.shuffle(g.s.deck);
     for (let i = 0; i < START_HAND; i++) for (let p = 0; p < 2; p++) g.drawOne(p);
@@ -143,7 +144,8 @@ export class Game {
   bank = (p: number) => this.s.players[p].bank;
   vault = (p: number) => this.s.players[p].vault;
   setCards = (p: number, c: string) => this.s.players[p].collection[c];
-  bankTotal = (p: number) => this.bank(p).reduce((t, c) => t + value(c.kind), 0);
+  credit = (p: number) => this.s.players[p].credit ?? 0;
+  bankTotal = (p: number) => this.bank(p).reduce((t, c) => t + value(c.kind), this.credit(p));
   lootSum = (cards: Card[]) => cards.reduce((t, c) => t + value(c.kind), 0);
 
   isComplete(p: number, color: string): boolean {
@@ -203,20 +205,12 @@ export class Game {
     return true;
   }
 
-  // Double Crossed: someone steals bills from the drawer's bank, biggest first, up to WINDFALL_CAP
-  // bills in all. They land in the discard pile (where a Windfall can find them).
+  // Double Crossed: someone steals up to WINDFALL_CAP bills from the drawer's bank.
+  // They land in the discard pile (where a Windfall can find them).
   doubleCross(p: number) {
-    const loot = this.bank(p).filter((c) => isMoney(c.kind));
-    loot.sort((a, b) => (value(b.kind) - value(a.kind)) || (a.id - b.id));
-    let total = 0;
-    for (const c of loot) {
-      const v = value(c.kind);
-      if (total + v <= WINDFALL_CAP) {
-        total += v;
-        this.bank(p).splice(this.bank(p).indexOf(c), 1);
-        this.s.discard.push(c);
-      }
-    }
+    const r = this.pay(p, Math.min(WINDFALL_CAP, this.bankTotal(p)));
+    this.s.discard.push(...r.cards);
+    const total = r.value;
     if (total > 0) {
       this.ev(p, (v) => `Double Crossed! Someone stole ${bills(total)} from ${this.poss(p, v)} bank.`, "doublecross", p, true);
     } else {
@@ -262,53 +256,46 @@ export class Game {
   }
 
   // ---- payments
-  pay(p: number, amount: number): Card[] {
+  // The bank is one running total: its cards plus credit (leftover from broken bills).
+  // Paying lowers it by exactly the amount; the covering cards leave, the rest stays as credit.
+  pay(p: number, amount: number): { cards: Card[]; value: number } {
     const b = this.bank(p);
-    if (amount <= 0 || b.length === 0) return [];
-    if (this.bankTotal(p) <= amount) return b.splice(0, b.length);
+    const total = this.bankTotal(p);
+    if (amount <= 0 || total <= 0) return { cards: [], value: 0 };
+    if (total <= amount) {
+      this.s.players[p].credit = 0;
+      return { cards: b.splice(0, b.length), value: total };
+    }
+    const cr = this.credit(p);
+    if (cr >= amount) {
+      this.s.players[p].credit = cr - amount;
+      return { cards: [], value: amount };
+    }
+    const need = amount - cr;
     const n = Math.min(b.length, 12);
     let bestMask = -1, bestSum = 1 << 30, bestCount = 99;
     for (let m = 1; m < 1 << n; m++) {
       let sm = 0, cnt = 0;
       for (let i = 0; i < n; i++) if (m & (1 << i)) { sm += value(b[i].kind); cnt++; }
-      if (sm >= amount && (sm < bestSum || (sm === bestSum && cnt < bestCount))) {
+      if (sm >= need && (sm < bestSum || (sm === bestSum && cnt < bestCount))) {
         bestSum = sm; bestMask = m; bestCount = cnt;
       }
     }
+    if (bestMask < 0) return { cards: [], value: 0 };
     const paid: Card[] = [];
-    if (bestMask < 0) return paid;
     for (let i = n - 1; i >= 0; i--) if (bestMask & (1 << i)) paid.push(b.splice(i, 1)[0]);
-    return paid;
+    this.s.players[p].credit = cr + bestSum - amount;
+    return { cards: paid, value: amount };
   }
 
-  exactSubset(pool: Card[], target: number): Card[] {
-    if (target <= 0) return [];
-    const n = Math.min(pool.length, 12);
-    let best = -1, bestCount = 99;
-    for (let m = 1; m < 1 << n; m++) {
-      let sm = 0, cnt = 0;
-      for (let i = 0; i < n; i++) if (m & (1 << i)) { sm += value(pool[i].kind); cnt++; }
-      if (sm === target && cnt < bestCount) { best = m; bestCount = cnt; }
-    }
-    const out: Card[] = [];
-    if (best >= 0) for (let i = 0; i < n; i++) if (best & (1 << i)) out.push(pool[i]);
-    return out;
-  }
-
-  private moveChange(payer: number, payee: number, over: number): Card[] {
-    const change = this.exactSubset(this.bank(payee), over);
-    for (const c of change) this.bank(payee).splice(this.bank(payee).indexOf(c), 1);
-    this.bank(payer).push(...change);
-    return change;
-  }
-
-  // Returns the sentence (per viewer) describing the payment.
+  // One player pays another: the payer's total drops by what they pay and the payee's rises
+  // by the same. Returns the sentence (per viewer) describing the payment.
   transfer(payer: number, payee: number, amount: number): (v: number) => string {
-    const got = this.pay(payer, amount);
-    let sum = this.lootSum(got);
-    let change: Card[] = [];
-    if (sum > amount) change = this.moveChange(payer, payee, sum - amount);
+    const r = this.pay(payer, amount);
+    const got = r.cards;
+    let sum = r.value;
     this.bank(payee).push(...got);
+    this.s.players[payee].credit = this.credit(payee) + sum - this.lootSum(got);
     const gems: string[] = [];
     let gemSum = 0;
     while (sum + gemSum < amount) {
@@ -319,9 +306,14 @@ export class Game {
       gems.push(removed[0]);
       gemSum += pawnValue(removed[0]);
     }
-    let change2: Card[] = [];
-    if (gemSum > 0 && sum + gemSum > amount && change.length === 0) {
-      change2 = this.moveChange(payer, payee, sum + gemSum - amount);
+    let refund = 0;
+    if (gemSum > 0 && sum + gemSum > amount) {
+      // A gem worth more than what was left to pay: the payee gives the difference back.
+      refund = Math.min(sum + gemSum - amount, this.bankTotal(payee));
+      if (refund > 0) {
+        this.s.players[payee].credit = this.credit(payee) - refund;
+        this.s.players[payer].credit = this.credit(payer) + refund;
+      }
     }
     const paidSum = sum;
     sum += gemSum;
@@ -337,24 +329,21 @@ export class Game {
     const counts: Record<string, number> = {};
     for (const k of gems) counts[k] = (counts[k] ?? 0) + 1;
     const names = Object.keys(counts).map((k) => (counts[k] === 1 ? aAn(oneName(k)) : `${counts[k]} ${displayName(k)}`));
-    const changeSum = this.lootSum(change) + this.lootSum(change2);
     const text = (v: number) => {
       const parts: string[] = [];
-      parts.push(got.length === 0 ? `${this.nm(payer, v)} had no bills` : `${this.nm(payer, v)} paid ${bills(paidSum)}`);
-      if (change.length) parts.push(`got ${bills(this.lootSum(change))} back in change`);
+      parts.push(paidSum === 0 ? `${this.nm(payer, v)} had no bills` : `${this.nm(payer, v)} paid ${bills(paidSum)}`);
       if (names.length) {
-        if (got.length === 0) parts[0] = `${this.nm(payer, v)} paid with ${names.join(" and ")}`;
+        if (paidSum === 0) parts[0] = `${this.nm(payer, v)} paid with ${names.join(" and ")}`;
         else parts.push(`handed over ${names.join(" and ")}`);
       }
-      if (change2.length) parts.push(`got ${bills(this.lootSum(change2))} back in change`);
+      if (refund > 0) parts.push(`got ${bills(refund)} back in change`);
       let t = parts.join(" and ") + ".";
       if (owedNow > 0) {
-        t += ` ${this.nm(payer, v)} ${this.vb(payer, v, "owe", "owes")} ${bills(owedNow)}${got.length === 0 ? "" : " more"}, taken from the next bills ${payer === v ? "you" : "they"} get.`;
+        t += ` ${this.nm(payer, v)} ${this.vb(payer, v, "owe", "owes")} ${bills(owedNow)}${paidSum === 0 ? "" : " more"}, taken from the next bills ${payer === v ? "you" : "they"} get.`;
       }
       return t;
     };
-    void changeSum;
-    if (got.length && this.s.owes[payee] > 0) this.collectDebt(payee);
+    if (paidSum > 0 && this.s.owes[payee] > 0) this.collectDebt(payee);
     return text;
   }
 
@@ -378,7 +367,7 @@ export class Game {
   }
 
   collectDebt(p: number) {
-    if (this.s.owes[p] <= 0 || this.bank(p).length === 0) return;
+    if (this.s.owes[p] <= 0 || this.bankTotal(p) <= 0) return;
     const amount = this.s.owes[p];
     this.s.owes[p] = 0;
     const how = this.transfer(p, this.opp(p), amount);
@@ -490,7 +479,7 @@ export class Game {
       for (const color of COLORS) if (this.isComplete(o, color)) out.push({ type: "heist", card: id, as: "grand", color });
     } else if (kind === "payup") {
       // No bills? They pay with a gem at its pawn value instead (never from a finished set).
-      if (this.bank(o).length || this.gemForPayment(o, p)) out.push({ type: "heist", card: id, as: "payup" });
+      if (this.bankTotal(o) > 0 || this.gemForPayment(o, p)) out.push({ type: "heist", card: id, as: "payup" });
     }
     return out;
   }
@@ -614,7 +603,7 @@ export class Game {
     const c = this.removeFromHand(p, move.card as number);
     s.discard.push(c);
     s.plays_left--;
-    s.discard.push(...this.pay(p, cost(c.kind)));
+    s.discard.push(...this.pay(p, cost(c.kind)).cards);
     if (c.kind === "lucky") {
       const got = this.draw(p, 2);
       this.ev(p, (v) => `${this.nm(p, v)} played Lucky Break and drew ${got}.`, "lucky", p, false);
@@ -643,8 +632,8 @@ export class Game {
     if (card.kind === "wild" && card.face === undefined) card.face = p;
     s.plays_left--;
     const paid = this.pay(p, cost(kind));
-    s.discard.push(...paid);
-    const paidTxt = paid.length ? ` (paid ${bills(this.lootSum(paid))})` : "";
+    s.discard.push(...paid.cards);
+    const paidTxt = paid.value > 0 ? ` (paid ${bills(paid.value)})` : "";
     this.ev(p, (v) => `${this.nm(p, v)} played ${displayName(kind)} on ${o === v ? "you" : this.s.players[o].name}${paidTxt}.`, kind, card.face ?? p, true);
     for (let sl = 0; sl < 2; sl++) {
       const t = this.vault(o)[sl];
@@ -788,6 +777,7 @@ export class Game {
       collection: s.players[p].collection,
       vault: p === seat ? s.players[p].vault : s.players[p].vault.map((c) => (c ? hidden() : null)),
       bank: s.players[p].bank,
+      credit: s.players[p].credit ?? 0,
     });
     const rot = (p: number) => (p < 0 ? p : p === seat ? 0 : 1);
     return {

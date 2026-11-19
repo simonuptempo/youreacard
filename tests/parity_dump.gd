@@ -3,7 +3,7 @@ extends SceneTree
 func _st(g: GameState) -> Dictionary:
 	var ps: Array = []
 	for p in g.players:
-		ps.append({"name": p["name"], "hand": p["hand"].duplicate(true), "bank": p["bank"].duplicate(true), "vault": p["vault"].duplicate(true), "collection": p["collection"].duplicate(true)})
+		ps.append({"name": p["name"], "hand": p["hand"].duplicate(true), "bank": p["bank"].duplicate(true), "credit": int(p.get("credit", 0)), "vault": p["vault"].duplicate(true), "collection": p["collection"].duplicate(true)})
 	return {"players": ps, "deck": g.deck.duplicate(true), "discard": g.discard.duplicate(true), "current": g.current, "plays_left": g.plays_left, "winner": g.winner, "counter_owed": g.counter_owed.duplicate(), "owes": g.owes.duplicate()}
 
 func _init() -> void:

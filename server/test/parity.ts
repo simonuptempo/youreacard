@@ -12,7 +12,7 @@ Game.prototype.ev = function (p, text, card, face, big) {
 const sortKeys = (v: any): any => Array.isArray(v) ? v.map(sortKeys) : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])])) : typeof v === "number" ? Math.round(v) : v;
 const norm = (x: any) => JSON.stringify(sortKeys(x));
 const strip = (st: any) => ({
-  players: st.players.map((pl: any) => ({ hand: pl.hand, bank: pl.bank, vault: pl.vault, collection: COLORS.map((c) => pl.collection[c]) })),
+  players: st.players.map((pl: any) => ({ hand: pl.hand, bank: pl.bank, credit: pl.credit ?? 0, vault: pl.vault, collection: COLORS.map((c) => pl.collection[c]) })),
   deck: st.deck, discard: st.discard, current: st.current, plays_left: st.plays_left, winner: st.winner,
   counter_owed: st.counter_owed, owes: st.owes,
 });
