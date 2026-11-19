@@ -16,15 +16,15 @@ const TREASURES := {
 
 const ACTIONS := {
 	"wild":      {"name": "Wild", "type": "wild",  "count": 2, "role": "you",         "text": "Counts as any gem"},
-	"swipe":     {"name": "Heist",          "type": "heist", "count": 7, "role": "pickpocket",  "text": "Take 1 gem from a set they haven't finished"},
-	"swap":      {"name": "Trade",          "type": "heist", "count": 4, "role": "trickster",   "text": "Trade one of your gems for one of theirs"},
+	"swipe":     {"name": "Heist",          "type": "heist", "count": 7, "role": "pickpocket",  "text": "Take a gem from their unfinished set"},
+	"swap":      {"name": "Trade",          "type": "heist", "count": 4, "role": "trickster",   "text": "Trade your gem for one of theirs"},
 	"shakedown": {"name": "Shakedown",      "type": "heist", "count": 4, "role": "boss",        "text": "Take a random card from their hand"},
-	"grand":     {"name": "Grand Heist",    "type": "heist", "count": 2, "role": "mastermind",  "text": "Take ALL the gems in one of their finished sets"},
-	"payup":     {"name": "Pay Up!",        "type": "heist", "count": 4, "role": "boss",        "text": "They pay you 2 bills (or gems, if they have no bills)"},
-	"shield":    {"name": "Shield",         "type": "trap",  "count": 3, "role": "bouncer",     "text": "Defense: blocks an action"},
-	"mirror":    {"name": "Mirror",         "type": "trap",  "count": 2, "role": "illusionist", "text": "Defense: bounces an action back"},
-	"snare":     {"name": "Snare",          "type": "trap",  "count": 2, "role": "trapper",     "text": "Defense: blocks an action and you keep their card"},
-	"lockpick":  {"name": "Lockpick",       "type": "tool",  "count": 4, "role": "locksmith",   "text": "Defuse a Defense in their vault, or steal a decoy"},
+	"grand":     {"name": "Grand Heist",    "type": "heist", "count": 2, "role": "mastermind",  "text": "Take a finished set of gems"},
+	"payup":     {"name": "Pay Up!",        "type": "heist", "count": 4, "role": "boss",        "text": "They pay you 2 bills (gems, if they can't)"},
+	"shield":    {"name": "Shield",         "type": "trap",  "count": 3, "role": "bouncer",     "text": "Blocks an action"},
+	"mirror":    {"name": "Mirror",         "type": "trap",  "count": 2, "role": "illusionist", "text": "Bounces an action back upon them"},
+	"snare":     {"name": "Snare",          "type": "trap",  "count": 2, "role": "trapper",     "text": "Blocks an action and you keep their card"},
+	"lockpick":  {"name": "Lockpick",       "type": "tool",  "count": 4, "role": "locksmith",   "text": "Defuse a Defense in their vault"},
 	"lucky":     {"name": "Lucky Break",    "type": "tool",  "count": 4, "role": "",            "text": "Draw 2 cards"},
 	"loot1":     {"name": "1 Bill",          "type": "money", "count": 6, "role": "",            "text": "Bank it to pay for Heists"},
 	"loot2":     {"name": "2 Bills",        "type": "money", "count": 5, "role": "",            "text": "Bank it to pay for Heists"},
@@ -46,7 +46,7 @@ const CRITTERS := {"loot1": "mouse", "loot2": "raccoon", "loot3": "fox", "loot4"
 
 const ROLE_TITLES := {
 	"you": "You", "pickpocket": "The Pickpocket", "trickster": "The Trickster", "boss": "The Boss",
-	"mastermind": "The Mastermind", "bouncer": "The Bouncer", "illusionist": "The Illusionist",
+	"mastermind": "The Genius", "bouncer": "The Bouncer", "illusionist": "The Illusionist",
 	"trapper": "The Trapper", "locksmith": "The Locksmith",
 }
 const ROLES := ["you", "pickpocket", "trickster", "boss", "mastermind", "bouncer", "illusionist", "trapper", "locksmith"]

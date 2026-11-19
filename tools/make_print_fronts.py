@@ -20,5 +20,5 @@ for k in meta['order']:
     card=bleed(im)
     for i in range(meta['counts'][k]):
         n+=1
-        card.save(f'mpc/front-{n:02d}-{NAMES.get(k,k)}.png',dpi=(300,300))
+        card.save(f'mpc/fronts/front-{n:02d}-{NAMES.get(k,k)}.png',dpi=(300,300))
 print(n)

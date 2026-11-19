@@ -55,7 +55,7 @@ they get trimmed, volume-matched and put in `audio/voice_real/`. A line plays on
 - `boss_8` Cash on the table, please.  _(Pay Up!)_
 - `boss_9` The Boss always collects.  _(Pay Up!)_
 
-## Mastermind (woman; alt: man)
+## Genius (woman; alt: man)
 - ~~done~~ `mastermind_0` All according to plan.
 - ~~done~~ `mastermind_1` The whole set? Don't mind if I do.
 - ~~done~~ `mastermind_2` Checkmate.

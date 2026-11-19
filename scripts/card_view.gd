@@ -275,7 +275,7 @@ func _draw_full_art(font: Font, kind: String, typ: String) -> void:
 		var lfs := int(w * 0.085)
 		while lfs > 8 and font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs).x > w * 0.9:
 			lfs -= 1
-		draw_string(font, Vector2(0, hgt * 0.715), label, HORIZONTAL_ALIGNMENT_CENTER, w, lfs, Color(ink, 0.9))
+		draw_string(font, Vector2(0, hgt * 0.705), label, HORIZONTAL_ALIGNMENT_CENTER, w, lfs, Color(ink, 0.9))
 	var rules: String = CardDB.ACTIONS[kind]["text"]
 	if cost > 0:
 		rules = "Costs %s. %s" % [CardDB.bills(cost), rules]
@@ -293,11 +293,13 @@ func _draw_full_art(font: Font, kind: String, typ: String) -> void:
 	if lines.size() > 3:
 		fs = int(w * 0.062)
 		lines = _wrap(font, rules, w * 0.82, fs)
-	var y := hgt * (0.78 if lines.size() <= 2 else 0.765)
+	# A clear gap under the character's name before the rules text.
+	lines = _balance(font, rules, lines, fs)
+	var y := hgt * (0.795 if lines.size() <= 2 else 0.78) if role != "" else hgt * (0.78 if lines.size() <= 2 else 0.765)
 	for line in lines:
 		draw_string(font, Vector2(0, y), line, HORIZONTAL_ALIGNMENT_CENTER, w, fs, body)
 		y += fs * 1.15
-	if y < hgt * 0.9:
+	if y < hgt * 0.9 and role == "" and kind != "lucky":
 		draw_string(font, Vector2(0, hgt * 0.925), CardDB.type_label(typ), HORIZONTAL_ALIGNMENT_CENTER, w, int(w * 0.062), Color(ink, 0.8))
 
 
@@ -317,6 +319,27 @@ func _draw_chip(font: Font, kind: String, typ: String) -> void:
 		label = CardDB.display_name(kind)
 	var x := h * 1.05
 	draw_string(font, Vector2(x, h * 0.64), label, HORIZONTAL_ALIGNMENT_LEFT, size.x - x - 4, int(h * 0.42), Color("#222222"))
+
+
+## Same number of lines, but evened out so the last line isn't a lone word.
+func _balance(font: Font, text: String, lines: Array, fs: int) -> Array:
+	if lines.size() < 2:
+		return lines
+	var widest := 0.0
+	for l in lines:
+		widest = maxf(widest, font.get_string_size(l, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
+	var lo := widest * 0.5
+	var hi := widest + 1.0
+	var best := lines
+	for i in 12:
+		var mid := (lo + hi) * 0.5
+		var trial := _wrap(font, text, mid, fs)
+		if trial.size() <= lines.size():
+			best = trial
+			hi = mid
+		else:
+			lo = mid
+	return best
 
 
 func _wrap(font: Font, text: String, max_w: float, fs: int) -> Array:

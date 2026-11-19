@@ -438,7 +438,7 @@ VOICES = {
     "trickster": dict(f0=270, formant=1.15, syl=0.11, gap=0.02, vib=0.01, vib_rate=4, glide=0.22, bright=0.6, breath=0.04, vowels=["a", "o", "i"], cons=True),
     # Lou the Boss: low, gravelly, slow
     "boss": dict(f0=105, formant=0.88, syl=0.15, gap=0.04, vib=0.0, vib_rate=4, glide=0.04, bright=1.0, breath=0.12, vowels=["ah", "o", "u"], cons=True),
-    # Amara the Mastermind: calm, smooth, confident
+    # Amara the Genius: calm, smooth, confident
     "mastermind": dict(f0=205, formant=1.08, syl=0.14, gap=0.04, vib=0.008, vib_rate=4, glide=0.03, bright=0.5, breath=0.03, vowels=["a", "e", "o"], cons=False),
     # Dev the Bouncer: very deep and steady
     "bouncer": dict(f0=82, formant=0.82, syl=0.16, gap=0.05, vib=0.0, vib_rate=4, glide=0.02, bright=0.7, breath=0.05, vowels=["o", "u", "ah"], cons=False),
