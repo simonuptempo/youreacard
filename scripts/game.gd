@@ -343,10 +343,21 @@ func _draw_header(p: int, pos: Vector2) -> void:
 	board.add_child(UI.label("Vault",Vector2(492 if p==1 else 566,pos.y-5),Vector2(112,18),14,UI.MUTED,HORIZONTAL_ALIGNMENT_CENTER))
 
 func _draw_bank(p: int,pos: Vector2,_max_w: float) -> void:
-	board.add_child(UI.label("BANK",pos,Vector2(130,22),15,UI.MUTED))
-	board.add_child(UI.label(CardDB.bills(g.bank_total(p)),pos+Vector2(0,24),Vector2(138,38),25,Color("#f3ca89")))
+	# The bank: a little stack of bills and the total.
+	var tex:=Art.tex("bill-1")
+	for k in 2:
+		if tex==null: break
+		var bill:=TextureRect.new()
+		bill.texture=tex
+		bill.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+		bill.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		bill.position=pos+Vector2(k*7,8-k*4)
+		bill.size=Vector2(32,45)
+		bill.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		board.add_child(bill)
+	board.add_child(UI.label(str(g.bank_total(p)),pos+Vector2(48,4),Vector2(90,46),34,Color("#f3ca89")))
 	if g.owes[p]>0:
-		board.add_child(UI.label("owes %s" % CardDB.bills(g.owes[p]),pos+Vector2(0,60),Vector2(160,22),15,Color("#ff8a7a")))
+		board.add_child(UI.label("owes %s" % CardDB.bills(g.owes[p]),pos+Vector2(0,54),Vector2(160,22),15,Color("#ff8a7a")))
 
 func _draw_vault(p: int,pos: Vector2) -> void:
 	for slot in 2:
@@ -1670,7 +1681,7 @@ func _draw_flashes() -> void:
 	var rects := _flash_rects.duplicate()
 	for p in 2:
 		var hp := _header_pos(p)
-		rects["bank_%d" % p] = Rect2(hp + Vector2(312, -2), Vector2(150, 72))
+		rects["bank_%d" % p] = Rect2(hp + Vector2(314, 6), Vector2(120, 62))
 		rects["hand_%d" % p] = _hand_badge_rect if p == 1 else Rect2(Vector2(18, HAND_Y - 46), Vector2(330, 36))
 		rects["vault_%d" % p] = Rect2((Vector2(492, 26) if p == 1 else Vector2(566, 278)) + Vector2(-6, 6), Vector2(132, 85))
 	for key in _flash:
