@@ -6,9 +6,9 @@ const COL_W := 118.0
 const CHIP := Vector2(112, 34)
 const SLOT := Vector2(52, 73)
 
-const OPP_COLL_Y := 140.0
-const MY_COLL_Y := 436.0
-const HAND_Y := 624.0
+const OPP_COLL_Y := 124.0
+const MY_COLL_Y := 376.0
+const HAND_Y := 564.0
 const BAR_Y := 0.0
 
 const TABLE_PANEL := Color("#102d2a")
@@ -90,8 +90,8 @@ func _ready() -> void:
 	bot_face = {"portrait_path": "res://art/role-%s.png" % cast["role"]}
 
 	# Quiet panels let the felt remain visible without sitting behind small text.
-	add_child(UI.panel(Vector2(16,16),Vector2(688,112),TABLE_PANEL,20))
-	add_child(UI.panel(Vector2(16,308),Vector2(688,116),TABLE_PANEL,20))
+	add_child(UI.panel(Vector2(16,16),Vector2(688,96),TABLE_PANEL,20))
+	add_child(UI.panel(Vector2(16,268),Vector2(688,96),TABLE_PANEL,20))
 	add_child(UI.panel(Vector2(0,1160),Vector2(720,120),Color("#102421"),0))
 	board = Control.new()
 	board.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -112,11 +112,11 @@ func _ready() -> void:
 	bar.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	bar.z_index=20
 	add_child(bar)
-	var recap_btn := UI.button("Replay", Vector2(620, 84), Vector2(70, 32), Color("#314742"), 15)
+	var recap_btn := UI.button("Replay", Vector2(620, 70), Vector2(70, 32), Color("#314742"), 15)
 	recap_btn.tooltip_text = "Replay their last turn"
 	recap_btn.pressed.connect(_on_recap_pressed)
 	add_child(recap_btn)
-	var menu:=UI.button("Menu",Vector2(620,34),Vector2(70,46),Color("#314742"),17)
+	var menu:=UI.button("Menu",Vector2(620,24),Vector2(70,40),Color("#314742"),17)
 	if _practice:
 		menu.text = "Exit"
 		menu.tooltip_text = "Leave practice anytime"
@@ -285,9 +285,9 @@ func refresh() -> void:
 	_close_collection()
 	_clear(board)
 	_draw_header(1,Vector2(26,24))
-	_draw_header(0,Vector2(26,316))
-	_draw_vault(1,Vector2(492,38))
-	_draw_vault(0,Vector2(566,328))
+	_draw_header(0,Vector2(26,276))
+	_draw_vault(1,Vector2(492,26))
+	_draw_vault(0,Vector2(566,278))
 	_draw_gem_row(1, OPP_COLL_Y)
 	_draw_gem_row(0, MY_COLL_Y)
 	_draw_flashes()
@@ -309,15 +309,28 @@ func _draw_header(p: int, pos: Vector2) -> void:
 	var avatar:=AvatarView.new()
 	avatar.data=_player_portrait() if p==0 else bot_face
 	avatar.position=pos
-	avatar.size=Vector2(78,88)
+	avatar.size=Vector2(72,80)
 	avatar.clip_contents=true
 	avatar.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	board.add_child(avatar)
-	board.add_child(UI.label("You" if p==0 else bot_name,pos+Vector2(90,0),Vector2(206,34),26,UI.ACCENT if p==g.current else UI.TEXT))
-	board.add_child(UI.label("%d of %d sets complete" % [g.complete_count(p),GameState.SETS_TO_WIN],pos+Vector2(90,37),Vector2(300,28),20,UI.TEXT))
-	board.add_child(UI.label("%d cards in hand" % g.hand(p).size(),pos+Vector2(90,66),Vector2(220,24),17,UI.MUTED))
+	var who:="You" if p==0 else bot_name
+	board.add_child(UI.label(who,pos+Vector2(86,2),Vector2(206,34),26,UI.ACCENT if p==g.current else UI.TEXT))
+	board.add_child(UI.label("%d of %d sets complete" % [g.complete_count(p),GameState.SETS_TO_WIN],pos+Vector2(86,40),Vector2(300,28),20,UI.TEXT))
+	if p==1:
+		# Their hand size: a little stack of card backs with the count, beside their name.
+		var name_w:=ThemeDB.fallback_font.get_string_size(who,HORIZONTAL_ALIGNMENT_LEFT,-1,26).x
+		var at:=pos+Vector2(86+name_w+14,5)
+		for k in 2:
+			var back:=CardView.new()
+			back.position=at+Vector2(k*5,k*-3)
+			back.size=Vector2(22,31)
+			back.mouse_filter=Control.MOUSE_FILTER_IGNORE
+			board.add_child(back)
+			back.setup({"id":-1,"kind":"wild"},{},true)
+		board.add_child(UI.label(str(g.hand(p).size()),at+Vector2(32,0),Vector2(40,30),22,UI.TEXT))
+		_hand_badge_rect=Rect2(at-Vector2(4,6),Vector2(66,40))
 	_draw_bank(p,pos+Vector2(322,7),132)
-	board.add_child(UI.label("Vault",Vector2(492 if p==1 else 566,pos.y-4),Vector2(112,22),15,UI.MUTED,HORIZONTAL_ALIGNMENT_CENTER))
+	board.add_child(UI.label("Vault",Vector2(492 if p==1 else 566,pos.y-5),Vector2(112,18),14,UI.MUTED,HORIZONTAL_ALIGNMENT_CENTER))
 
 func _draw_bank(p: int,pos: Vector2,_max_w: float) -> void:
 	board.add_child(UI.label("BANK",pos,Vector2(130,22),15,UI.MUTED))
@@ -469,8 +482,8 @@ class HandCard:
 
 func _draw_hand() -> void:
 	var cards:=g.hand(0)
-	board.add_child(UI.label("YOUR HAND · %d cards" % cards.size(),Vector2(22,580),Vector2(360,34),21,UI.TEXT))
-	board.add_child(UI.label("Tap a card to flip",Vector2(382,582),Vector2(316,30),18,UI.MUTED,HORIZONTAL_ALIGNMENT_RIGHT))
+	board.add_child(UI.label("YOUR HAND · %d cards" % cards.size(),Vector2(22,HAND_Y-44),Vector2(360,34),21,UI.TEXT))
+	board.add_child(UI.label("Tap a card to flip",Vector2(382,HAND_Y-42),Vector2(316,30),18,UI.MUTED,HORIZONTAL_ALIGNMENT_RIGHT))
 	var area:=Vector2(684,1150.0-HAND_Y)
 	var gap:=10.0
 	var columns:=1
@@ -1603,6 +1616,7 @@ var _flash_rects: Dictionary = {}
 var _replay_panel: Control
 var _replay_lines: Array = []
 var _replay_card: Control
+var _hand_badge_rect := Rect2(260, 24, 66, 40)
 # Recap/replay panel layout: text runs the full width; the acting card and its speech
 # bubble (or, at the end, who said what) sit in a strip along the bottom.
 const RC_X := 36.0
@@ -1615,7 +1629,7 @@ var _replay_from_mode := "busy"
 
 
 func _header_pos(p: int) -> Vector2:
-	return Vector2(26, 24) if p == 1 else Vector2(26, 316)
+	return Vector2(26, 24) if p == 1 else Vector2(26, 276)
 
 
 func _zone_key(info: Array) -> String:
@@ -1647,8 +1661,8 @@ func _draw_flashes() -> void:
 	for p in 2:
 		var hp := _header_pos(p)
 		rects["bank_%d" % p] = Rect2(hp + Vector2(312, -2), Vector2(150, 72))
-		rects["hand_%d" % p] = Rect2(hp + Vector2(82, 60), Vector2(230, 32))
-		rects["vault_%d" % p] = Rect2((Vector2(492, 38) if p == 1 else Vector2(566, 328)) + Vector2(-6, 6), Vector2(132, 85))
+		rects["hand_%d" % p] = _hand_badge_rect if p == 1 else Rect2(Vector2(18, HAND_Y - 46), Vector2(330, 36))
+		rects["vault_%d" % p] = Rect2((Vector2(492, 26) if p == 1 else Vector2(566, 278)) + Vector2(-6, 6), Vector2(132, 85))
 	for key in _flash:
 		if not rects.has(key):
 			continue
