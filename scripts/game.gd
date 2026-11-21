@@ -294,7 +294,7 @@ func refresh() -> void:
 	_draw_hand()
 	var my_turn:=g.current==0 and g.winner<0
 	end_btn.disabled=not my_turn or mode in ["busy","over","target"]
-	if _replaying or _my_recap_open: end_btn.disabled=false  # End Turn also ends the replay / your recap
+
 	end_btn.text="Discard" if mode=="discard" else "End Turn"
 	_turn_label.text="Your turn · %d play%s left" % [g.plays_left,"" if g.plays_left==1 else "s"] if my_turn else "%s's turn" % bot_name
 	if _replaying: _turn_label.text="Replaying %s's turn" % bot_name
@@ -1182,7 +1182,7 @@ func _sync_counter_panel() -> void:
 	var y := HAND_Y - 46.0
 	var bg := Panel.new()
 	bg.position = Vector2(16, y)
-	bg.size = Vector2(688, 1150 - y)
+	bg.size = Vector2(688, RC_BOTTOM - y)
 	bg.add_theme_stylebox_override("panel", UI.box(Color("#14302c"), 18, UI.ACCENT, 2))
 	_counter_panel.add_child(bg)
 	_counter_panel.add_child(_recap_title("FREE COUNTER-TRADE", y))
@@ -1214,7 +1214,7 @@ func _sync_counter_panel() -> void:
 		tl.add_theme_font_override("font", UI.font(700 if active else 600))
 		_counter_panel.add_child(tl)
 		sy += 88.0
-	var skip := UI.button("Skip counter-trade", Vector2(40, 1150 - 82), Vector2(640, 62), Color("#314742"), 22)
+	var skip := UI.button("Skip counter-trade", Vector2(40, RC_BOTTOM - 82), Vector2(640, 62), Color("#314742"), 22)
 	skip.pressed.connect(_apply_and_clear.bind({"type": "counter_skip"}))
 	_counter_panel.add_child(skip)
 
@@ -1584,7 +1584,7 @@ func _show_my_recap() -> bool:
 	var y := HAND_Y - 46.0
 	var bg := Panel.new()
 	bg.position = Vector2(16, y)
-	bg.size = Vector2(688, 1150 - y)
+	bg.size = Vector2(688, RC_BOTTOM - y)
 	bg.add_theme_stylebox_override("panel", UI.box(Color("#14302c"), 18, UI.ACCENT, 2))
 	_recap_layer.add_child(bg)
 	_recap_layer.add_child(_recap_title("YOUR TURN", y))
@@ -1592,7 +1592,7 @@ func _show_my_recap() -> bool:
 	var strip := _quote_strip_height(quotes)
 	var scroll := ScrollContainer.new()
 	scroll.position = Vector2(RC_X, y + 60)
-	scroll.size = Vector2(RC_W, 1150 - 94 - strip - (y + 60))
+	scroll.size = Vector2(RC_W, RC_BOTTOM - 94 - strip - (y + 60))
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_recap_layer.add_child(scroll)
 	var box := VBoxContainer.new()
@@ -1608,12 +1608,11 @@ func _show_my_recap() -> bool:
 	# What changed hands, as the same two-column table the opponent's recap uses.
 	if not _my_before.is_empty():
 		_gains_losses_table(box, r["you_gained"], r["you_lost"], r["they_gained"], r["they_lost"])
-	_show_quotes(quotes, 1150.0 - 94.0 - strip + 6.0, _recap_layer)
-	var done := UI.button("Continue", Vector2(40, 1150 - 82), Vector2(640, 62), UI.ACCENT, 23)
+	_show_quotes(quotes, RC_BOTTOM - 94.0 - strip + 6.0, _recap_layer)
+	var done := UI.button("Continue", Vector2(40, RC_BOTTOM - 82), Vector2(640, 62), UI.ACCENT, 23)
 	done.pressed.connect(_continue_from_my_recap)
 	_recap_layer.add_child(done)
 	_my_recap_open = true
-	end_btn.disabled = false  # the bottom button carries on too
 	return true
 
 
@@ -1779,6 +1778,7 @@ var _hand_badge_rect := Rect2(260, 24, 66, 40)
 # Recap/replay panel layout: text runs the full width; the acting card and its speech
 # bubble (or, at the end, who said what) sit in a strip along the bottom.
 const RC_X := 36.0
+const RC_BOTTOM := 1264.0  # recaps run to the bottom of the screen, over the End Turn bar
 const RC_W := 648.0
 const RC_FONT := 26
 const RC_CARD := Vector2(148, 207)
@@ -1882,14 +1882,14 @@ func _build_replay_panel() -> void:
 	var y := HAND_Y - 46.0
 	var bg := Panel.new()
 	bg.position = Vector2(16, y)
-	bg.size = Vector2(688, 1150 - y)
+	bg.size = Vector2(688, RC_BOTTOM - y)
 	bg.add_theme_stylebox_override("panel", UI.box(Color("#14302c"), 18, UI.ACCENT, 2))
 	bg.gui_input.connect(_on_replay_panel_input)
 	_replay_panel.add_child(bg)
 	_replay_panel.add_child(_recap_title("%s'S TURN" % bot_name.to_upper(), y))
 	_replay_scroll = ScrollContainer.new()
 	_replay_scroll.position = Vector2(RC_X, y + 60)
-	_replay_scroll.size = Vector2(RC_W, 1150 - 16 - RC_CARD.y - 12 - (y + 60))
+	_replay_scroll.size = Vector2(RC_W, RC_BOTTOM - 16 - RC_CARD.y - 12 - (y + 60))
 	_replay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_replay_scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_replay_panel.add_child(_replay_scroll)
@@ -1909,7 +1909,7 @@ func _build_replay_panel() -> void:
 			group.append(l)
 		_replay_lines.append(group)
 	_replay_card = Control.new()
-	_replay_card.position = Vector2(RC_X, 1150 - 16 - RC_CARD.y)
+	_replay_card.position = Vector2(RC_X, RC_BOTTOM - 16 - RC_CARD.y)
 	_replay_card.size = RC_CARD
 	_replay_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_replay_panel.add_child(_replay_card)
@@ -2021,13 +2021,13 @@ func _replay_summary() -> void:
 	_gains_losses_table(_replay_box, _recap.get("you_gained", []), lost, gained, [])
 	_replay_scroll.mouse_filter = Control.MOUSE_FILTER_PASS  # scroll down to the table
 	var strip := _quote_strip_height(quotes)
-	_replay_scroll.size.y = 1150 - 94 - strip - _replay_scroll.position.y
+	_replay_scroll.size.y = RC_BOTTOM - 94 - strip - _replay_scroll.position.y
 	_replay_scroll.scroll_vertical = 0
-	_show_quotes(quotes, 1150.0 - 94.0 - strip + 6.0)
-	var again := UI.button("Watch again", Vector2(40, 1150 - 82), Vector2(250, 62), Color("#314742"), 21)
+	_show_quotes(quotes, RC_BOTTOM - 94.0 - strip + 6.0)
+	var again := UI.button("Watch again", Vector2(40, RC_BOTTOM - 82), Vector2(250, 62), Color("#314742"), 21)
 	again.pressed.connect(_watch_again)
 	_replay_panel.add_child(again)
-	var done := UI.button("Start my turn" if _replay_from_mode == "busy" else "Back to my turn", Vector2(310, 1150 - 82), Vector2(370, 62), UI.ACCENT, 23)
+	var done := UI.button("Start my turn" if _replay_from_mode == "busy" else "Back to my turn", Vector2(310, RC_BOTTOM - 82), Vector2(370, 62), UI.ACCENT, 23)
 	if _practice and _practice_completed >= 10: done.text = "Finish practice"
 	done.pressed.connect(_end_replay_now)
 	_replay_panel.add_child(done)
