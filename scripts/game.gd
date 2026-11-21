@@ -1229,36 +1229,152 @@ func _show_game_over() -> void:
 	_clear_bar()
 	var o := Control.new()
 	o.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.7)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	o.add_child(dim)
-	var won := g.winner == 0
-	o.add_child(UI.label("You win!" if won else "%s wins!" % bot_name, Vector2(0, 150), Vector2(720, 90), 64, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
-	var cv := CardView.new()
-	cv.size = Vector2(280, 392)
-	cv.position = Vector2(220, 270)
-	o.add_child(cv)
-	cv.setup({"id": -1, "kind": "wild"}, face_for(g.winner, "you"))
-	o.add_child(UI.label("Finished in %d turns each." % ceili(g.turn_number / 2.0), Vector2(0, 690), Vector2(720, 40), 24, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	o.z_index = 50
+	_win_splash(o)
 	if not _online and g.winner == 0:
 		Profile.mark_beaten(bot_name)
 	_save_game()  # a finished game isn't reopened
 	if _online:
-		var back := UI.button("Back to your games", Vector2(160, 790), Vector2(400, 80), UI.ACCENT, 28)
+		var back := UI.button("Back to your games", Vector2(160, 1040), Vector2(400, 80), UI.ACCENT, 28)
 		back.pressed.connect(_leave)
 		o.add_child(back)
+		_fade_in_late([back])
 		add_child(o)
 		return
 	var loser := 1 - g.winner
-	var again := UI.button("Rematch", Vector2(160, 760), Vector2(400, 80), UI.ACCENT, 32)
+	var again := UI.button("Rematch", Vector2(160, 1000), Vector2(400, 80), UI.ACCENT, 32)
 	again.pressed.connect(_on_rematch.bind(loser))
-	o.add_child(UI.label("You'll go first" if loser == 0 else "%s will go first" % bot_name, Vector2(0, 842), Vector2(720, 30), 18, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	var first := UI.label("You'll go first" if loser == 0 else "%s will go first" % bot_name, Vector2(0, 1082), Vector2(720, 30), 18, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	o.add_child(first)
 	o.add_child(again)
-	var menu := UI.button("Menu", Vector2(160, 884), Vector2(400, 70), Color("#3a4166"), 26)
+	var menu := UI.button("Menu", Vector2(160, 1124), Vector2(400, 70), Color("#3a4166"), 26)
 	menu.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/main.tscn"))
 	o.add_child(menu)
+	_fade_in_late([again, first, menu])
 	add_child(o)
+
+
+## The end-of-game splash: a burst of light, the winner's card bouncing in, their four
+## finished sets popping up one by one, and (when you win) confetti.
+func _win_splash(o: Control) -> void:
+	var won := g.winner == 0
+	var dim := ColorRect.new()
+	dim.color = Color(0.02, 0.05, 0.1, 0.0)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	o.add_child(dim)
+	dim.create_tween().tween_property(dim, "color:a", 0.88, 0.35)
+	var center := Vector2(360, 470)
+	# Rays of light turning slowly behind the card.
+	var rays := Node2D.new()
+	rays.position = center
+	o.add_child(rays)
+	var ray_col := Color(UI.ACCENT, 0.16 if won else 0.07)
+	for k in 14:
+		var a0 := TAU * k / 14.0
+		var poly := Polygon2D.new()
+		poly.polygon = PackedVector2Array([Vector2.ZERO, Vector2.from_angle(a0 - 0.09) * 900, Vector2.from_angle(a0 + 0.09) * 900])
+		poly.color = ray_col
+		rays.add_child(poly)
+	rays.scale = Vector2(0.2, 0.2)
+	var rt := rays.create_tween()
+	rt.tween_property(rays, "scale", Vector2.ONE, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var spin := rays.create_tween().set_loops()
+	spin.tween_property(rays, "rotation", TAU, 40.0).from(0.0)
+	# Headline.
+	var title := UI.label("YOU WIN!" if won else "%s WINS!" % bot_name.to_upper(), Vector2(0, 52), Vector2(720, 110), 84, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
+	title.add_theme_font_override("font", UI.font(900))
+	title.add_theme_color_override("font_outline_color", Color("#1b2038"))
+	title.add_theme_constant_override("outline_size", 18)
+	title.pivot_offset = Vector2(360, 55)
+	o.add_child(title)
+	title.scale = Vector2(0.2, 0.2)
+	title.modulate.a = 0.0
+	var tt := title.create_tween().set_parallel()
+	tt.tween_property(title, "scale", Vector2.ONE, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(0.15)
+	tt.tween_property(title, "modulate:a", 1.0, 0.2).set_delay(0.15)
+	var sub := UI.label("Four sets. Heist complete!" if won else "%s finished four sets first." % bot_name, Vector2(0, 158), Vector2(720, 44), 30, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	sub.add_theme_font_override("font", UI.font(800))
+	sub.modulate.a = 0.0
+	o.add_child(sub)
+	sub.create_tween().tween_property(sub, "modulate:a", 1.0, 0.3).set_delay(0.5)
+	# The winner's card, bouncing in with a little tilt.
+	var cv := CardView.new()
+	cv.size = Vector2(300, 420)
+	cv.position = center - cv.size / 2.0 + Vector2(0, 10)
+	cv.pivot_offset = cv.size / 2.0
+	o.add_child(cv)
+	cv.setup({"id": -1, "kind": "wild"}, face_for(g.winner, "you"))
+	cv.scale = Vector2(0.1, 0.1)
+	cv.rotation = -0.5
+	var ct := cv.create_tween().set_parallel()
+	ct.tween_property(cv, "scale", Vector2.ONE, 0.7).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT).set_delay(0.25)
+	ct.tween_property(cv, "rotation", -0.05 if won else 0.05, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(0.25)
+	# The four finished sets, popping in one at a time.
+	var done: Array = []
+	for color in CardDB.COLORS:
+		if g.is_complete(g.winner, color):
+			done.append(color)
+	done = done.slice(0, GameState.SETS_TO_WIN)
+	var gw := 112.0
+	var gx := 360.0 - (done.size() * gw + (done.size() - 1) * 16.0) / 2.0
+	for i in done.size():
+		var slot := Panel.new()
+		slot.position = Vector2(gx + i * (gw + 16.0), 720)
+		slot.size = Vector2(gw, gw)
+		slot.pivot_offset = slot.size / 2.0
+		slot.add_theme_stylebox_override("panel", UI.box(Color("#14302c"), 22, UI.ACCENT, 4))
+		o.add_child(slot)
+		var gem := TextureRect.new()
+		gem.texture = Art.treasure(done[i])
+		gem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		gem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		gem.position = Vector2(12, 12)
+		gem.size = slot.size - Vector2(24, 24)
+		slot.add_child(gem)
+		slot.scale = Vector2.ZERO
+		slot.create_tween().tween_property(slot, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(0.8 + 0.18 * i)
+	var turns := UI.label("Finished in %d turns each." % ceili(g.turn_number / 2.0), Vector2(0, 850), Vector2(720, 40), 24, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	turns.modulate.a = 0.0
+	o.add_child(turns)
+	turns.create_tween().tween_property(turns, "modulate:a", 1.0, 0.3).set_delay(1.5)
+	if won:
+		_confetti(o)
+
+
+func _confetti(o: Control) -> void:
+	var cols := [UI.ACCENT, Color("#e8433f"), Color("#3cb97a"), Color("#4f8ff7"), Color("#fbefd4"), Color("#a66bf5")]
+	for c in cols:
+		var p := CPUParticles2D.new()
+		p.position = Vector2(360, -20)
+		p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+		p.emission_rect_extents = Vector2(380, 10)
+		p.amount = 26
+		p.lifetime = 3.2
+		p.explosiveness = 0.15
+		p.direction = Vector2(0, 1)
+		p.spread = 25.0
+		p.gravity = Vector2(0, 260)
+		p.initial_velocity_min = 120.0
+		p.initial_velocity_max = 340.0
+		p.angular_velocity_min = -360.0
+		p.angular_velocity_max = 360.0
+		p.angle_min = 0.0
+		p.angle_max = 360.0
+		p.scale_amount_min = 7.0
+		p.scale_amount_max = 13.0
+		p.color = c
+		p.one_shot = false
+		o.add_child(p)
+		p.emitting = true
+		# Rain for a few seconds, then let the last pieces fall.
+		get_tree().create_timer(3.5).timeout.connect(func(): if is_instance_valid(p): p.emitting = false)
+
+
+## Buttons wait until the splash has had its moment.
+func _fade_in_late(nodes: Array) -> void:
+	for n in nodes:
+		n.modulate.a = 0.0
+		n.create_tween().tween_property(n, "modulate:a", 1.0, 0.35).set_delay(1.7)
 
 
 func _set_msg(t: String) -> void:
