@@ -250,6 +250,23 @@ static func portrait_crop(image_size: Vector2, face_data: Dictionary) -> Rect2:
 	var edge := minf(image_size.x, image_size.y) / clampf(float(face_data.get("portrait_zoom", 1.0)), 1.0, 3.0)
 	return Rect2((image_size - Vector2.ONE * edge) * Vector2(clampf(float(face_data.get("portrait_x", 0.5)), 0.0, 1.0), clampf(float(face_data.get("portrait_y", 0.5)), 0.0, 1.0)), Vector2.ONE * edge)
 
+## "You" before you've put yourself on a card: a plain head-and-shoulders outline.
+func _draw_silhouette() -> void:
+	var edge := minf(size.x, size.y)
+	var c := size * 0.5
+	var col := Color("#8fa6b2")
+	draw_circle(c + Vector2(0, -edge * 0.12), edge * 0.2, col)
+	var body := PackedVector2Array()
+	var w := edge * 0.38
+	var top := c.y + edge * 0.12
+	for i in 25:
+		var a := PI + PI * i / 24.0
+		body.append(Vector2(c.x + cos(a) * w, top + edge * 0.1 + sin(a) * edge * 0.22))
+	body.append(Vector2(c.x + w, c.y + edge * 0.5))
+	body.append(Vector2(c.x - w, c.y + edge * 0.5))
+	draw_colored_polygon(body, col)
+
+
 func _draw() -> void:
 	var portrait := portrait_texture(str(data.get("portrait_path", "")))
 	if portrait != null:
@@ -258,6 +275,9 @@ func _draw() -> void:
 		draw_texture_rect_region(portrait, target, portrait_crop(portrait.get_size(), data))
 		return
 	if data.is_empty():
+		return
+	if data.get("silhouette", false):
+		_draw_silhouette()
 		return
 	var s := minf(size.x / 200.0, size.y / 240.0)
 	var off := Vector2((size.x - 200.0 * s) * 0.5, (size.y - 240.0 * s) * 0.5)

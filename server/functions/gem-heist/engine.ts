@@ -333,8 +333,8 @@ export class Game {
       const parts: string[] = [];
       parts.push(paidSum === 0 ? `${this.nm(payer, v)} had no bills` : `${this.nm(payer, v)} paid ${bills(paidSum)}`);
       if (names.length) {
-        if (paidSum === 0) parts[0] = `${this.nm(payer, v)} paid with ${names.join(" and ")}`;
-        else parts.push(`handed over ${names.join(" and ")}`);
+        if (paidSum === 0) parts[0] = `${this.nm(payer, v)} had no bills, so ${payer === v ? "you" : "they"} paid with ${names.join(" and ")} (worth ${bills(gemSum)})`;
+        else parts.push(`ran out of bills and handed over ${names.join(" and ")} (worth ${bills(gemSum)})`);
       }
       if (refund > 0) parts.push(`got ${bills(refund)} back in change`);
       let t = parts.join(" and ") + ".";
@@ -590,7 +590,9 @@ export class Game {
     if (extra) {
       const n = this.setCards(p, color).length;
       const how = this.transfer(this.opp(p), p, extraGemPay(n - setSize(color)));
-      this.ev(p, (v) => `${this.nm(p, v)} added ${n !== 8 ? "a" : "an"} ${ordinal(n)} ${oneName(color)}. ${how(v)}`, color, -1, true);
+      const amt = extraGemPay(n - setSize(color));
+      const o = this.opp(p);
+      this.ev(p, (v) => `${this.nm(p, v)} added ${n !== 8 ? "a" : "an"} ${ordinal(n)} ${oneName(color)} to a finished set. That's a bonus of ${bills(amt)} from ${o === v ? "you" : this.s.players[o].name}! ${how(v)}`, color, -1, true);
       return;
     }
     const done = this.isComplete(p, color) ? " Set complete!" : "";

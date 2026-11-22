@@ -122,13 +122,13 @@ func me_placeholder() -> bool:
 
 
 ## Your picture during a game: your card's face, or its character art.
+## You're none of the cards until you put yourself on one, so until then: a plain outline.
 func me_portrait() -> Dictionary:
-	var face := slot_face(me_slot)
-	if not face.is_empty():
-		return face
-	if me_slot in CardDB.ROLES:
-		return {"portrait_path": "res://art/role-%s.png" % me_slot}
-	return {"portrait_path": "res://art/role-you.png"}
+	if is_custom(me_slot):
+		var face := slot_face(me_slot)
+		if not face.is_empty():
+			return face
+	return {"silhouette": true}
 
 
 ## What the slot is, for screen titles.

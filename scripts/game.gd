@@ -37,6 +37,7 @@ var _online_seq := 0          # last server move this screen has caught up to
 var _waiting := false
 var bot_name := "Juno"
 var bot_face: Dictionary = {}
+var _bot_role := ""  # the computer opponent's crew card ("" online)
 
 var mode := "play"          # play | target | discard | busy | over
 var selected_id := -1
@@ -88,6 +89,7 @@ func _ready() -> void:
 	var cast: Dictionary = Profile.CAST[cast_index]
 	bot_name = cast["name"]
 	bot_face = {"portrait_path": "res://art/role-%s.png" % cast["role"]}
+	_bot_role = str(cast["role"])
 
 	# Quiet panels let the felt remain visible without sitting behind small text.
 	add_child(UI.panel(Vector2(16,16),Vector2(688,96),TABLE_PANEL,20))
@@ -1297,13 +1299,22 @@ func _win_splash(o: Control) -> void:
 	sub.modulate.a = 0.0
 	o.add_child(sub)
 	sub.create_tween().tween_property(sub, "modulate:a", 1.0, 0.3).set_delay(0.5)
-	# The winner's card, bouncing in with a little tilt.
-	var cv := CardView.new()
-	cv.size = Vector2(300, 420)
+	# The winner, bouncing in with a little tilt: their own card if they have one (your
+	# customized card, or the computer's crew card), otherwise a gold medallion.
+	var cv: Control
+	if won and Profile.is_custom(Profile.me_slot):
+		cv = CardView.new()
+		cv.size = Vector2(300, 420)
+		(cv as CardView).setup(Profile.me_card(), Profile.me_face())
+	elif not won and _bot_role != "":
+		cv = CardView.new()
+		cv.size = Vector2(300, 420)
+		(cv as CardView).setup({"id": -1, "kind": Profile.slot_kind(_bot_role)}, {})
+	else:
+		cv = _medallion(_player_portrait() if won else bot_face, "You" if won else bot_name)
 	cv.position = center - cv.size / 2.0 + Vector2(0, 10)
 	cv.pivot_offset = cv.size / 2.0
 	o.add_child(cv)
-	cv.setup({"id": -1, "kind": "wild"}, face_for(g.winner, "you"))
 	cv.scale = Vector2(0.1, 0.1)
 	cv.rotation = -0.5
 	var ct := cv.create_tween().set_parallel()
@@ -1339,6 +1350,33 @@ func _win_splash(o: Control) -> void:
 	turns.create_tween().tween_property(turns, "modulate:a", 1.0, 0.3).set_delay(1.5)
 	if won:
 		_confetti(o)
+
+
+## A gold coin with a face on it, for a winner who isn't on a card.
+func _medallion(face: Dictionary, label: String) -> Control:
+	var m := Control.new()
+	m.size = Vector2(340, 400)
+	var ring := Panel.new()
+	ring.position = Vector2(20, 0)
+	ring.size = Vector2(300, 300)
+	ring.add_theme_stylebox_override("panel", UI.box(Color("#e9b949"), 150, Color("#fff1b8"), 10))
+	m.add_child(ring)
+	var inner := Panel.new()
+	inner.position = Vector2(30, 30)
+	inner.size = Vector2(240, 240)
+	inner.add_theme_stylebox_override("panel", UI.box(Color("#1d3a3a"), 120, Color("#a8741a"), 6))
+	inner.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+	ring.add_child(inner)
+	var a := AvatarView.new()
+	a.data = face
+	a.position = Vector2(0, 10)
+	a.size = Vector2(240, 240)
+	a.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.add_child(a)
+	var l := UI.label(label, Vector2(0, 312), Vector2(340, 60), 44, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
+	l.add_theme_font_override("font", UI.font(900))
+	m.add_child(l)
+	return m
 
 
 func _confetti(o: Control) -> void:

@@ -6,9 +6,10 @@ const STEPS := [
 	["YOUR NEXT GREAT HEIST", "Collect gems, bank bills, and outsmart your opponent"],
 	["BE THE FIRST TO COLLECT FOUR SETS", ""],
 	["START YOUR TURN", "Draw 2 cards and play up to %d cards"],
+	["BONUSES AND PAYING UP", "When bills change hands"],
 	["ACTION CARDS", "Pay for each one with bills from your bank"],
 	["DEFENSE CARDS", "Move them to your vault. They spring on attack."],
-	["YOU'RE A CARD", "...and you are wild"],
+	["YOU'RE A CARD", "Put yourself on any card in the deck"],
 ]
 const TABS := ["Bank a bill", "Play a gem", "Move to vault", "Take an action"]
 const ACTIONS := [
@@ -150,9 +151,10 @@ func _show_step(index: int) -> void:
 		0: _setup_notes()
 		1: _sets()
 		2: _turn()
-		3: _rows(ACTIONS, false)
-		4: _rows(DEFENSES, true)
-		5: _wild()
+		3: _payments()
+		4: _rows(ACTIONS, false)
+		5: _rows(DEFENSES, true)
+		6: _wild()
 
 
 func _advance() -> void:
@@ -301,7 +303,7 @@ func _sets() -> void:
 		_label(_stage, CardDB.display_name(color), Vector2(x - 6, 22), Vector2(116, 34), 18, CardDB.tint(color).lightened(0.45))
 		for j in CardDB.set_size(color):
 			_pop(_gem(_stage, color, Vector2(x + 10, 68 + j * 102), Vector2(84, 84)), i * 0.12 + j * 0.1)
-	_pop(_label(_stage, "Every gem set needs 3 of a kind\n(except rubies, which need 2)", Vector2(40, 430), Vector2(640, 90), 28), 1.0)
+	_pop(_label(_stage, "Every gem set needs 3 of a kind\n(except rubies, which need 2).\nA Wild counts as any gem.", Vector2(40, 420), Vector2(640, 130), 28), 1.0)
 
 
 # ------------------------------------------------------------------ step 3: your turn (tabbed)
@@ -453,17 +455,47 @@ func _rows(list: Array, free: bool) -> void:
 
 # ------------------------------------------------------------------ step 6: you're wild
 
+## Step 4: the two times bills change hands that surprise people.
+func _payments() -> void:
+	# 1. An extra gem on a finished set earns a bonus from your opponent.
+	_stage.add_child(UI.panel(Vector2(20, 0), Vector2(680, 400), PANEL_BG, 20))
+	_pop(_label(_stage, "Extra gems pay off", Vector2(40, 14), Vector2(640, 40), 30, UI.ACCENT))
+	for j in 2:
+		_pop(_gem(_stage, "ruby", Vector2(70 + j * 92, 76), Vector2(84, 84)), 0.1 + j * 0.1)
+	var extra := _gem(_stage, "ruby", Vector2(270, 76), Vector2(84, 84))
+	_pop(extra, 0.45)
+	var plus := UI.label("+2 bills", Vector2(372, 92), Vector2(200, 50), 34, Color("#8fe3a0"), HORIZONTAL_ALIGNMENT_LEFT)
+	plus.add_theme_font_override("font", UI.font(900))
+	_stage.add_child(plus)
+	_pop(plus, 0.7)
+	_pop(_label(_stage, "Add a gem to a set that's already finished and your opponent pays you a bonus: 2 bills, then 3 bills for the next one. It works both ways, so watch their finished sets too!", Vector2(44, 180), Vector2(632, 200), 24), 0.9)
+	# 2. Out of bills? You pay with gems.
+	_stage.add_child(UI.panel(Vector2(20, 420), Vector2(680, 420), PANEL_BG, 20))
+	_pop(_label(_stage, "Out of bills? Pay with gems", Vector2(40, 434), Vector2(640, 40), 30, UI.ACCENT), 1.2)
+	_pop(_gem(_stage, "emerald", Vector2(150, 494), Vector2(84, 84)), 1.35)
+	var arrow := UI.label("→", Vector2(250, 494), Vector2(80, 84), 52, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	_stage.add_child(arrow)
+	_pop(arrow, 1.45)
+	_pop(_card(_stage, "loot1", Vector2(350, 476), Vector2(86, 120), _face("loot1")), 1.55)
+	_pop(_label(_stage, "If you owe bills and your bank is empty, you hand over gems from your unfinished sets instead. Most gems are worth 1 bill; Rubies and Diamonds are worth 2. Anything still owed comes out of the next bills you get.", Vector2(44, 610), Vector2(632, 220), 24), 1.7)
+
+
 func _wild() -> void:
-	var cv := _card(_stage, "wild", Vector2(195, 10), Vector2(330, 462), Profile.slot_face("you"))
-	cv.editable = true
+	# You're none of the cards until you put yourself on one. Show yours if you have,
+	# otherwise an inviting blank.
+	var slot := Profile.me_slot
+	var custom := Profile.is_custom(slot)
+	var cv := _card(_stage, Profile.slot_kind(slot), Vector2(195, 10), Vector2(330, 462), Profile.me_face() if custom else {})
+	cv.placeholder = not custom
+	cv.editable = custom  # the blank card already shows its own camera badge
+	cv.queue_redraw()
 	# Tap the card to put your face on it right here.
 	cv.mouse_filter = Control.MOUSE_FILTER_STOP
 	cv.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	cv.tapped.connect(func(_v): _edit_wild())
 	_pop(cv)
-	_pop(_label(_stage, "A wild card counts as a gem of any color.", Vector2(40, 490), Vector2(640, 60), 28), 0.4)
-	var custom := Profile.is_custom("you")
-	var edit := UI.button("Change your card" if custom else "Tap to make it you", Vector2(185, 556), Vector2(350, 64), UI.ACCENT, 24)
+	_pop(_label(_stage, "Add your photo to a crew member, a pet bill, or the Wild, and play as yourself.", Vector2(40, 490), Vector2(640, 60), 26), 0.4)
+	var edit := UI.button("Change your card" if custom else "Make a card yours", Vector2(185, 566), Vector2(350, 64), UI.ACCENT, 24)
 	edit.pressed.connect(_edit_wild)
 	_stage.add_child(edit)
 	_pop(edit, 0.7)
@@ -478,6 +510,6 @@ func _wild() -> void:
 
 func _edit_wild() -> void:
 	_stop_animations()
-	Profile.edit_slot = "you"
+	Profile.edit_slot = Profile.me_slot
 	Profile.creator_return = "explainer"
 	Profile.go("my_cards")

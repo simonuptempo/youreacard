@@ -250,9 +250,9 @@ func transfer(payer: int, payee: int, amount: int) -> String:
 		for k in counts:
 			names.append(a_an(CardDB.one_name(k)) if counts[k] == 1 else "%d %s" % [counts[k], CardDB.display_name(k)])
 		if sum == 0:
-			parts[0] = "%s paid with %s" % [nm(payer), " and ".join(names)]
+			parts[0] = "%s had no bills, so %s paid with %s (worth %s)" % [nm(payer), "you" if nm(payer) == "You" else "they", " and ".join(names), CardDB.bills(gem_sum)]
 		else:
-			parts.append("handed over %s" % " and ".join(names))
+			parts.append("ran out of bills and handed over %s (worth %s)" % [" and ".join(names), CardDB.bills(gem_sum)])
 	if gem_sum > 0 and sum + gem_sum > amount:
 		# A gem worth more than what was left to pay: the payee gives the difference back.
 		var refund := mini(sum + gem_sum - amount, bank_total(payee))
@@ -746,7 +746,8 @@ func _do_collect(p: int, move: Dictionary) -> void:
 		var n := set_cards(p, color).size()
 		var amount := extra_gem_pay(n - CardDB.set_size(color))
 		var how := transfer(opp(p), p, amount)
-		_event(p, "%s added %s %s %s. %s" % [nm(p), "a" if n != 8 else "an", ordinal(n), CardDB.one_name(color), how], color, -1, true)
+		var payer_word := "you" if nm(opp(p)) == "You" else nm(opp(p))
+		_event(p, "%s added %s %s %s to a finished set. That's a bonus of %s from %s! %s" % [nm(p), "a" if n != 8 else "an", ordinal(n), CardDB.one_name(color), CardDB.bills(amount), payer_word, how], color, -1, true)
 		return
 	var done := " Set complete!" if is_complete(p, color) else ""
 	if c["kind"] == "wild":
