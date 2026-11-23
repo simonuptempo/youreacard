@@ -424,7 +424,8 @@ func _draw_gem_row(p: int, y: float) -> void:
 	var col_h := 132.0
 	for i in order.size():
 		var color: String = order[i]
-		var cards := g.set_cards(p, color)
+		# Wilds sit at the bottom of the column, matching the stack when you tap it.
+		var cards: Array = g.set_cards(p, color).filter(func(c): return c["kind"] != "wild") + g.set_cards(p, color).filter(func(c): return c["kind"] == "wild")
 		var need := CardDB.set_size(color)
 		var done := g.is_complete(p, color)
 		var target := false
@@ -580,13 +581,18 @@ func _inspect_collection(p: int,color: String) -> void:
 	_collection_popup.add_child(UI.label("Tap the stack to choose it." if mode=="target" else ("Tap a gem to pawn it, or a Wild to move it." if p==0 else "Cards in this set are visible to both players."),Vector2(44,310),Vector2(632,48),21,UI.MUTED,HORIZONTAL_ALIGNMENT_CENTER))
 	# The set is shown as one stack, each card a little offset, so you can count it at a glance.
 	var cards: Array = g.set_cards(p,color).duplicate()
-	cards.sort_custom(func(x, y): return x["kind"]=="wild" and y["kind"]!="wild")  # real gems on top
+	# Wilds go at the bottom of the stack: the front card, fully in view, because a Wild is
+	# the card you usually want to move.
+	var gems_only: Array = cards.filter(func(c): return c["kind"]!="wild")
+	cards = gems_only + cards.filter(func(c): return c["kind"]=="wild")
 	var n:=cards.size()
 	var step:=Vector2(34,30)
 	var card_sz:=Vector2(214,300)
 	var origin:=Vector2(360-(card_sz.x+(n-1)*step.x)/2.0,380)
 	var targeting:=mode=="target" and n>0
-	var top_id:=int(cards[n-1]["id"]) if n>0 else -1
+	# When an action targets this stack it takes a real gem if there is one, not the Wild.
+	var target_card: Dictionary = (gems_only[-1] if not gems_only.is_empty() else cards[n-1]) if n>0 else {}
+	var top_id:=int(target_card["id"]) if n>0 else -1
 	var stack_is_target:=targeting and _chip_is_target(p,top_id,color)
 	for i in n:
 		var card: Dictionary = cards[i]
@@ -595,9 +601,9 @@ func _inspect_collection(p: int,color: String) -> void:
 		view.size=card_sz
 		_collection_popup.add_child(view)
 		view.setup(card,face_for(int(card.get("face",p)),"you") if card["kind"]=="wild" else {})
-		view.highlight=stack_is_target and i==n-1
-		# When targeting, any tap on the stack picks its top card.
-		var pick: Dictionary = cards[n-1] if targeting else card
+		view.highlight=stack_is_target and int(card["id"])==top_id
+		# When targeting, any tap on the stack picks the targeted card.
+		var pick: Dictionary = target_card if targeting else card
 		view.tapped.connect(func(v):
 			_detail_card=pick
 			_close_collection()
@@ -609,7 +615,7 @@ func _inspect_collection(p: int,color: String) -> void:
 			var taking_all:=false
 			for m in target_moves:
 				if m.get("as","")=="grand": taking_all=true
-			how="  ·  Tap the stack to take %s" % ("all %d" % n if taking_all and n>1 else ("it" if n==1 else "1 (the top card)"))
+			how="  ·  Tap the stack to take %s" % ("all %d" % n if taking_all and n>1 else ("it" if n==1 else "1"))
 		_collection_popup.add_child(UI.label(count_text+how,Vector2(44,origin.y+card_sz.y+(n-1)*step.y+16),Vector2(632,40),23,UI.TEXT,HORIZONTAL_ALIGNMENT_CENTER))
 	if g.set_cards(p,color).is_empty():
 		_collection_popup.add_child(UI.label("No gems in this set yet.",Vector2(60,450),Vector2(600,100),26,UI.MUTED,HORIZONTAL_ALIGNMENT_CENTER))
@@ -623,7 +629,7 @@ func _inspect_collection(p: int,color: String) -> void:
 			if m.get("as","")=="grand": all=true
 		var what:=("all %d" % n) if all and n>1 else ("1 " + CardDB.one_name(color))
 		var take:=UI.button("%s %s" % [verb, what],Vector2(366,916),Vector2(310,66),UI.ACCENT,24)
-		var top: Dictionary = cards[n-1]
+		var top: Dictionary = target_card
 		take.pressed.connect(func():
 			_detail_card=top
 			_close_collection()
