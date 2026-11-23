@@ -1038,7 +1038,7 @@ func _run_bot_turn() -> void:
 		_turn_before = _snapshot()
 		_turn_first_event = g.events.size()
 	# Play their turn one move at a time, keeping a copy of the table after each move.
-	_frames = [{"state": g.clone(), "events": g.events.slice(_turn_first_event)}]
+	_frames = [{"state": g.clone(), "events": _strip_win(g.events.slice(_turn_first_event))}]
 	var guard := 0
 	while g.winner < 0 and g.current == 1 and guard < 40:
 		guard += 1
@@ -1051,7 +1051,7 @@ func _run_bot_turn() -> void:
 			# Their turn is over; your draw belongs to your turn, not the replay.
 			_frames.append({"state": g.clone(), "events": [], "end": true})
 		else:
-			_frames.append({"state": g.clone(), "events": evs})
+			_frames.append({"state": g.clone(), "events": _strip_win(evs)})
 	_recap = _build_recap(_turn_before, _snapshot(), g.events.slice(_turn_first_event))
 	_turn_before = {}
 	events_seen = g.events.size()  # the replay shows these, not the one-at-a-time popups
@@ -1068,7 +1068,9 @@ func _after_change() -> void:
 	events_seen = g.events.size()
 	for e in new_events:
 		Sfx.play_event(e)
-		if e["big"] or (e["p"] == 1 and not str(e["text"]).contains(" drew ")):
+		if _is_win(e):
+			pass  # the win gets its own splash, not a card popup
+		elif e["big"] or (e["p"] == 1 and not str(e["text"]).contains(" drew ")):
 			replay_queue.append(e)
 		_set_msg(e["text"])
 	refresh()
@@ -1076,6 +1078,24 @@ func _after_change() -> void:
 		_play_next_replay()
 	elif replay_queue.is_empty():
 		_finish_replays()
+
+
+## The "completed 4 sets and won!" line. It isn't about a card, so it never shows one
+## (it used to show a Wild, which put Nana Bea's face on your win).
+func _is_win(e: Dictionary) -> bool:
+	return str(e.get("text", "")).ends_with("and won!")
+
+
+func _strip_win(evs: Array) -> Array:
+	var out: Array = []
+	for e in evs:
+		if _is_win(e):
+			var d: Dictionary = e.duplicate()
+			d["card"] = ""
+			out.append(d)
+		else:
+			out.append(e)
+	return out
 
 
 func _play_next_replay() -> void:
@@ -2181,7 +2201,8 @@ func _replay_summary() -> void:
 	var again := UI.button("Watch again", Vector2(40, RC_BOTTOM - 82), Vector2(250, 62), Color("#314742"), 21)
 	again.pressed.connect(_watch_again)
 	_replay_panel.add_child(again)
-	var done := UI.button("Start my turn" if _replay_from_mode == "busy" else "Back to my turn", Vector2(310, RC_BOTTOM - 82), Vector2(370, 62), UI.ACCENT, 23)
+	var over := (_real_g if _real_g != null else g).winner >= 0
+	var done := UI.button("See who won" if over else ("Start my turn" if _replay_from_mode == "busy" else "Back to my turn"), Vector2(310, RC_BOTTOM - 82), Vector2(370, 62), UI.ACCENT, 23)
 	if _practice and _practice_completed >= 10: done.text = "Finish practice"
 	done.pressed.connect(_end_replay_now)
 	_replay_panel.add_child(done)
@@ -2456,7 +2477,7 @@ func _online_replay(before: GameState, d: Dictionary) -> void:
 		if int(m["view"].get("current", 1)) == 0 and int(m["view"].get("winner", -1)) < 0:
 			_frames.append({"state": st, "events": [], "end": true})  # their End Turn; your draw isn't part of it
 		else:
-			_frames.append({"state": st, "events": st.events})
+			_frames.append({"state": st, "events": _strip_win(st.events)})
 			evs.append_array(st.events)
 	var before_snap := _snapshot(before)
 	_online_load(d)
@@ -2621,7 +2642,7 @@ func _resume(saved: Dictionary) -> void:
 	_frames = []
 	for f in saved.get("frames", []):
 		var evs: Array = GameState.from_view({"events": f.get("events", [])}).events
-		_frames.append({"state": GameState.from_dict(f["state"]), "events": evs, "end": bool(f.get("end", false))})
+		_frames.append({"state": GameState.from_dict(f["state"]), "events": _strip_win(evs), "end": bool(f.get("end", false))})
 	_recap = saved.get("recap", {})
 	mode = "busy"
 	refresh()
