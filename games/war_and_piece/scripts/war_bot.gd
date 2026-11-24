@@ -60,24 +60,33 @@ static func _try(hand: Array, locked: Array, order: Array) -> Dictionary:
 	return out
 
 
-## Play a whole Piece round for player p.
-static func play_piece(g: WarState, p: int) -> void:
+## The moves that lock as much of player p's hand as possible (without "done").
+## Each is applied to g as it goes, and the ones that worked are returned.
+static func arrange(g: WarState, p: int) -> Array:
+	var done: Array = []
 	var pl := plan(g.hand(p), g.sets(p))
-	# Additions refer to set indexes as they were before new sets were added, so do them
-	# against the original sets first when the plan started with "add"; otherwise after.
-	var base := g.sets(p).size()
 	for ids in pl["new"]:
-		g.lock_set(p, ids)
+		var m := {"t": "lock", "p": p, "ids": ids}
+		if g.apply(m):
+			done.append(m)
 	for a in pl["add"]:
-		var idx: int = a[0]
-		if not g.add_to_set(p, idx, a[1]):
-			# Index shifted: find any set that takes it.
-			for k in g.sets(p).size():
-				if g.add_to_set(p, k, a[1]):
-					break
-	g.finish_piece(p)
-	void_unused(base)
+		# Add steps name sets by their place in the plan; if that set moved, any set that takes the card will do.
+		var m := {"t": "add", "p": p, "set": a[0], "ids": a[1]}
+		if g.apply(m):
+			done.append(m)
+			continue
+		for k in g.sets(p).size():
+			m = {"t": "add", "p": p, "set": k, "ids": a[1]}
+			if g.apply(m):
+				done.append(m)
+				break
+	return done
 
 
-static func void_unused(_x) -> void:
-	pass
+## Play a whole Piece round for player p. Returns the moves made.
+static func play_piece(g: WarState, p: int) -> Array:
+	var moves := arrange(g, p)
+	var d := {"t": "done", "p": p}
+	if g.apply(d):
+		moves.append(d)
+	return moves

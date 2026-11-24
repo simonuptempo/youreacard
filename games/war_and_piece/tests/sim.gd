@@ -35,5 +35,5 @@ func _init() -> void:
 		longest = maxi(longest, g.round_number)
 		if g.events[-1]["text"].contains("locked away") and g.events[-1]["text"].contains("!"):
 			by_lock += 1
-	print("games %d  wins %s  avg rounds %.1f (max %d)  avg flips %.1f  ended by locking: %d  problems: %d" % [games, wins, float(rounds_total) / games, longest, float(flips_total) / games, by_lock, bad])
+	print("games %d  wins %s  avg rounds %.1f (max %d)  avg flips %.1f  ended by 26 locked: %d  problems: %d" % [games, wins, float(rounds_total) / games, longest, float(flips_total) / games, by_lock, bad])
 	quit(0)

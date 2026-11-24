@@ -3,8 +3,12 @@ extends Control
 
 const GAMES := [
 	{"id": "gem_heist", "name": "Gem Heist", "tag": "Collect gems, steal theirs, guard your vault.", "ready": true},
-	{"id": "war_and_piece", "name": "War and Piece", "tag": "Win cards in War, then lock them into sets.", "ready": true, "scene": "res://games/war_and_piece/wp_menu.tscn"},
-	{"id": "see_saw", "name": "See Saw", "tag": "One quick look. What did you see?", "ready": false},
+	# War and Piece: playable; lives in games/war_and_piece/ and opens its own menu scene.
+	{"id": "war_and_piece", "name": "War and Piece", "tag": "Win cards in War, then lock them into sets.", "ready": true,
+		"scene": "res://games/war_and_piece/scenes/main.tscn"},
+	# See Saw: playable; lives in games/see_saw/ and opens its own menu scene.
+	{"id": "see_saw", "name": "See Saw", "tag": "One quick look. What did you see?", "ready": true,
+		"scene": "res://games/see_saw/scenes/main.tscn"},
 ]
 
 
@@ -92,10 +96,12 @@ func _tile(game: Dictionary, pos: Vector2) -> void:
 	b.disabled = not ready
 	b.accessibility_name = game["name"]
 	if ready:
-		if game.has("scene"):
-			b.pressed.connect(func(): get_tree().change_scene_to_file(game["scene"]))
-		else:
-			b.pressed.connect(func(): Profile.go("main"))
+		# A game with its own "scene" (e.g. See Saw) opens that; Gem Heist opens its menu.
+		b.pressed.connect(func():
+			if game.has("scene"):
+				get_tree().change_scene_to_file(game["scene"])
+			else:
+				Profile.go("main"))
 	add_child(b)
 	var art := GameArt.new()
 	art.kind = game["id"]
@@ -112,6 +118,8 @@ func _tile(game: Dictionary, pos: Vector2) -> void:
 	b.add_child(tag)
 	var status := "Play" if ready else "Coming soon"
 	if ready and game["id"] == "gem_heist" and Profile.saved_game().has("state"):
+		status = "Continue your game"
+	if ready and game["id"] == "war_and_piece" and WarSave.has_game():  # War and Piece: a game in progress
 		status = "Continue your game"
 	var st := UI.label(status + ("  ›" if ready else ""), Vector2(222, 132), Vector2(420, 34), 22, Color("#3cb97a") if ready else Color("#8890b0"))
 	st.add_theme_font_override("font", UI.font(800))
