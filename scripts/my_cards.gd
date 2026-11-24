@@ -704,5 +704,7 @@ func _leave() -> void:
 			Profile.go("explainer")
 		"main":
 			Profile.go("main")
+		"home":
+			Profile.go("home")
 		_:
 			Profile.go("settings")

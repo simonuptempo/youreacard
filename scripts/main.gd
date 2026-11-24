@@ -34,23 +34,6 @@ var _reference_button: Button
 
 
 func _ready() -> void:
-	if not Profile.onboarded:
-		Profile.onboarding_step = 0
-		Profile.go.call_deferred("onboarding")
-		return
-	# Opening the app: go straight back to the game you were in, even if the app was closed.
-	if not Profile.launch_checked:
-		Profile.launch_checked = true
-		var online: Dictionary = Profile.saved_game(Profile.ONLINE_SAVE)
-		var local: Dictionary = Profile.saved_game()
-		if online.has("online") and Online.signed_in():
-			Online.game_id = str(online["online"])
-			Profile.go.call_deferred("game")
-			return
-		if local.has("state") and bool(local.get("open", true)):
-			Profile.resume_game = true
-			Profile.go.call_deferred("game")
-			return
 	theme = UI.make_theme()
 	var bg := ColorRect.new()
 	bg.color = UI.BG
@@ -64,7 +47,9 @@ func _ready() -> void:
 	gear.add_theme_stylebox_override("hover", UI.box(Color("#3a4580"), 34))
 	gear.add_theme_stylebox_override("pressed", UI.box(Color("#262d55"), 34))
 	gear.tooltip_text = "Settings"
-	gear.pressed.connect(func(): Profile.go("settings"))
+	gear.pressed.connect(func():
+		Profile.settings_return = "main"
+		Profile.go("settings"))
 	gear.add_child(Icon.make("gear", Vector2(14, 14), Vector2(40, 40)))
 	add_child(gear)
 	_reference_button = Button.new()
@@ -79,14 +64,30 @@ func _ready() -> void:
 	_reference_button.pressed.connect(_show_rules)
 	add_child(_reference_button)
 
-	var hello := "Hi, %s!" % Profile.display_name if Profile.display_name != "" else ""
-	add_child(UI.label(hello, Vector2(24, 34), Vector2(508, 50), 26, UI.MUTED))
-	add_child(Art.logo(Vector2(140, 176), Vector2(440, 192)))
-	add_child(UI.label("GEM HEIST", Vector2(40, 362), Vector2(640, 48), 38, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
-	add_child(UI.label("Collect. Steal. Defend. Star in your own deck.", Vector2(40, 410), Vector2(640, 32), 20, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	var home := Button.new()
+	home.position = Vector2(20, 24)
+	home.size = Vector2(68, 68)
+	home.add_theme_stylebox_override("normal", UI.box(Color("#2f3866"), 34))
+	home.add_theme_stylebox_override("hover", UI.box(Color("#3a4580"), 34))
+	home.add_theme_stylebox_override("pressed", UI.box(Color("#262d55"), 34))
+	home.tooltip_text = "All games"
+	home.pressed.connect(func(): Profile.go("home"))
+	home.add_child(Icon.make("back", Vector2(16, 16), Vector2(36, 36)))
+	add_child(home)
+	var gh := TextureRect.new()
+	gh.texture = Art.tex("gem-heist-logo")
+	gh.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	gh.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	gh.position = Vector2(110, 110)
+	gh.size = Vector2(500, 219)
+	gh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(gh)
+	if gh.texture == null:
+		add_child(UI.label("GEM HEIST", Vector2(40, 200), Vector2(640, 60), 52, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
+	add_child(UI.label("Collect. Steal. Defend. Star in your own deck.", Vector2(40, 346), Vector2(640, 40), 22, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 
 	var card := CardView.new()
-	card.position = Vector2(250, 452)
+	card.position = Vector2(250, 420)
 	card.size = Vector2(220, 308)
 	add_child(card)
 	card.setup(Profile.me_card(), Profile.me_face())

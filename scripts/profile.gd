@@ -25,6 +25,7 @@ var creator_via_crew := false     # Create on the crew screen: the builder retur
 var creator_return := "main"       # where the crew screen (my_cards) goes back to: main | settings | onboarding | explainer
 var creator_mode := ""         # open the card maker on "photo", "builder" or "gallery"
 var photo_kind := "me"          # whose photo: "me", "pet" or "person" (a friend or family member)
+var settings_return := "home"     # home | main: where Settings goes back to
 var explainer_return := "main"     # main | onboarding | settings
 var explainer_start := 0           # step to open the tutorial on (e.g. back from editing your Wild)
 var onboarding_step := 0

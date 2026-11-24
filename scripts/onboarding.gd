@@ -60,8 +60,8 @@ func _step_welcome() -> void:
 	pulse.tween_property(card, "scale", Vector2(1.04, 1.04), 0.6).set_trans(Tween.TRANS_SINE)
 	pulse.tween_property(card, "scale", Vector2.ONE, 0.6).set_trans(Tween.TRANS_SINE)
 
-	_root.add_child(UI.label("In this game you don't just play cards.\nYou ARE one.", Vector2(40, 720), Vector2(640, 100), 30, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	_root.add_child(UI.label("Make a cartoon you (or your pet!) and star on your own wild card.", Vector2(60, 824), Vector2(600, 70), 22, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	_root.add_child(UI.label("In these games you don't just play cards.\nYou ARE one.", Vector2(40, 720), Vector2(640, 100), 30, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	_root.add_child(UI.label("Make a cartoon you (or your pet!) and star on your own card.", Vector2(60, 824), Vector2(600, 70), 22, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 
 	var go := UI.button("Make my card", Vector2(140, 920), Vector2(440, 92), UI.ACCENT, 36)
 	go.pressed.connect(_step_name)
@@ -107,7 +107,7 @@ func _skip() -> void:
 	Profile.onboarded = true
 	Profile.onboarding_step = 0
 	Profile.save_profile()
-	Profile.go("main")
+	Profile.go("home")
 
 
 # ------------------------------------------------------------------ step 1: name
@@ -237,5 +237,5 @@ func _step_reveal() -> void:
 		Profile.go("explainer"))
 	_root.add_child(watch)
 	var play := UI.button("Let's play!", Vector2(40, 996), Vector2(640, 92), UI.ACCENT, 34)
-	play.pressed.connect(func(): Profile.go("main"))
+	play.pressed.connect(func(): Profile.go("home"))
 	_root.add_child(play)

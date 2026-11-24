@@ -20,7 +20,7 @@ func _ready() -> void:
 	back.size = Vector2(68, 68)
 	back.add_theme_stylebox_override("normal", UI.box(Color("#2f3866"), 34))
 	back.add_theme_stylebox_override("hover", UI.box(Color("#3a4580"), 34))
-	back.pressed.connect(func(): Profile.go("main"))
+	back.pressed.connect(func(): Profile.go(Profile.settings_return))
 	back.add_child(Icon.make("back", Vector2(16, 16), Vector2(36, 36)))
 	add_child(back)
 	add_child(UI.label("Settings", Vector2(0, 28), Vector2(720, 60), 42, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))

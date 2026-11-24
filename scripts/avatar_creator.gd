@@ -558,6 +558,8 @@ func _leave(saved: bool) -> void:
 			# Back to the tutorial's "you are wild" step.
 			Profile.explainer_start = 5
 			Profile.go("explainer")
+		"home":
+			Profile.go("home")
 		_:
 			Profile.go("main")
 
