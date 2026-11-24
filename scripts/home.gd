@@ -4,7 +4,9 @@ extends Control
 const GAMES := [
 	{"id": "gem_heist", "name": "Gem Heist", "tag": "Collect gems, steal theirs, guard your vault.", "ready": true},
 	{"id": "war_and_piece", "name": "War and Piece", "tag": "Win cards in War, then lock them into sets.", "ready": false},
-	{"id": "see_saw", "name": "See Saw", "tag": "One quick look. What did you see?", "ready": false},
+	# See Saw: playable; lives in games/see_saw/ and opens its own menu scene.
+	{"id": "see_saw", "name": "See Saw", "tag": "One quick look. What did you see?", "ready": true,
+		"scene": "res://games/see_saw/scenes/main.tscn"},
 ]
 
 
@@ -92,7 +94,12 @@ func _tile(game: Dictionary, pos: Vector2) -> void:
 	b.disabled = not ready
 	b.accessibility_name = game["name"]
 	if ready:
-		b.pressed.connect(func(): Profile.go("main"))
+		# A game with its own "scene" (e.g. See Saw) opens that; Gem Heist opens its menu.
+		b.pressed.connect(func():
+			if game.has("scene"):
+				get_tree().change_scene_to_file(game["scene"])
+			else:
+				Profile.go("main"))
 	add_child(b)
 	var art := GameArt.new()
 	art.kind = game["id"]
