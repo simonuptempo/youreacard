@@ -21,11 +21,6 @@ const CHARACTERS := {
 }
 
 
-## The character on a rank (11 Jack … 14 Ace), or "" for number cards.
-static func role_for_rank(rank: int) -> String:
-	return str(CHARACTERS.get(rank, {}).get("role", ""))
-
-
 static func build_deck() -> Array:
 	var deck: Array = []
 	var id := 1

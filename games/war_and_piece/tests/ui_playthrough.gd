@@ -10,7 +10,7 @@ func _initialize() -> void:
 func _new_game() -> void:
 	if _game:
 		_game.queue_free()
-	_game = load("res://games/war_and_piece/scenes/game.tscn").instantiate()
+	_game = load("res://games/war_and_piece/wp_table.tscn").instantiate()
 	root.add_child(_game)
 
 func _process(_d: float) -> bool:

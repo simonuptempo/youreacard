@@ -1,23 +1,14 @@
 extends SceneTree
 ## Screenshots of each screen: OUT env var is the folder.
 var _step := 0
-var _pre := 0
 var _f := 0
 var _scene
 var _out := OS.get_environment("OUT")
 
 func _initialize() -> void:
 	OS.set_environment("WAP_SEED", "2")
-	# A game in progress, so the menu shows Continue.
-	var g := WarState.new()
-	g.setup(["You", "Computer"], 99)
-	g.apply({"t": "flip_all"})
-	WarBot.play_piece(g, 0)
-	WarBot.play_piece(g, 1)
-	g.apply({"t": "flip"})
-	WarSave.save(g)
-	# First the You're a Card home screen, with War and Piece's tile.
-	_scene = null
+	_scene = load("res://games/war_and_piece/wp_menu.tscn").instantiate()
+	root.add_child(_scene)
 
 func _shot(name: String) -> void:
 	root.get_viewport().get_texture().get_image().save_png(_out + "/" + name + ".png")
@@ -27,28 +18,14 @@ func _process(_d: float) -> bool:
 	_f += 1
 	if _f % 20 != 0:
 		return false
-	if _pre < 2:
-		if _pre == 0:
-			root.get_node("/root/Profile").onboarded = true
-			root.get_node("/root/Profile").launch_checked = true
-			_scene = load("res://scenes/home.tscn").instantiate()
-			root.add_child(_scene)
-		else:
-			_shot("0-home")
-			_scene.queue_free()
-			_scene = load("res://games/war_and_piece/scenes/main.tscn").instantiate()
-			root.add_child(_scene)
-		_pre += 1
-		return false
 	match _step:
 		0: _shot("1-menu")
 		1:
 			_scene.show_rules()
 		2:
 			_shot("2-rules")
-			WarSave.clear()
 			_scene.queue_free()
-			_scene = load("res://games/war_and_piece/scenes/game.tscn").instantiate()
+			_scene = load("res://games/war_and_piece/wp_table.tscn").instantiate()
 			root.add_child(_scene)
 		3: _shot("3-war-start")
 		4:

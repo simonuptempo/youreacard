@@ -29,78 +29,14 @@ var glow := false:
 	set(v):
 		glow = v
 		queue_redraw()
-## Custom faces come from the shared Profile (made in the app's My Cards screen).
-## A face to show instead of the saved one (a preview).
-var face: Dictionary = {}
-## A name to show instead of the saved one (the card maker's preview).
-var preview_name := ""
-## Shown in My Cards (no extra badge here; kept so Gem Heist's screens can set it).
-var editable := false
-var _avatar: AvatarView
 
 
-func setup(c: Dictionary, down := false, face_override: Dictionary = {}) -> WarCardView:
+func setup(c: Dictionary, down := false) -> WarCardView:
 	card = c
 	face_down = down
-	face = face_override
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_sync_avatar()
 	queue_redraw()
 	return self
-
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_RESIZED:
-		_sync_avatar()
-
-
-## The character's role on this card, or "" for number cards.
-func role() -> String:
-	if card.is_empty():
-		return ""
-	return str(WarCards.CHARACTERS.get(int(card.get("rank", 0)), {}).get("role", ""))
-
-
-## The face this card shows: the preview, your saved face, or {} for the painted character.
-func shown_face() -> Dictionary:
-	var r := role()
-	if r == "":
-		return {}
-	if not face.is_empty():
-		return face
-	return Profile.slot_face(r)
-
-
-func shown_name() -> String:
-	if preview_name != "":
-		return preview_name
-	var r := role()
-	return Profile.face_name(r) if r != "" else ""
-
-
-func _portrait_box() -> Rect2:
-	var w := size.x
-	return Rect2(w * 0.25, size.y * 0.12, w * 0.5, w * 0.5)
-
-
-## Custom faces are drawn by an AvatarView (a cartoon from a photo, or one you built).
-func _sync_avatar() -> void:
-	var f := shown_face()
-	var show := not f.is_empty() and not face_down and size.x >= 90 and not card.is_empty()
-	if not show:
-		if _avatar:
-			_avatar.queue_free()
-			_avatar = null
-		return
-	if _avatar == null:
-		_avatar = AvatarView.new()
-		_avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(_avatar)
-	_avatar.role = role()
-	_avatar.data = f
-	var b := _portrait_box()
-	_avatar.position = b.position
-	_avatar.size = b.size
 
 
 func _gui_input(e: InputEvent) -> void:
@@ -130,8 +66,6 @@ func _draw() -> void:
 		draw_style_box(_outline(GOLD, rad, maxi(3, int(w * 0.05))), r)
 	if dimmed:
 		draw_style_box(UI.box(Color(0.08, 0.09, 0.16, 0.55), rad), r)
-	if _avatar:
-		_avatar.modulate = Color(0.5, 0.5, 0.55) if dimmed else Color.WHITE
 
 
 func _outline(col: Color, rad: int, bw: int) -> StyleBoxFlat:
@@ -197,20 +131,16 @@ func _draw_face(r: Rect2, rad: int) -> void:
 	if ch.is_empty():
 		_draw_pips(r, col)
 		return
-	var box := _portrait_box()
+	var box := Rect2(w * 0.25, h * 0.12, w * 0.5, w * 0.5)
 	draw_style_box(UI.box(Color(col, 0.12), int(w * 0.05)), box.grow(w * 0.02))
-	if _avatar == null:
-		var tex := art(ch["role"])
-		if tex:
-			draw_texture_rect(tex, box, false)
+	var tex := art(ch["role"])
+	if tex:
+		draw_texture_rect(tex, box, false)
 	var ns := int(w * 0.11)
-	var who := shown_name()
-	if who.length() > 9:
-		ns = int(ns * 9.0 / who.length())
-	draw_string(UI.font(900), Vector2(0, box.end.y + w * 0.05 + int(w * 0.11)), who, HORIZONTAL_ALIGNMENT_CENTER, w, ns, col)
+	draw_string(UI.font(900), Vector2(0, box.end.y + w * 0.05 + ns), ch["name"], HORIZONTAL_ALIGNMENT_CENTER, w, ns, col)
 	if w >= 160:
 		var ts := int(w * 0.06)
-		draw_string(UI.font(700), Vector2(w * 0.1, box.end.y + w * 0.08 + int(w * 0.11) + ts * 1.1), ch["title"], HORIZONTAL_ALIGNMENT_CENTER, w * 0.8, ts, Color(col, 0.75))
+		draw_string(UI.font(700), Vector2(w * 0.1, box.end.y + w * 0.08 + ns + ts * 1.1), ch["title"], HORIZONTAL_ALIGNMENT_CENTER, w * 0.8, ts, Color(col, 0.75))
 
 
 func _draw_pips(r: Rect2, col: Color) -> void:
