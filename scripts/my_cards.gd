@@ -346,7 +346,11 @@ func _choose_photo() -> void:
 	if _picker_pending:
 		return
 	if not DisplayServer.has_feature(DisplayServer.FEATURE_NATIVE_DIALOG_FILE):
-		_say("Uploading photos isn't available here. Try Take a selfie.", true)
+		if OS.get_name() == "macOS" and OS.has_feature("editor"):
+			# Only when testing in Godot: the game embedded in the editor can't open the Mac's file picker.
+			_say("Testing in Godot? Turn off Embed Game on Play in the Game panel, then run again.", true)
+		else:
+			_say("Uploading photos isn't available here. Try Take a selfie.", true)
 		return
 	_picker_pending = true
 	var error := DisplayServer.file_dialog_show(
