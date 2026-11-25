@@ -109,7 +109,7 @@ function makeUser(meta: any, email?: string, password?: string) {
   const u = { id, token: "tok-" + id, refresh: "ref-" + id, email: email ?? null, password, is_anonymous: !email };
   tables.users.push(u);
   const name = String(meta?.display_name || "Player").slice(0, 24);
-  tables.profiles.push({ id, display_name: name, avatar: {}, is_guest: !email, beaten: [] });
+  tables.profiles.push({ id, display_name: name, avatar: {}, is_guest: !email, kid: !email && meta?.kid === true, beaten: [] });
   return u;
 }
 const session = (u: any) => ({ access_token: u.token, refresh_token: u.refresh, expires_in: 3600, user: { id: u.id, email: u.email, is_anonymous: u.is_anonymous } });

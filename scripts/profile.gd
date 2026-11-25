@@ -18,6 +18,7 @@ var onboarded := false
 var display_name := ""
 var birth_year := 0              # asked once by AgeGate (stays on this phone); 0 = not asked
 var birth_month := 0
+var nickname := ""                # under 13: the online nickname picked from Nicknames
 var me_slot := "you"            # the card you are: the Wild by default, or any crew card or bill
 var beaten: Array = []           # names of characters you have beaten (cycles you through the cast)
 
@@ -167,7 +168,7 @@ func save_profile() -> void:
 	f.store_string(JSON.stringify({"slots": slots, "plays_v3": plays_per_turn,
 		"onboarded": onboarded, "display_name": display_name, "beaten": beaten, "sound_on": sound_on,
 		"voices": voices, "voice_alt": voice_alt, "me_slot": me_slot,
-		"birth_year": birth_year, "birth_month": birth_month}))
+		"birth_year": birth_year, "birth_month": birth_month, "nickname": nickname}))
 
 
 func load_profile() -> void:
@@ -194,6 +195,7 @@ func load_profile() -> void:
 	me_slot = str(data.get("me_slot", "you"))
 	birth_year = int(data.get("birth_year", 0))
 	birth_month = int(data.get("birth_month", 0))
+	nickname = str(data.get("nickname", ""))
 	if not me_slot in SLOTS:
 		me_slot = "you"
 	sound_on = bool(data.get("sound_on", true))

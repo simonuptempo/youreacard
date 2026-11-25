@@ -35,17 +35,24 @@ static func ok() -> bool:
 	return age() >= MIN_AGE
 
 
+## Under 13: online play is the kid-safe version (guest account, a nickname from a list,
+## friends by invite code only, no photo cartoons).
+static func kid() -> bool:
+	return known() and age() < MIN_AGE
+
+
 ## Run on_ok if the player may use `feature` (asking their birthday first if needed),
 ## otherwise explain it's not available and run on_no. on_no also runs if they back out.
-static func require(parent: Node, feature: String, on_ok: Callable, on_no: Callable) -> void:
+## kids_ok: players under 13 may use it too (in its kid-safe version).
+static func require(parent: Node, feature: String, on_ok: Callable, on_no: Callable, kids_ok := false) -> void:
 	if known():
-		if ok():
+		if ok() or kids_ok:
 			on_ok.call()
 		else:
 			_not_available(parent, feature, on_no)
 		return
 	_ask(parent, func():
-		if ok():
+		if ok() or kids_ok:
 			on_ok.call()
 		else:
 			_not_available(parent, feature, on_no), on_no)

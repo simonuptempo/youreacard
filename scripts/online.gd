@@ -24,6 +24,15 @@ func _ready() -> void:
 	_load_session()
 
 
+const KID_SIGNIN := "That sign-in isn't available on this device. Play with a nickname instead."
+
+
+## Under 13 the account must be a kid account (from this app's kid sign-in). A grown-up's
+## account left signed in on the phone is signed out instead.
+func kid_session_ok() -> bool:
+	return not AgeGate.kid() or not signed_in() or bool(me.get("kid", false))
+
+
 func signed_in() -> bool:
 	return session.has("access_token")
 
@@ -40,9 +49,12 @@ func name_or(fallback: String) -> String:
 # ------------------------------------------------------------------ HTTP
 
 func _http(method: int, path: String, body: Variant = null, use_session := true) -> Dictionary:
-	# Nothing leaves the phone for players under 13 (or who haven't answered the age screen).
-	if not AgeGate.ok():
+	# Nothing leaves the phone until the age screen is answered. Under 13, online play is
+	# the kid-safe version: no finding strangers (the server checks this too).
+	if not AgeGate.known():
 		return {"ok": false, "status": 0, "data": null, "error": "Online play isn't available on this device."}
+	if AgeGate.kid() and typeof(body) == TYPE_DICTIONARY and str(body.get("action", "")) == "find_match":
+		return {"ok": false, "status": 0, "data": null, "error": "Finding a player isn't available. Invite a friend instead."}
 	var req := HTTPRequest.new()
 	req.timeout = 20.0
 	add_child(req)
@@ -177,6 +189,8 @@ func _cartoon_request(photo: Image, extra: Dictionary) -> Dictionary:
 # ------------------------------------------------------------------ accounts
 
 func sign_up_email(email: String, password: String, first_name: String) -> String:
+	if AgeGate.kid():
+		return KID_SIGNIN
 	var r := await _http(HTTPClient.METHOD_POST, "/auth/v1/signup",
 		{"email": email.strip_edges(), "password": password, "data": {"display_name": first_name.strip_edges()}}, false)
 	if not r["ok"]:
@@ -189,6 +203,8 @@ func sign_up_email(email: String, password: String, first_name: String) -> Strin
 
 
 func sign_in_email(email: String, password: String) -> String:
+	if AgeGate.kid():
+		return KID_SIGNIN
 	var r := await _http(HTTPClient.METHOD_POST, "/auth/v1/token?grant_type=password",
 		{"email": email.strip_edges(), "password": password}, false)
 	if not r["ok"]:
@@ -200,7 +216,12 @@ func sign_in_email(email: String, password: String) -> String:
 
 ## A quick guest account for someone joining with an invite code.
 func sign_in_guest(first_name: String) -> String:
-	var r := await _http(HTTPClient.METHOD_POST, "/auth/v1/signup", {"data": {"display_name": first_name}}, false)
+	var meta := {"display_name": first_name}
+	if AgeGate.kid():
+		if not Nicknames.valid(first_name):
+			return "Please pick a nickname."
+		meta["kid"] = true   # the server keeps this account kid-safe
+	var r := await _http(HTTPClient.METHOD_POST, "/auth/v1/signup", {"data": meta}, false)
 	if not r["ok"]:
 		return r["error"]
 	_store(r["data"])
@@ -213,6 +234,8 @@ func sign_in_guest(first_name: String) -> String:
 var _oauth_cancel := false
 
 func sign_in_with(provider: String) -> String:
+	if AgeGate.kid():
+		return KID_SIGNIN
 	_oauth_cancel = false
 	var verifier := _random_token(48)
 	var challenge := Marshalls.raw_to_base64(verifier.sha256_buffer()).replace("+", "-").replace("/", "_").replace("=", "")
@@ -253,6 +276,8 @@ func refresh_profile() -> void:
 
 
 func set_display_name(n: String) -> String:
+	if AgeGate.kid() and not Nicknames.valid(n):
+		return "Please pick a nickname."
 	var r := await call_fn("update_profile", {"display_name": n})
 	if r["ok"]:
 		me = r["data"].get("profile", me)

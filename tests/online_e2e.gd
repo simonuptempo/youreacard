@@ -8,8 +8,8 @@ var my_moves := 0
 
 func _process(_d: float) -> bool:
 	steps += 1
-	if root.get_node("Profile").birth_year == 0:
-		root.get_node("Profile").birth_year = 1990  # an adult player (AgeGate)
+	if root.get_node("Profile").birth_year != 1990:
+		root.get_node("Profile").birth_year = 1990  # always an adult player here (AgeGate)
 		root.get_node("Profile").birth_month = 1
 	if steps > 200000:
 		print("E2E TIMEOUT in phase ", phase); quit(1); return true

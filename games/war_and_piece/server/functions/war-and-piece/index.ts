@@ -3,6 +3,7 @@
 // seat may see (Game.view in engine.ts: face-down stocks and the other hand stay hidden).
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { Game, type Move } from "./engine.ts";
+import { validNickname } from "./kid.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -30,9 +31,17 @@ function cleanName(raw: unknown): string {
   return s;
 }
 
+// Players under 13 (kid accounts) can only use a nickname from our list, never typed text.
+async function nameFor(me: string, raw: unknown): Promise<string> {
+  const p = await profile(me);
+  if (!p.kid) return cleanName(raw);
+  if (!validNickname(raw)) throw new Oops("Please pick a nickname from the list.");
+  return String(raw);
+}
+
 async function profile(id: string) {
-  const { data } = await db.from("profiles").select("id, display_name, avatar, is_guest").eq("id", id).maybeSingle();
-  return data ?? { id, display_name: "Player", avatar: {}, is_guest: false };
+  const { data } = await db.from("profiles").select("id, display_name, avatar, is_guest, kid").eq("id", id).maybeSingle();
+  return data ?? { id, display_name: "Player", avatar: {}, is_guest: false, kid: false };
 }
 
 // Who can move: 2 = either player (War, or both still arranging), 0/1 = that seat, -1 = over.
@@ -85,7 +94,7 @@ const actions: Record<string, (c: Ctx) => Promise<unknown>> = {
   },
 
   async update_profile({ me, body }) {
-    if (body.display_name !== undefined) await db.from("profiles").update({ display_name: cleanName(body.display_name) }).eq("id", me);
+    if (body.display_name !== undefined) await db.from("profiles").update({ display_name: await nameFor(me, body.display_name) }).eq("id", me);
     return { profile: await profile(me) };
   },
 
@@ -101,7 +110,7 @@ const actions: Record<string, (c: Ctx) => Promise<unknown>> = {
 
   async join_invite({ me, body }) {
     const code = String(body.code ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const name = cleanName(body.name);
+    const name = await nameFor(me, body.name);
     const { data: inv } = await db.from("wp_invites").select("*").eq("code", code).maybeSingle();
     if (!inv || new Date(inv.expires_at) < new Date()) throw new Oops("That code doesn't work. Check it and try again.", 404);
     if (inv.host === me) throw new Oops("That's your own invite code.");
@@ -140,6 +149,8 @@ const actions: Record<string, (c: Ctx) => Promise<unknown>> = {
 
   // ---- strangers
   async find_match({ me }) {
+    // Players under 13 only play friends they invite (or who invite them), never strangers.
+    if ((await profile(me)).kid) throw new Oops("Finding a player isn't available on this account. Invite a friend instead.", 403);
     const { data: other, error } = await db.rpc("take_wp_match", { me });
     if (error) throw new Oops(error.message, 500);
     if (!other) return { waiting: true };

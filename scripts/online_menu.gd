@@ -23,8 +23,8 @@ func _ready() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	# The shared age screen comes first (asked once for all the games).
-	if not AgeGate.ok():
-		AgeGate.require(self, "Online play", func(): get_tree().reload_current_scene(), func(): Profile.go("main"))
+	if not AgeGate.known():
+		AgeGate.require(self, "Online play", func(): get_tree().reload_current_scene(), func(): Profile.go("main"), true)
 		return
 	var back := Button.new()
 	back.position = Vector2(20, 24)
@@ -132,6 +132,9 @@ func _close_overlay() -> void:
 # ------------------------------------------------------------------ sign in
 
 func _show_signin() -> void:
+	if AgeGate.kid():
+		_show_kid_signin()
+		return
 	_reset()
 	_text("Play friends and family, or find a new rival.", 130, 26)
 	_text("Opponents see your card art and first name. Your photos and voice recordings stay on this phone.", 176, 20, UI.MUTED, 60)
@@ -143,6 +146,43 @@ func _show_signin() -> void:
 	_text("Got an invite code from a friend?", 700, 24)
 	_button("Join a friend's game", 750, UI.ACCENT, _show_join, 80, 28, Color("#1b2038"))
 	_text("No account needed to join a friend.", 840, 18, UI.MUTED)
+
+
+# ------------------------------------------------------------------ under 13
+
+## The nickname this phone plays under (picked once, can be re-rolled before signing in).
+func _kid_nickname() -> String:
+	if not Nicknames.valid(Profile.nickname):
+		Profile.nickname = Nicknames.random()
+		Profile.save_profile()
+	return Profile.nickname
+
+
+func _show_kid_signin() -> void:
+	_reset()
+	_text("Play with friends and family", 130, 30, UI.ACCENT)
+	_text("You'll play online with a nickname. Your name, photos and voice stay on this phone.", 180, 20, UI.MUTED, 60)
+	_text("Your nickname", 286, 22, UI.MUTED)
+	var nick := _text(_kid_nickname(), 322, 44, UI.TEXT, 64)
+	nick.add_theme_font_override("font", UI.font(900))
+	_button("New nickname", 404, Color("#3a4166"), func():
+		Profile.nickname = Nicknames.random()
+		Profile.save_profile()
+		nick.text = Profile.nickname, 64, 22)
+	_button("Start playing", 520, UI.ACCENT, _kid_start, 84, 30, Color("#1b2038"))
+	_add(UI.panel(Vector2(110, 650), Vector2(500, 2), Color("#3a4166"), 1))
+	_text("Got an invite code from a friend?", 674, 24)
+	_button("Join a friend's game", 724, Color("#4c8dff"), _show_join, 80, 28)
+	_text("You can play friends who share a code with you. There's no chat.", 820, 18, UI.MUTED, 60)
+
+
+func _kid_start() -> void:
+	_busy(true, "Getting ready…")
+	var err := await Online.sign_in_guest(_kid_nickname())
+	if err != "":
+		_error(err)
+		return
+	_show_home()
 
 
 func _oauth(provider: String) -> void:
@@ -207,16 +247,21 @@ func _show_home() -> void:
 	await Online.refresh_profile()
 	if flow != _flow:
 		return
+	if Online.signed_in() and not Online.kid_session_ok():
+		await Online.sign_out()
+		if flow != _flow:
+			return
 	if not Online.signed_in():
 		_show_signin()
 		return
 	# Use the nickname from this phone if the account doesn't have a first name yet.
-	if Online.name_or("") == "" and Profile.display_name != "":
+	if Online.name_or("") == "" and Profile.display_name != "" and not AgeGate.kid():
 		await Online.set_display_name(Profile.display_name)
 	_text("Hi, %s!" % Online.name_or("there"), 120, 32, UI.TEXT, 48)
 	_button("Invite a friend", 190, UI.ACCENT, _show_invite, 84, 30, Color("#1b2038"))
 	_button("Join with a code", 290, Color("#4c8dff"), _show_join, 76)
-	_button("Find a player", 382, Color("#3cb97a"), _show_find, 76)
+	if not AgeGate.kid():   # under 13: friends only, never strangers
+		_button("Find a player", 382, Color("#3cb97a"), _show_find, 76)
 	_text("YOUR GAMES", 486, 20, UI.MUTED, 30)
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 10)
@@ -229,7 +274,7 @@ func _show_home() -> void:
 	_add(scroll)
 	var loading := UI.label("Loading…", Vector2.ZERO, Vector2(600, 40), 22, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	list.add_child(loading)
-	if Online.is_guest():
+	if Online.is_guest() and not AgeGate.kid():
 		_text("Playing as a guest. Sign in on the website later to keep your games.", 1100, 18, UI.MUTED, 60)
 	var r := await Online.call_fn("my_games")
 	if flow != _flow:
@@ -356,8 +401,13 @@ func _show_join() -> void:
 	_f_code = _field("Invite code", 250)
 	_f_code.max_length = 8
 	_f_code.text_changed.connect(_upper_code)
-	_f_first = _field("Your first name", 340, false, Online.name_or(Profile.display_name))
-	_f_first.max_length = 16
+	if AgeGate.kid():
+		# Under 13: a nickname from our list, never typed.
+		_f_first = _field("Nickname", 340, false, Online.name_or(_kid_nickname()) if Online.signed_in() else _kid_nickname())
+		_f_first.editable = false
+	else:
+		_f_first = _field("Your first name", 340, false, Online.name_or(Profile.display_name))
+		_f_first.max_length = 16
 	_button("Join", 450, UI.ACCENT, _submit_join, 80, 30, Color("#1b2038"))
 	_button("Back", 550, Color("#3a4166"), (_show_home if Online.signed_in() else _show_signin), 70, 22)
 
@@ -392,7 +442,7 @@ func _join(code: String, first_name: String) -> void:
 	if not r["ok"]:
 		_error(r["error"])
 		return
-	if Profile.display_name == "":
+	if Profile.display_name == "" and not AgeGate.kid():
 		Profile.display_name = first_name
 		Profile.save_profile()
 	var host: String = r["data"].get("host_name", "your friend")

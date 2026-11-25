@@ -22,8 +22,8 @@ func _shot(name: String) -> void:
 
 func _process(_d: float) -> bool:
 	_f += 1
-	if root.get_node("Profile").birth_year == 0:
-		root.get_node("Profile").birth_year = 1990  # an adult player (AgeGate)
+	if root.get_node("Profile").birth_year != 1990:
+		root.get_node("Profile").birth_year = 1990  # always an adult player here (AgeGate)
 		root.get_node("Profile").birth_month = 1
 	if _f == 2:
 		Online = root.get_node("/root/Online")
