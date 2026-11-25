@@ -18,6 +18,7 @@ var onboarded := false
 var display_name := ""
 var birth_year := 0              # asked once by AgeGate (stays on this phone); 0 = not asked
 var birth_month := 0
+var voice_game := "gem_heist"     # whose lines My Cards records (set by the game that opens it; not saved)
 var nickname := ""                # under 13: the online nickname picked from Nicknames
 var me_slot := "you"            # the card you are: the Wild by default, or any crew card or bill
 var beaten: Array = []           # names of characters you have beaten (cycles you through the cast)

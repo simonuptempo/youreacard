@@ -212,10 +212,12 @@ func _refresh() -> void:
 	_camera_btn.disabled = busy
 	_upload_btn.disabled = busy
 	_create_btn.disabled = busy
-	_voice_btn.visible = VoiceRecorder.speaks(_slot)
+	# Each game has its own lines to record (See Saw has none).
+	var lines: Array = VoiceRecorder.prompts(_slot, Profile.voice_game)
+	_voice_btn.visible = VoiceRecorder.speaks(_slot) and not lines.is_empty()
 	if _voice_btn.visible:
-		var n := VoiceRecorder.recorded_count(_slot)
-		_voice_btn.text = "     Record your voice" if n == 0 else "     Your voice: %d of %d lines" % [n, VoiceRecorder.LINE_COUNT]
+		var n := VoiceRecorder.count_for(_slot, Profile.voice_game)
+		_voice_btn.text = "     Record your voice" if n == 0 else "     Your voice: %d of %d lines" % [n, lines.size()]
 	_look_btn.visible = _has_photo(_slot)
 	_look_btn.disabled = busy
 	_reset_btn.visible = Profile.is_custom(_slot) and _busy_slot != _slot
@@ -567,6 +569,7 @@ func _create() -> void:
 func _record_voice() -> void:
 	var r := VoiceRecorder.new()
 	r.slot = _slot
+	r.game = Profile.voice_game
 	r.closed.connect(_refresh)
 	add_child(r)
 
