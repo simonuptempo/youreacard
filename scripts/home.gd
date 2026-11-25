@@ -144,18 +144,6 @@ class GameArt extends Control:
 				add_child(r)
 
 	func _draw() -> void:
-		match kind:
-			"war_and_piece":
-				_card(Vector2(30, 22), -0.2, "K", Color("#1e2233"))
-				_card(Vector2(84, 16), 0.16, "A", Color("#c8343e"))
-			"see_saw":
-				for i in 3:
-					_card(Vector2(28 + i * 44, 22), (i - 1) * 0.14, "?", Color("#4c8dff"))
-
-	func _card(at: Vector2, rot: float, txt: String, col: Color) -> void:
-		var sz := Vector2(78, 108)
-		draw_set_transform(at + sz / 2, rot)
-		var r := Rect2(-sz / 2, sz)
-		draw_style_box(UI.box(Color("#fbf7ee"), 10, Color("#d9d2c0"), 2), r)
-		draw_string(UI.font(900), Vector2(-sz.x / 2, 18), txt, HORIZONTAL_ALIGNMENT_CENTER, sz.x, 52, col)
-		draw_set_transform(Vector2.ZERO)
+		# War and Piece and See Saw use their own emblems (the same marks as their menus and card backs).
+		if kind in ["war_and_piece", "see_saw"]:
+			CardGameEmblem.draw_mark(self, Rect2(Vector2.ZERO, size), kind)
