@@ -34,7 +34,7 @@ const VOICE := {"you": "", "pickpocket": "boy", "trickster": "woman", "boss": "m
 	"bouncer": "man", "illusionist": "woman", "trapper": "woman", "locksmith": "woman"}
 const ALT_VOICE := {"boy": "girl", "girl": "boy", "woman": "man", "man": "woman"}
 ## How often characters speak (Settings: Often / Sometimes / Off).
-const CHANCE := {"often": [0.75, 1.0], "sometimes": [0.35, 0.8], "off": [0.0, 0.0]}
+
 const GEMS := ["ruby", "emerald", "sapphire", "topaz", "diamond", "amethyst"]
 
 var enabled := true
@@ -46,6 +46,7 @@ var _bags := {}          # role -> line numbers not used yet (no repeats until a
 var _last_line := {}
 var _last_speaker := ""
 var _heard := {}         # characters who have spoken since the app opened
+var _skips := {}         # role -> how many more chances to stay quiet before speaking again
 
 
 func _ready() -> void:
@@ -99,19 +100,19 @@ func voice_left() -> float:
 ## Should this character speak now? Not every card gets a line, or it gets tiring:
 ## big moments (twists firing, a Grand Heist, your own recorded voice) usually do,
 ## everyday plays only sometimes, and the same character rarely twice in a row.
-func should_speak(role: String, e: Dictionary, own_voice := false) -> bool:
+func should_speak(role: String, _e: Dictionary = {}, _own_voice := false) -> bool:
 	if role == "":
 		return false
-	# With voices off, characters still "speak" in speech bubbles, just silently.
-	var mode := str(Profile.voices) if Profile.voices != "off" else "sometimes"
-	var card := str(e.get("card", ""))
-	var big := own_voice or card in CardDB.TRAPS or card == "grand"
-	var chance: float = CHANCE.get(mode, CHANCE["sometimes"])[1 if big else 0]
-	if not _heard.has(role):
-		chance = 1.0  # everyone gets to introduce themselves once
-	elif role == _last_speaker:
-		chance *= 0.4
-	return randf() < chance
+	# Characters speak every 2nd or 3rd time they could (every 2nd on "Often"), so the
+	# voices and speech bubbles don't pop up on every play. With voices off they still
+	# "speak" in speech bubbles, just silently.
+	if not _skips.has(role):
+		_skips[role] = 0  # everyone gets to introduce themselves the first time
+	if int(_skips[role]) > 0:
+		_skips[role] = int(_skips[role]) - 1
+		return false
+	_skips[role] = 1 if Profile.voices == "often" else randi_range(1, 2)
+	return true
 
 
 ## A character speaks: picks one of their lines, plays it, and returns it for the bubble.
