@@ -468,7 +468,12 @@ export class Game {
       const a=this.sets(0).length, b=this.sets(1).length;
       this.endGame(a>b?0:b>a?1:2, "All 13 sets are complete!"); return;
     }
-    if (this.sets(0).length + this.sets(1).length === 12) { this.finalShowdown(); return; }
+    if (this.sets(0).length + this.sets(1).length === 12) {
+      // One set left. A showdown only breaks a 6-6 tie; otherwise the leader wins now.
+      if (this.sets(0).length === this.sets(1).length) this.finalShowdown();
+      else this.endGame(this.sets(0).length > this.sets(1).length ? 0 : 1, "Only one set is left, and it can't change the result!");
+      return;
+    }
     this.s.quiet=0;
     if (!this.hand(0).length || !this.hand(1).length) {
       const loose=[...this.hand(0),...this.hand(1)]; this.shuffle(loose);

@@ -538,7 +538,12 @@ func _start_war_round() -> void:
 		_end_game(0 if a > b else (1 if b > a else 2), "All 13 sets are complete!")
 		return
 	if sets(0).size() + sets(1).size() == 12:
-		_final_showdown()
+		# One set left. A showdown only breaks a 6-6 tie; otherwise the last set can't
+		# change the result, so the leader wins now.
+		if sets(0).size() == sets(1).size():
+			_final_showdown()
+		else:
+			_end_game(0 if sets(0).size() > sets(1).size() else 1, "Only one set is left, and it can't change the result!")
 		return
 	quiet_pieces = 0
 	# A fresh deal of loose cards keeps both players in War if one deck is empty.

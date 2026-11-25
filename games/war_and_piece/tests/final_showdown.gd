@@ -37,6 +37,17 @@ func run():
   wins[g.winner] += 1
   ties += g.last_faceoff.wars
  assert(wins[0]>0 and wins[1]>0 and ties>0)
+ # Not tied at 12 sets (8-4, 7-5): no showdown, the leader simply wins.
+ for lead in [[8,4],[4,8],[7,5]]:
+  var g2 := fixture(3)
+  var all: Array = g2.sets(0) + g2.sets(1)
+  g2.players[0].sets = all.slice(0, lead[0])
+  g2.players[1].sets = all.slice(lead[0])
+  g2.last_faceoff = {}
+  g2._start_war_round()
+  assert(g2.phase() == "over" and g2.winner == (0 if lead[0] > lead[1] else 1))
+  assert(g2.last_faceoff.get("reason", "") != "final_showdown")
+  assert(g2.sets(0).size() + g2.sets(1).size() == 12)
  WarSave.clear()
  var screen = load("res://games/war_and_piece/scenes/game.tscn").instantiate()
  root.add_child(screen)
