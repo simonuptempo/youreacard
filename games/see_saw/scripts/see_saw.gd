@@ -113,7 +113,7 @@ func answer(i: int) -> Dictionary:
 			last_result = {"cleared": true, "question": q, "picked": -1}
 			earned += 50
 			history[level] = cards.duplicate(true)
-			# Level 4 and every level after it earns Nana Bea's counterweight: an extra life.
+			# Level 4 and every level after it earns Lou's counterweight: an extra life.
 			if level >= COUNTERWEIGHT_FROM:
 				lives += 1
 				res["counterweight"] = true

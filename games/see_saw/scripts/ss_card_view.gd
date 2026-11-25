@@ -2,7 +2,7 @@ class_name SSCardView
 extends WarCardView
 ## Shared personalized portraits and rank layout; See Saw adds its answer ring.
 ## In See Saw every rank has a character on it (SSCards.CHARACTERS), and there's one
-## extra card: Nana Bea's counterweight ({"counterweight": true}), worth an extra life.
+## extra card: Lou's counterweight ({"counterweight": true}), worth an extra life.
 var ring := Color.TRANSPARENT:
 	set(v):
 		ring = v
@@ -32,7 +32,7 @@ func role() -> String:
 	if card.is_empty():
 		return ""
 	if is_counterweight():
-		return "you"
+		return str(SSCards.COUNTERWEIGHT["role"])
 	return str(SSCards.CHARACTERS.get(int(card.get("rank", 0)), {}).get("role", ""))
 
 
@@ -77,12 +77,10 @@ func _draw_portrait(col: Color) -> void:
 func shown_name() -> String:
 	if preview_name != "":
 		return preview_name
-	if is_counterweight() and not Profile.is_custom("you"):
-		return "Nana Bea"
 	return super.shown_name()
 
 
-## Nana Bea's counterweight: gold, "+1" in the corners, and a little weight under her name.
+## Lou's counterweight: gold, "+1" in the corners, and a little weight under his name.
 func _draw_counterweight(r: Rect2, rad: int) -> void:
 	var w := r.size.x
 	var h := r.size.y

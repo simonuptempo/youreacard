@@ -26,7 +26,7 @@ func run():
  var before := g.points
  var wrong: int = (int(g.question().answer)+1)%g.question().options.size()
  var res = g.answer(wrong)
- # Clearing level 4 earned Nana Bea's counterweight: 4 lives.
+ # Clearing level 4 earned Lou's counterweight: 4 lives.
  assert(res.bonus and g.lives==4 and g.points==before and g.streak==0)
  g.next_round();assert(g.phase=="ready" and g.level==5)
  assert(not g.restore_counterweight())

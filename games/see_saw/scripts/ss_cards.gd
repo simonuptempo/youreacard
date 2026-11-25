@@ -22,17 +22,17 @@ const CHARACTERS := {
 	10: {"name": "Kodi", "role": "locksmith"},
 	11: {"name": "Pip", "title": "the Jack of all Trades", "role": "pickpocket"},
 	12: {"name": "Juno", "title": "the Queen of Hearts", "role": "trickster"},
-	13: {"name": "Lou", "title": "the King of the Hill", "role": "boss"},
+	13: {"name": "Nana Bea", "title": "the King of the Hill", "role": "you"},
 	14: {"name": "Amara", "title": "the Ace in the Hole", "role": "mastermind"},
 }
-## The 14th card: Nana Bea's counterweight. You earn one for clearing level 4 and every
+## The 14th card: Lou's counterweight. You earn one for clearing level 4 and every
 ## level after it, and it goes on your side of the seesaw as an extra life.
-const COUNTERWEIGHT := {"counterweight": true, "id": 99, "name": "Nana Bea", "role": "you"}
+const COUNTERWEIGHT := {"counterweight": true, "id": 99, "name": "Lou", "role": "boss"}
 
 
 ## The card each My Cards slot shows in See Saw (a Spade of its rank, or the counterweight).
 static func card_for_slot(slot: String) -> Dictionary:
-	if slot == "you":
+	if slot == COUNTERWEIGHT["role"]:
 		return COUNTERWEIGHT.duplicate()
 	for r in CHARACTERS:
 		if CHARACTERS[r]["role"] == slot:
@@ -45,7 +45,7 @@ static func slot_order() -> Array:
 	var out: Array = []
 	for r in FACE_RANKS:
 		out.append(CHARACTERS[r]["role"])
-	out.append("you")
+	out.append(COUNTERWEIGHT["role"])
 	return out
 
 

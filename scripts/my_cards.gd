@@ -170,7 +170,7 @@ func _icon_button(icon: String, text: String, pos: Vector2, w: float) -> Button:
 
 # ------------------------------------------------------------------ which card
 
-## See Saw shows its own deck: 2 to Ace with a character on each, then Nana Bea's
+## See Saw shows its own deck: 2 to Ace with a character on each, then Lou's
 ## counterweight. Every other game shows the Gem Heist crew and bills.
 func _see_saw() -> bool:
 	return Profile.voice_game == "see_saw"

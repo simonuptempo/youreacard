@@ -313,7 +313,7 @@ func _pick(i: int) -> void:
 		b.pressed.connect(_advance)
 
 
-## Clearing level 4 and beyond: Nana Bea's counterweight lands on your side of the seesaw.
+## Clearing level 4 and beyond: Lou's counterweight lands on your side of the seesaw.
 func _show_counterweight(earned: int) -> void:
 	var o := Control.new()
 	o.name = "Counterweight"
@@ -338,7 +338,7 @@ func _show_counterweight(earned: int) -> void:
 	v.scale = Vector2(0.4, 0.4)
 	var pop := v.create_tween()
 	pop.tween_property(v, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	var who := Profile.face_name("you") if Profile.is_custom("you") else "Nana Bea"
+	var who := Profile.face_name(str(SSCards.COUNTERWEIGHT["role"]))
 	var line := UI.label("You earned %s's counterweight!\nIt goes on your seesaw: one extra life." % who, Vector2(40, 690), Vector2(640, 100), 30, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	line.add_theme_font_override("font", UI.font(800))
 	o.add_child(line)
@@ -503,7 +503,7 @@ class BalanceMeter extends Control:
 		draw_colored_polygon(PackedVector2Array([Vector2(107, 57), Vector2(87, 91), Vector2(127, 91)]), Color("#3fb56b"))
 		draw_line(Vector2(24, 61 - tilt), Vector2(190, 61 + tilt), Color("#7cdbca"), 7, true)
 		for i in lives:
-			# Rows of four; earned counterweights (past the first three) are Nana Bea gold.
+			# Rows of four; earned counterweights (past the first three) are counterweight gold.
 			var x := 151 + (i % 4) * 15
 			var y := 61 + tilt * (float(x - 107) / 83.0) - 13 - int(i / 4) * 13
 			draw_style_box(UI.box(UI.ACCENT if i < 3 else Color("#ff9f43"), 3), Rect2(x, y, 12, 12))

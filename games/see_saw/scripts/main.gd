@@ -17,10 +17,10 @@ const RULES := """[b]Look. Remember. Answer.[/b]
  • Answer every question correctly to advance; a miss gives you new cards at the same level.
  • At zero counterweights, you land. Spend 250 points to restore one and keep playing, or finish your run.
  • You can also restore a counterweight between levels, up to three. Spending subtracts from your score.
- • [b]Nana Bea's counterweight:[/b] clear Level 4, and every level after it, to earn an extra counterweight (an extra life).
+ • [b]Lou's counterweight:[/b] clear Level 4, and every level after it, to earn an extra counterweight (an extra life).
 
 [b]You're a Card[/b]
-Every card from 2 to Ace has a character on it, and Nana Bea is on the counterweight. Put yourself, your friends or your pets on any of them. Tap a preview card or My Cards, then take a photo or upload one and cartoonify it. Your faces and names appear in the game and its memory questions. These cards are shared with your other games."""
+Every card from 2 to Ace has a character on it, and Lou is on the counterweight. Put yourself, your friends or your pets on any of them. Tap a preview card or My Cards, then take a photo or upload one and cartoonify it. Your faces and names appear in the game and its memory questions. These cards are shared with your other games."""
 
 
 func _ready() -> void:
@@ -115,8 +115,8 @@ func show_rules() -> Control:
 		["check", "MAKE EVERY ANSWER COUNT", "[b]Correct answer[/b]  ·  10 × your level\n[b]Level cleared[/b]  ·  +50 points\n[b]5 correct in a row[/b]  ·  +100 points", "#ffce3a"],
 		["replay", "A BLAST FROM TWO LEVELS BACK", "After Levels [b]4, 6, 8…[/b], try a bonus question about the level two earlier.\n[b]+50 if correct.[/b] Miss? No counterweight lost.", "#ffb399"],
 		["replay", "KEEP YOUR SEAT IN THE AIR", "Start with [b]3 counterweights[/b]. Each regular miss removes one: you sink and retry the level.\nLanded? Finish, or spend [b]250 points[/b] to restore one and keep going.", "#7cdbca"],
-		["check", "NANA BEA'S COUNTERWEIGHT", "Clear [b]Level 4[/b], and every level after it, to earn an extra counterweight: [b]one more life[/b].", "#ff9f43"],
-		["camera", "MAKE THE CARDS YOURS", "Open [b]My Cards[/b] or tap a face on the menu. Every card from [b]2 to Ace[/b] has a character, and [b]Nana Bea[/b] is the counterweight. Put yourself, friends or pets on any of them.\nYour faces and names become part of the questions!", "#ffce3a"]
+		["check", "LOU'S COUNTERWEIGHT", "Clear [b]Level 4[/b], and every level after it, to earn an extra counterweight: [b]one more life[/b].", "#ff9f43"],
+		["camera", "MAKE THE CARDS YOURS", "Open [b]My Cards[/b] or tap a face on the menu. Every card from [b]2 to Ace[/b] has a character, and [b]Lou[/b] is the counterweight. Put yourself, friends or pets on any of them.\nYour faces and names become part of the questions!", "#ffce3a"]
 	]
 	for section in sections:
 		var panel := PanelContainer.new()
