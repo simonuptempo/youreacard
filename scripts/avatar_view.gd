@@ -243,6 +243,13 @@ static func portrait_texture(path: String) -> Texture2D:
 	elif path.begins_with("user://portraits/") and FileAccess.file_exists(path):
 		var image := Image.load_from_file(path)
 		if image != null:
+			# Cartoons made before backgrounds were cut out: cut once (only a very plain,
+			# cartoon-like border qualifies) and save, so it's done for good.
+			if not image.detect_alpha():
+				var cut := Cutout.cut(image, Cutout.STRICT_BORDER)
+				if cut != image:
+					image = cut
+					image.save_png(path)
 			portrait_cache[path] = ImageTexture.create_from_image(image)
 	return portrait_cache.get(path)
 

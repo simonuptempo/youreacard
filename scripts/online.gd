@@ -147,7 +147,8 @@ func device_id() -> String:
 func _cartoon_request(photo: Image, extra: Dictionary) -> Dictionary:
 	if not AgeGate.ok():
 		return {"ok": false, "image": null, "error": "Cartoons from photos aren't available on this device."}
-	var img := photo.duplicate() as Image
+	# A cut-out cartoon (for "Change the look") goes back on its plain background: JPEG has no transparency.
+	var img := Cutout.flatten(photo)
 	var longest := maxi(img.get_width(), img.get_height())
 	if longest > 1024:
 		var k := 1024.0 / longest
@@ -183,7 +184,8 @@ func _cartoon_request(photo: Image, extra: Dictionary) -> Dictionary:
 			ok = out.load_jpg_from_buffer(bytes)
 	if ok != OK or out.is_empty():
 		return {"ok": false, "error": "The cartoon came back damaged. Please try again."}
-	return {"ok": true, "image": out, "error": ""}
+	# No white square around the cartoon: its plain background becomes transparent.
+	return {"ok": true, "image": Cutout.cut(out), "error": ""}
 
 
 # ------------------------------------------------------------------ accounts

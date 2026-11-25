@@ -35,7 +35,8 @@ const COSTUME: Record<string, string> = {
 const STYLE =
   "Style: a warm, friendly cartoon for a family card game, with clean bold outlines, soft cel shading and bright cheerful colors, " +
   "like a modern storybook illustration. Show the head and shoulders, facing the viewer, centered and filling most of the square. " +
-  "Plain light cream background. No text, no frame, no border.";
+  "A plain, flat light cream background: one solid color with no shading, texture, shadow or scenery " +
+  "(the app cuts it out). No text, no frame, no border.";
 
 function prompt(kind: string, role: string): string {
   const costume = COSTUME[role] ? ` wearing ${COSTUME[role]}` : "";
