@@ -442,6 +442,8 @@ export class Game {
         else if (kind === "lockpick" && this.bankTotal(p) >= cost("lockpick")) {
           for (let sl = 0; sl < 2; sl++) if (this.vault(o)[sl] !== null) moves.push({ type: "tool", card: id, slot: sl });
         } else if (kind === "lucky") moves.push({ type: "tool", card: id });
+        // Sacrifice: discard an action card for the bills it would have cost to play.
+        if (cost(kind) > 0) moves.push({ type: "sacrifice", card: id });
         if (empty >= 0) moves.push({ type: "vault", card: id, slot: empty });
       }
       // Pawn a gem straight out of a collection (never a wild, never one a finished set needs).
@@ -514,6 +516,16 @@ export class Game {
         s.plays_left--;
         if (isTreasure(c.kind)) this.ev(p, (v) => `${this.nm(p, v)} pawned ${aAn(oneName(c.kind))} for ${bills(value(c.kind))}.`, c.kind, -1, false);
         else this.ev(p, (v) => `${this.nm(p, v)} banked ${bills(value(c.kind))}.`, c.kind, -1, false);
+        this.collectDebt(p);
+        break;
+      }
+      case "sacrifice": {
+        const c = this.removeFromHand(p, n("card"));
+        const worth = cost(c.kind);
+        s.discard.push(c);
+        s.players[p].credit = this.credit(p) + worth;
+        s.plays_left--;
+        this.ev(p, (v) => `${this.nm(p, v)} sacrificed ${displayName(c.kind)} for ${bills(worth)}.`, c.kind, -1, false);
         this.collectDebt(p);
         break;
       }

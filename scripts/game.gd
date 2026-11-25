@@ -791,6 +791,9 @@ func _build_bar() -> void:
 					items.append(["Break into their vault (2 bills)", _lockpick_random, CardDB.TYPE_COLORS["tool"]])
 			"vault":
 				items.append(["Move to vault", _apply_and_clear.bind(m), Color("#4c8dff")])
+			"sacrifice":
+				# A fallback, like pawning: listed after the card's real uses.
+				pawn_items.append(["Sacrifice it (+%s)" % CardDB.bills(CardDB.cost(card["kind"])), _apply_and_clear.bind(m), Color("#8a5a2b")])
 	if g.plays_left <= 0:
 		_set_msg("No plays left this turn. Tap End Turn.")
 	else:
@@ -798,7 +801,7 @@ func _build_bar() -> void:
 		if card["kind"] in CardDB.HEISTS or card["kind"] == "lockpick" or card["kind"] == "wild":
 			var short := need > g.bank_total(0)
 			if short:
-				_set_msg("%s costs %s. Your bank has %s. Bank some bills first!" % [CardDB.display_name(card["kind"]), CardDB.bills(need), CardDB.bills(g.bank_total(0))])
+				_set_msg("%s costs %s. Your bank has %s. Bank some bills first, or sacrifice a card for bills." % [CardDB.display_name(card["kind"]), CardDB.bills(need), CardDB.bills(g.bank_total(0))])
 				items.push_front(["Needs %s to play (you have %d)" % [CardDB.bills(need), g.bank_total(0)], Callable(), Color("#7a3b3b")])
 			elif items.size() <= 1 and card["kind"] != "wild":
 				_set_msg("%s has no target right now. You can still move it to your vault." % CardDB.display_name(card["kind"]))

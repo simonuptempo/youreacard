@@ -586,6 +586,9 @@ func legal_moves(p: int) -> Array:
 						moves.append({"type": "tool", "card": id, "slot": s})
 			elif kind == "lucky":
 				moves.append({"type": "tool", "card": id})
+			# Sacrifice: discard an action card for the bills it would have cost to play.
+			if CardDB.cost(kind) > 0:
+				moves.append({"type": "sacrifice", "card": id})
 			if empty_slot >= 0:
 				moves.append({"type": "vault", "card": id, "slot": empty_slot})
 		# Pawn a gem straight out of a collection (never a wild, never one a finished set needs).
@@ -683,6 +686,14 @@ func apply(move: Dictionary) -> bool:
 				_event(p, "%s pawned %s for %s." % [nm(p), a_an(CardDB.one_name(c["kind"])), CardDB.bills(CardDB.value(c["kind"]))], c["kind"], -1, false)
 			else:
 				_event(p, "%s banked %s." % [nm(p), CardDB.bills(CardDB.value(c["kind"]))], c["kind"], -1, false)
+			_collect_debt(p)
+		"sacrifice":
+			var c := _remove_from_hand(p, move["card"])
+			var worth := CardDB.cost(c["kind"])
+			discard.append(c)
+			players[p]["credit"] = credit(p) + worth
+			plays_left -= 1
+			_event(p, "%s sacrificed %s for %s." % [nm(p), CardDB.display_name(c["kind"]), CardDB.bills(worth)], c["kind"], -1, false)
 			_collect_debt(p)
 		"pawn":
 			var found := _remove_from_collection(p, move["card"])
