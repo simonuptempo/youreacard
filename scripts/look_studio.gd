@@ -39,11 +39,31 @@ func _exit_tree() -> void:
 	AvatarView.portrait_cache.erase(cache_key)
 
 func _button(text: String, pos: Vector2, dimensions: Vector2, action: Callable, accent := false) -> Button:
-	var b := UI.button(text,pos,dimensions,UI.ACCENT if accent else Color("#343e66"),20)
+	var b := UI.button(text,pos,dimensions,UI.ACCENT if accent else Color("#242e43"),20)
+	b.add_theme_stylebox_override("normal",UI.box(UI.ACCENT if accent else Color("#242e43"),8,Color("#424c61") if not accent else UI.ACCENT,1))
+	b.add_theme_stylebox_override("hover",UI.box(UI.ACCENT.lightened(0.1) if accent else Color("#354159"),8))
+	b.add_theme_stylebox_override("pressed",UI.box(UI.ACCENT.darkened(0.1) if accent else Color("#3b4962"),8))
+	b.add_theme_stylebox_override("disabled",UI.box(Color("#222b3e"),8))
 	b.disabled=busy
 	b.pressed.connect(action)
 	add_child(b)
 	return b
+
+func _tab(text: String, pos: Vector2, dimensions: Vector2, active: bool, action: Callable) -> Button:
+	var b := _button(text,pos,dimensions,action)
+	b.add_theme_stylebox_override("normal",UI.box(Color.TRANSPARENT,0))
+	b.add_theme_stylebox_override("hover",UI.box(Color("#303c51"),0))
+	b.add_theme_stylebox_override("pressed",UI.box(Color("#36445b"),0))
+	b.add_theme_color_override("font_color",UI.TEXT if active else UI.MUTED)
+	if active:
+		var line := UI.panel(Vector2(16,dimensions.y-3),Vector2(dimensions.x-32,2),UI.ACCENT,0)
+		line.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		b.add_child(line)
+	return b
+
+func _footer() -> void:
+	add_child(UI.panel(Vector2(0,1150),Vector2(720,130),Color("#172031"),0))
+	add_child(UI.panel(Vector2(32,1150),Vector2(656,1),Color("#394458"),0))
 
 func _label(text: String, pos: Vector2, dimensions: Vector2, fs := 20, color := UI.TEXT) -> void:
 	add_child(UI.label(text,pos,dimensions,fs,color,HORIZONTAL_ALIGNMENT_CENTER))
@@ -79,7 +99,7 @@ func _undo() -> void:
 	_render()
 
 func _avatar_data(values: Dictionary) -> Dictionary:
-	var d := {"skin":6,"hair":3,"hair_color":2,"shirt":1,"shirt_color":6,"hat_color":6,"head_color":4,"mouth":1,"species":1 if pet else 0}
+	var d := {"skin":6,"hair":3,"hair_color":2,"shirt":2,"shirt_color":10,"hat_color":6,"head_color":4,"mouth":1,"species":1 if pet else 0}
 	for k in values:
 		var i := _options(k).find(values[k])
 		if i<0: continue
@@ -134,19 +154,22 @@ func _portrait(pos: Vector2, dimensions: Vector2, texture: Texture2D, overlays: 
 
 func _render() -> void:
 	for child in get_children(): remove_child(child); child.queue_free()
-	add_child(UI.panel(Vector2.ZERO,Vector2(720,1280),Color("#1d2543"),0))
-	_label("Review your look" if result!=null else "Try on a look",Vector2(36,24),Vector2(648,50),32,UI.ACCENT)
+	add_child(UI.panel(Vector2.ZERO,Vector2(720,1280),Color("#1b2436"),0))
+	_label("Review portrait" if result!=null else "Portrait studio",Vector2(36,24),Vector2(648,50),28,UI.TEXT)
 	if result!=null:
 		_review()
 		return
-	_button("On card" if not card_mode else "Portrait",Vector2(522,82),Vector2(166,44),func(): card_mode=not card_mode; _render())
-	_portrait(Vector2(180,100),Vector2(360,350),saved_original if show_original else original,not show_original)
-	_button("Original" if not show_original else "Try-on",Vector2(32,402),Vector2(150,46),func(): show_original=not show_original; _render())
-	var undo := _button("Undo",Vector2(538,402),Vector2(150,46),_undo)
+	add_child(UI.panel(Vector2(32,88),Vector2(656,390),Color("#202b3d"),12))
+	_portrait(Vector2(180,96),Vector2(360,320),saved_original if show_original else original,not show_original)
+	# One continuous toolbar, aligned with the editing panel below.
+	add_child(UI.panel(Vector2(32,420),Vector2(656,58),Color("#253146"),0))
+	_tab("Portrait",Vector2(32,420),Vector2(164,58),not card_mode,func(): card_mode=false; _render())
+	_tab("On card",Vector2(196,420),Vector2(164,58),card_mode,func(): card_mode=true; _render())
+	_tab("Original" if not show_original else "Try-on",Vector2(360,420),Vector2(164,58),show_original,func(): show_original=not show_original; _render())
+	var undo := _tab("Undo",Vector2(524,420),Vector2(164,58),false,_undo)
 	undo.disabled=busy or history.is_empty()
-	_label("Original • your saved portrait" if show_original else "Try-on preview • AI result may differ",Vector2(32,453),Vector2(656,28),17,UI.MUTED)
 	if _has_overlay() and not show_original:
-		_label("Drag accessories to fit",Vector2(32,486),Vector2(270,28),17,UI.MUTED)
+		_label("Rough try-on · drag to fit",Vector2(32,486),Vector2(270,28),17,UI.MUTED)
 		var slider := HSlider.new()
 		slider.position=Vector2(330,490); slider.size=Vector2(260,28)
 		slider.min_value=0.5; slider.max_value=1.6; slider.step=0.05; slider.value=fit
@@ -154,26 +177,22 @@ func _render() -> void:
 		slider.value_changed.connect(func(value): fit=value; _update_overlay(self))
 		add_child(slider)
 	else:
-		_label("Hair, clothing and removals appear in the AI preview.",Vector2(32,486),Vector2(656,28),17,UI.MUTED)
+		_label("Approximate try-on · Generate to see hair and outfit changes.",Vector2(32,486),Vector2(656,28),17,UI.MUTED)
 	var available: Array=[]
 	for i in GROUPS.size():
 		for k in GROUP_KEYS[i]:
 			if not _options(k).is_empty(): available.append(i); break
+	add_child(UI.panel(Vector2(32,536),Vector2(656,56),Color("#263247"),8))
 	for i in available.size():
 		var gi: int=available[i]
-		var w := 648.0/available.size()
-		_button(GROUPS[gi],Vector2(32+i*w,530),Vector2(w-8,52),func(): group=gi; key=_keys()[0]; _render(),group==gi)
+		var w := 656.0/available.size()
+		_tab(GROUPS[gi],Vector2(32+i*w,536),Vector2(w,56),group==gi,func(): group=gi; key=_keys()[0]; _render())
 	var keys := _keys()
 	if not key in keys: key=keys[0]
-	var tabs := HBoxContainer.new()
-	var tabs_scroll := ScrollContainer.new()
-	tabs_scroll.position=Vector2(32,596); tabs_scroll.size=Vector2(656,56)
-	tabs_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(tabs_scroll); tabs_scroll.add_child(tabs)
-	for k in keys:
-		var t:=UI.button(_title(k),Vector2.ZERO,Vector2(0,42),UI.ACCENT if k==key else Color("#343e66"),18)
-		t.custom_minimum_size=Vector2(140,42); t.disabled=busy
-		t.pressed.connect(func(): key=k; _render()); tabs.add_child(t)
+	for i in keys.size():
+		var k: String=keys[i]
+		var width:=656.0/keys.size()
+		_tab("Style" if k=="hair" else "Color" if k.ends_with("color") else _title(k),Vector2(32+i*width,602),Vector2(width,48),k==key,func(): key=k; _render())
 	var scroll := ScrollContainer.new()
 	scroll.position=Vector2(32,664); scroll.size=Vector2(656,348)
 	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
@@ -190,10 +209,11 @@ func _render() -> void:
 	chip_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(chip_scroll); chip_scroll.add_child(chips)
 	for k in edits:
-		var chip:=UI.button("%s: %s ×" % [_title(k),edits[k]],Vector2.ZERO,Vector2(0,42),Color("#3c466d"),16)
+		var chip:=UI.button("%s: %s ×" % [_title(k),edits[k]],Vector2.ZERO,Vector2(0,42),Color("#263247"),16)
 		chip.custom_minimum_size=Vector2(150,42); chip.disabled=busy
 		chip.pressed.connect(func(): _choose(k,"Keep as is")); chips.add_child(chip)
-	_label("Generating preview… Your saved look is safe." if busy else message,Vector2(32,1090),Vector2(656,50),18,UI.ACCENT)
+	_label("Generating preview… Your saved look is safe." if busy else message,Vector2(32,1090),Vector2(656,50),18,UI.MUTED)
+	_footer()
 	_button("Cancel",Vector2(32,1170),Vector2(180,72),func(): closed.emit())
 	var generate := _button("Generate preview",Vector2(228,1170),Vector2(460,72),func(): generate_requested.emit(edits.duplicate(true)),true)
 	generate.disabled=busy or edits.is_empty()
@@ -206,7 +226,9 @@ func _update_overlay(node: Node) -> void:
 func _tile(grid: GridContainer, value: String) -> void:
 	var selected: bool = (value=="Keep as is" and not edits.has(key)) or edits.get(key,"")==value
 	var b:=Button.new(); b.custom_minimum_size=Vector2(154,146); b.disabled=busy
-	b.add_theme_stylebox_override("normal",UI.box(Color("#303b60"),14,UI.ACCENT if selected else Color("#465171"),3 if selected else 1))
+	b.add_theme_stylebox_override("normal",UI.box(Color("#303e52") if selected else Color("#232f42"),6,UI.ACCENT if selected else Color("#354155"),2 if selected else 1))
+	b.add_theme_stylebox_override("hover",UI.box(Color("#344257"),6,Color("#607088"),1))
+	b.add_theme_stylebox_override("pressed",UI.box(Color("#3b4b60"),6,UI.ACCENT,2))
 	grid.add_child(b)
 	if value=="Keep as is" or value=="None":
 		var symbol:=UI.label("↶" if value=="Keep as is" else "−",Vector2(12,12),Vector2(130,80),48,UI.MUTED,HORIZONTAL_ALIGNMENT_CENTER)
@@ -237,11 +259,13 @@ func show_error(error: String) -> void:
 func _review() -> void:
 	_label("Nothing is saved until you choose Use this look.",Vector2(32,84),Vector2(656,56),21,UI.MUTED)
 	_portrait(Vector2(100,160),Vector2(520,520),saved_original if show_original else ImageTexture.create_from_image(result),false)
-	_button("Before",Vector2(152,710),Vector2(200,56),func(): show_original=true; _render(),show_original)
-	_button("After",Vector2(368,710),Vector2(200,56),func(): show_original=false; _render(),not show_original)
-	_button("On card" if not card_mode else "Portrait",Vector2(232,790),Vector2(256,52),func(): card_mode=not card_mode; _render())
+	add_child(UI.panel(Vector2(32,710),Vector2(656,56),Color("#263247"),8))
+	_tab("Before",Vector2(32,710),Vector2(218,56),show_original,func(): show_original=true; _render())
+	_tab("After",Vector2(250,710),Vector2(218,56),not show_original,func(): show_original=false; _render())
+	_tab("On card" if not card_mode else "Portrait",Vector2(468,710),Vector2(220,56),card_mode,func(): card_mode=not card_mode; _render())
 	_label("Like the result? Keep it, or adjust your choices and generate another preview.",Vector2(64,890),Vector2(592,100),23,UI.TEXT)
 	_label(message,Vector2(32,1000),Vector2(656,64),19,UI.ACCENT)
 	_button("Adjust",Vector2(32,1080),Vector2(656,62),func(): original=ImageTexture.create_from_image(result); result=null; edits.clear(); history.clear(); show_original=false; message="Adjusting the draft • nothing saved yet"; _render())
+	_footer()
 	_button("Keep original",Vector2(32,1170),Vector2(260,72),func(): closed.emit())
 	_button("Use this look",Vector2(308,1170),Vector2(380,72),func(): accepted.emit(result),true)
