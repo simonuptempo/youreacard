@@ -342,6 +342,7 @@ func _show_builder() -> void:
 			category.item_selected.connect(func(i): _current=i; _build_options())
 			_body.add_child(category)
 		var scroll := ScrollContainer.new()
+		UI.touch_scroll(scroll)
 		scroll.position=Vector2(0,118)
 		scroll.size=Vector2(664,290)
 		scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED

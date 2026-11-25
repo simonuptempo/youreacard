@@ -83,37 +83,39 @@ static func _ask(parent: Node, done: Callable, cancel: Callable) -> void:
 	var sub := UI.label("We only ask once. It stays on this device.", Vector2(70, 396), Vector2(580, 40), 22, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	sub.add_theme_font_override("font", UI.font(600))
 	o.add_child(sub)
-	var month := OptionButton.new()
-	month.position = Vector2(80, 480)
-	month.size = Vector2(300, 80)
-	month.add_theme_font_size_override("font_size", 26)
-	month.add_item("Month")
-	for m in MONTHS:
-		month.add_item(m)
-	month.get_popup().add_theme_font_size_override("font_size", 28)
-	o.add_child(month)
-	var year := OptionButton.new()
-	year.position = Vector2(400, 480)
-	year.size = Vector2(240, 80)
-	year.add_theme_font_size_override("font_size", 26)
-	year.add_item("Year")
+	# Month and year: tap a box to pick from a grid. (A long drop-down list can't be
+	# scrolled on iPhone, so the 100 years go in a scrolling grid instead.)
+	var picked := {"month": 0, "year": 0}
 	var this_year: int = int(Time.get_date_dict_from_system()["year"])
-	for y in range(this_year, this_year - 101, -1):
-		year.add_item(str(y))
-		year.set_item_metadata(year.item_count - 1, y)
-	year.get_popup().add_theme_font_size_override("font_size", 28)
-	o.add_child(year)
 	var go := UI.button("Continue", Vector2(170, 640), Vector2(380, 92), UI.ACCENT, 32)
 	go.add_theme_font_override("font", UI.font(800))
 	go.disabled = true
+	var month_btn := UI.button("Month", Vector2(80, 480), Vector2(300, 80), Color("#2f3866"), 26)
+	month_btn.name = "Month"
+	var year_btn := UI.button("Year", Vector2(400, 480), Vector2(240, 80), Color("#2f3866"), 26)
+	year_btn.name = "Year"
+	for btn in [month_btn, year_btn]:
+		btn.add_theme_font_override("font", UI.font(800))
+		o.add_child(btn)
+	var refresh := func():
+		month_btn.text = MONTHS[picked["month"] - 1] if picked["month"] > 0 else "Month"
+		year_btn.text = str(picked["year"]) if picked["year"] > 0 else "Year"
+		go.disabled = picked["month"] == 0 or picked["year"] == 0
+	month_btn.pressed.connect(func():
+		_grid(o, "Month", MONTHS, 3, func(i: int):
+			picked["month"] = i + 1
+			refresh.call()))
+	var years: Array = []
+	for y in range(this_year, this_year - 101, -1):
+		years.append(str(y))
+	year_btn.pressed.connect(func():
+		_grid(o, "Year", years, 4, func(i: int):
+			picked["year"] = this_year - i
+			refresh.call()))
 	o.add_child(go)
-	var refresh := func(_i := 0):
-		go.disabled = month.selected <= 0 or year.selected <= 0
-	month.item_selected.connect(refresh)
-	year.item_selected.connect(refresh)
 	go.pressed.connect(func():
-		Profile.birth_month = month.selected
-		Profile.birth_year = int(year.get_item_metadata(year.selected))
+		Profile.birth_month = picked["month"]
+		Profile.birth_year = picked["year"]
 		Profile.save_profile()
 		o.queue_free()
 		done.call())
@@ -123,6 +125,52 @@ static func _ask(parent: Node, done: Callable, cancel: Callable) -> void:
 		o.queue_free()
 		cancel.call())
 	o.add_child(back)
+
+
+## A full-screen grid of choices that scrolls with a finger drag; calls pick(index).
+static func _grid(parent: Control, title: String, items: Array, columns: int, pick: Callable) -> void:
+	var sheet := Control.new()
+	sheet.name = "Picker"
+	sheet.size = Vector2(720, 1280)
+	sheet.mouse_filter = Control.MOUSE_FILTER_STOP
+	var dim := ColorRect.new()
+	dim.color = Color(0.03, 0.04, 0.09, 0.9)
+	dim.size = Vector2(720, 1280)
+	sheet.add_child(dim)
+	sheet.add_child(UI.panel(Vector2(30, 120), Vector2(660, 1040)))
+	var t := UI.label("Pick the " + title.to_lower(), Vector2(60, 140), Vector2(600, 56), 32, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	t.add_theme_font_override("font", UI.font(900))
+	sheet.add_child(t)
+	var scroll := ScrollContainer.new()
+	UI.touch_scroll(scroll)
+	scroll.position = Vector2(50, 210)
+	scroll.size = Vector2(620, 820)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sheet.add_child(scroll)
+	var grid := GridContainer.new()
+	grid.columns = columns
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	scroll.add_child(grid)
+	var w := (600.0 - 12 * (columns - 1)) / columns
+	for i in items.size():
+		var b := UI.button(str(items[i]), Vector2.ZERO, Vector2(w, 76), Color("#2f3866"), 26)
+		b.custom_minimum_size = Vector2(w, 76)
+		b.add_theme_font_override("font", UI.font(800))
+		b.mouse_filter = Control.MOUSE_FILTER_PASS   # a drag on a button still scrolls the list
+		# A finger that scrolled the list isn't a pick, even if it lifts on a button.
+		b.button_down.connect(func(): b.set_meta("from", scroll.scroll_vertical))
+		b.pressed.connect(func():
+			if absi(scroll.scroll_vertical - int(b.get_meta("from", scroll.scroll_vertical))) > 12:
+				return
+			sheet.queue_free()
+			pick.call(i))
+		grid.add_child(b)
+	var cancel := UI.button("Cancel", Vector2(210, 1052), Vector2(300, 84), Color("#3a4166"), 28)
+	cancel.add_theme_font_override("font", UI.font(800))
+	cancel.pressed.connect(sheet.queue_free)
+	sheet.add_child(cancel)
+	parent.add_child(sheet)
 
 
 static func _not_available(parent: Node, feature: String, done: Callable) -> void:

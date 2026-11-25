@@ -266,6 +266,7 @@ func _show_home() -> void:
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 10)
 	var scroll := ScrollContainer.new()
+	UI.touch_scroll(scroll)
 	scroll.position = Vector2(60, 524)
 	scroll.size = Vector2(600, 560)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

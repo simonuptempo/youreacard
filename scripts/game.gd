@@ -697,6 +697,7 @@ func _bar_buttons(items: Array) -> void:
 	var col_w:=684.0-col_x-14.0
 	panel.add_child(UI.label("What do you want to do?",Vector2(col_x,14),Vector2(col_w,30),18,UI.MUTED))
 	var scroll:=ScrollContainer.new()
+	UI.touch_scroll(scroll)
 	scroll.position=Vector2(col_x,52)
 	scroll.size=Vector2(col_w,panel_h-64.0)
 	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
@@ -1604,6 +1605,7 @@ func _show_recap() -> void:
 	_recap_layer.add_child(UI.panel(Vector2(30, 90), Vector2(660, 1040), Color("#1d2a2c"), 22))
 	_recap_layer.add_child(UI.label("%s'S TURN" % bot_name.to_upper(), Vector2(30, 110), Vector2(660, 50), 34, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
 	var scroll := ScrollContainer.new()
+	UI.touch_scroll(scroll)
 	scroll.position = Vector2(56, 176)
 	scroll.size = Vector2(608, 830)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -1771,6 +1773,7 @@ func _show_my_recap() -> bool:
 	var quotes: Array = r["quotes"]
 	var strip := _quote_strip_height(quotes)
 	var scroll := ScrollContainer.new()
+	UI.touch_scroll(scroll)
 	scroll.position = Vector2(RC_X, y + 60)
 	scroll.size = Vector2(RC_W, RC_BOTTOM - 94 - strip - (y + 60))
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -2068,6 +2071,7 @@ func _build_replay_panel() -> void:
 	_replay_panel.add_child(bg)
 	_replay_panel.add_child(_recap_title("%s'S TURN" % bot_name.to_upper(), y))
 	_replay_scroll = ScrollContainer.new()
+	UI.touch_scroll(_replay_scroll)
 	_replay_scroll.position = Vector2(RC_X, y + 60)
 	_replay_scroll.size = Vector2(RC_W, RC_BOTTOM - 16 - RC_CARD.y - 12 - (y + 60))
 	_replay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

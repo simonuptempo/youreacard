@@ -943,6 +943,7 @@ func _build_piece() -> void:
 	_hint.visible = false
 	_layer.add_child(_hint)
 	var hs := ScrollContainer.new()
+	UI.touch_scroll(hs)
 	hs.name = "Hand"
 	hs.position = Vector2(24, 310)
 	hs.size = Vector2(672, 530)
@@ -950,6 +951,7 @@ func _build_piece() -> void:
 	_layer.add_child(hs)
 	_layer.add_child(UI.panel(Vector2(24, 852), Vector2(672, 128), Color("#f5f5ee"), 12))
 	var log := ScrollContainer.new()
+	UI.touch_scroll(log)
 	log.name = "PieceLog"
 	log.position = Vector2(36, 862)
 	log.size = Vector2(648, 108)

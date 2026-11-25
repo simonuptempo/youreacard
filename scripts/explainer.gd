@@ -419,6 +419,7 @@ func _tab_action() -> void:
 
 func _rows(list: Array, free: bool) -> void:
 	var scroll := ScrollContainer.new()
+	UI.touch_scroll(scroll)
 	scroll.size = Vector2(720, 850)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_stage.add_child(scroll)

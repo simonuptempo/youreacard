@@ -92,6 +92,7 @@ func _ready() -> void:
 		Vector2(60, 232), Vector2(600, 84), 20, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	var lines: Array = prompts(slot, game)
 	var scroll := ScrollContainer.new()
+	UI.touch_scroll(scroll)
 	scroll.position = Vector2(50, 326)
 	scroll.size = Vector2(620, 524)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

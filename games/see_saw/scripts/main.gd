@@ -101,6 +101,7 @@ func show_rules() -> Control:
 	var subtitle := UI.label("Look. Remember. Answer. Stay in the air.", Vector2(48, 140), Vector2(624, 44), 25, UI.TEXT)
 	o.add_child(subtitle)
 	var scroll := ScrollContainer.new()
+	UI.touch_scroll(scroll)
 	scroll.position = Vector2(48, 200)
 	scroll.size = Vector2(624, 890)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

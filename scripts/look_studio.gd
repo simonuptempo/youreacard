@@ -194,6 +194,7 @@ func _render() -> void:
 		var width:=656.0/keys.size()
 		_tab("Style" if k=="hair" else "Color" if k.ends_with("color") else _title(k),Vector2(32+i*width,602),Vector2(width,48),k==key,func(): key=k; _render())
 	var scroll := ScrollContainer.new()
+	UI.touch_scroll(scroll)
 	scroll.position=Vector2(32,664); scroll.size=Vector2(656,348)
 	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
@@ -205,6 +206,7 @@ func _render() -> void:
 	# Removable chips make pending changes explicit, without changing the saved image.
 	var chips := HBoxContainer.new()
 	var chip_scroll := ScrollContainer.new()
+	UI.touch_scroll(chip_scroll)
 	chip_scroll.position=Vector2(32,1028); chip_scroll.size=Vector2(656,56)
 	chip_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(chip_scroll); chip_scroll.add_child(chips)

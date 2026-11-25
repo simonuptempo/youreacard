@@ -125,6 +125,7 @@ func _ready() -> void:
 	add_child(_status)
 
 	var scroll := ScrollContainer.new()
+	UI.touch_scroll(scroll)
 	_scroll = scroll
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)

@@ -96,3 +96,50 @@ static func font(weight := 600) -> Font:
 	_fonts[weight] = fv
 	return fv
 
+
+
+## Makes a ScrollContainer scroll by finger on a phone even when its content is full of
+## buttons and rows: anything that would swallow the touch passes it on to the scroller,
+## and a finger that scrolls the list doesn't also press the button it started on.
+## Call it once, right after creating the ScrollContainer (content can be added later).
+static func touch_scroll(scroll: ScrollContainer) -> void:
+	var start := {"v": 0.0, "h": 0.0, "off": false}
+	var relax := func(node: Node, recurse: Callable) -> void:
+		for c in node.get_children():
+			if c is Control and not (c is ScrollBar) and c.mouse_filter == Control.MOUSE_FILTER_STOP:
+				c.mouse_filter = Control.MOUSE_FILTER_PASS
+			recurse.call(c, recurse)
+	scroll.sort_children.connect(func(): relax.call(scroll, relax))
+	var set_buttons := func(node: Node, off: bool, recurse: Callable) -> void:
+		for c in node.get_children():
+			if c is BaseButton and not (c is ScrollBar):
+				if off and not c.disabled:
+					c.disabled = true
+					c.set_meta("_scroll_off", true)
+				elif not off and c.has_meta("_scroll_off"):
+					c.disabled = false
+					c.remove_meta("_scroll_off")
+			recurse.call(c, off, recurse)
+	var moved := func(_v: float) -> void:
+		if start["off"]:
+			return
+		if absf(scroll.scroll_vertical - start["v"]) < 12 and absf(scroll.scroll_horizontal - start["h"]) < 12:
+			return
+		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			return   # scrolled by wheel or code, not a finger
+		# The finger is dragging the list: cancel the press on whatever button it started on.
+		start["off"] = true
+		set_buttons.call(scroll, true, set_buttons)
+		while scroll.is_inside_tree() and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			await scroll.get_tree().process_frame
+		if not is_instance_valid(scroll):
+			return
+		await scroll.get_tree().process_frame
+		set_buttons.call(scroll, false, set_buttons)
+		start["off"] = false
+	scroll.gui_input.connect(func(e: InputEvent):
+		if (e is InputEventScreenTouch or e is InputEventMouseButton) and e.pressed:
+			start["v"] = scroll.scroll_vertical
+			start["h"] = scroll.scroll_horizontal)
+	scroll.get_v_scroll_bar().value_changed.connect(moved)
+	scroll.get_h_scroll_bar().value_changed.connect(moved)
