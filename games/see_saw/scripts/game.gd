@@ -239,7 +239,7 @@ func _dress_option(b: Button, q: Dictionary, i: int) -> void:
 			var portrait: Control
 			if face.is_empty():
 				var tr := TextureRect.new()
-				tr.texture = SSCardView.art(role)
+				tr.texture = SSCardView.ss_art(role)
 				tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 				tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 				portrait = tr
@@ -291,6 +291,8 @@ func _pick(i: int) -> void:
 	elif res["correct"] and not res["round_over"]:
 		_txt("+%d points%s" % [res["points"], " · Streak bonus!" if res["streak_bonus"] else ""], Vector2(20, 1170), Vector2(680, 60), 40, GREEN, 900)
 		_later(0.7, _build_question)
+	elif res["cleared"] and res.get("counterweight", false):
+		_show_counterweight(res["points"])
 	elif res["cleared"]:
 		_txt("Level cleared! +%d points" % res["points"], Vector2(20, 1170), Vector2(680, 60), 40, GREEN, 900)
 		_later(1.1, _advance)
@@ -309,6 +311,43 @@ func _pick(i: int) -> void:
 		var label := "You landed · Continue" if res["game_over"] else "Try Level %d again" % g.level
 		var b := _btn(label, Vector2(160, 1186), Vector2(400, 80), UI.ACCENT, 30)
 		b.pressed.connect(_advance)
+
+
+## Clearing level 4 and beyond: Nana Bea's counterweight lands on your side of the seesaw.
+func _show_counterweight(earned: int) -> void:
+	var o := Control.new()
+	o.name = "Counterweight"
+	o.set_anchors_preset(Control.PRESET_FULL_RECT)
+	o.mouse_filter = Control.MOUSE_FILTER_STOP
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	o.add_child(dim)
+	_layer.add_child(o)
+	var title := UI.label("Level cleared! +%d points" % earned, Vector2(20, 200), Vector2(680, 60), 40, GREEN, HORIZONTAL_ALIGNMENT_CENTER)
+	title.add_theme_font_override("font", UI.font(900))
+	o.add_child(title)
+	var v := SSCardView.new()
+	v.size = Vector2(260, 364)
+	v.position = Vector2(230, 290)
+	v.pivot_offset = v.size / 2
+	v.setup(SSCards.COUNTERWEIGHT.duplicate())
+	v.glow = true
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	o.add_child(v)
+	v.scale = Vector2(0.4, 0.4)
+	var pop := v.create_tween()
+	pop.tween_property(v, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var who := Profile.face_name("you") if Profile.is_custom("you") else "Nana Bea"
+	var line := UI.label("You earned %s's counterweight!\nIt goes on your seesaw: one extra life." % who, Vector2(40, 690), Vector2(640, 100), 30, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	line.add_theme_font_override("font", UI.font(800))
+	o.add_child(line)
+	Sfx.play("grand")
+	var next := UI.button("On to Level %d" % g.level, Vector2(160, 830), Vector2(400, 100), UI.ACCENT, 34)
+	next.name = "Next"
+	next.add_theme_font_override("font", UI.font(800))
+	next.pressed.connect(_advance)
+	o.add_child(next)
 
 
 ## After a round: next level (or the same one again), or game over.
@@ -455,18 +494,19 @@ class BalanceMeter extends Control:
 
 	func _set_balance(value: float) -> void:
 		displayed = value
-		if is_instance_valid(avatar): avatar.position = Vector2(12, 61 - (displayed - 1.5) * 15 - 34)
+		if is_instance_valid(avatar): avatar.position = Vector2(12, 61 - clampf(displayed - 1.5, -1.5, 2.5) * 15 - 34)
 		queue_redraw()
 
 	func _draw() -> void:
-		var tilt := (displayed - 1.5) * 15
+		var tilt := clampf(displayed - 1.5, -1.5, 2.5) * 15
 		draw_line(Vector2(4, 92), Vector2(210, 92), Color("#778294"), 2)
 		draw_colored_polygon(PackedVector2Array([Vector2(107, 57), Vector2(87, 91), Vector2(127, 91)]), Color("#3fb56b"))
 		draw_line(Vector2(24, 61 - tilt), Vector2(190, 61 + tilt), Color("#7cdbca"), 7, true)
 		for i in lives:
-			var x := 151 + i * 15
-			var y := 61 + tilt * (float(x - 107) / 83.0) - 13
-			draw_style_box(UI.box(UI.ACCENT, 3), Rect2(x, y, 12, 12))
+			# Rows of four; earned counterweights (past the first three) are Nana Bea gold.
+			var x := 151 + (i % 4) * 15
+			var y := 61 + tilt * (float(x - 107) / 83.0) - 13 - int(i / 4) * 13
+			draw_style_box(UI.box(UI.ACCENT if i < 3 else Color("#ff9f43"), 3), Rect2(x, y, 12, 12))
 
 
 ## A big suit shape (or a red/black pair) for option buttons.

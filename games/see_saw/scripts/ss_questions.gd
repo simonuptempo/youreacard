@@ -236,7 +236,7 @@ static func _nth_color(cards: Array, rng: RandomNumberGenerator) -> Dictionary:
 
 static func _yes_no(cards: Array, rng: RandomNumberGenerator) -> Dictionary:
 	var want := rng.randf() < 0.5
-	var props: Array = [{"type": "color", "v": "red"}, {"type": "color", "v": "black"}, {"type": "face"}, {"type": "rank", "v": 14}]
+	var props: Array = [{"type": "color", "v": "red"}, {"type": "color", "v": "black"}, {"type": "rank", "v": 14}]
 	for s in SSCards.SUITS:
 		props.append({"type": "suit", "v": s})
 	for c in cards:
@@ -262,13 +262,20 @@ static func _character(cards: Array, rng: RandomNumberGenerator) -> Dictionary:
 	var text: String
 	if cards.size() == 1:
 		text = "Who was on the card?"
-	elif faces.size() == 1:
-		text = "Who was on the character card?"
 	else:
 		text = "Who was on the %s card?" % SSCards.ordinal(pos + 1)
-	var opts: Array = SSCards.FACE_RANKS.duplicate()
+	# Four faces: the right one and three others (neighbors by rank are the trickiest).
+	var right := int(cards[pos]["rank"])
+	var opts: Array = [right]
+	var tries := 0
+	while opts.size() < 4 and tries < 100:
+		tries += 1
+		var r := clampi(right + rng.randi_range(-3, 3), 2, 14) if tries < 60 else rng.randi_range(2, 14)
+		if not r in opts:
+			opts.append(r)
+	opts.sort()
 	var labels: Array = opts.map(func(r): return SSCards.CHARACTERS[r]["name"])
-	var q := _q(text, "character", opts, opts.find(int(cards[pos]["rank"])), {"pos": pos}, labels)
+	var q := _q(text, "character", opts, opts.find(right), {"pos": pos}, labels)
 	q["keep_order"] = true
 	return q
 
@@ -343,7 +350,7 @@ static func _where(cards: Array, rng: RandomNumberGenerator) -> Dictionary:
 
 
 static func _count(cards: Array, rng: RandomNumberGenerator) -> Dictionary:
-	var props: Array = [{"type": "color", "v": "red"}, {"type": "color", "v": "black"}, {"type": "face"}]
+	var props: Array = [{"type": "color", "v": "red"}, {"type": "color", "v": "black"}]
 	for s in SSCards.SUITS:
 		props.append({"type": "suit", "v": s})
 	var prop: Dictionary = props[rng.randi_range(0, props.size() - 1)]

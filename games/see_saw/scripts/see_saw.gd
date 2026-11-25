@@ -11,6 +11,7 @@ extends RefCounted
 ## "ask" (answering), "between" (round finished, see last_result), "over".
 
 const START_LIVES := 3
+const COUNTERWEIGHT_FROM := 4   # clearing this level (and every one after) earns a counterweight
 
 var points := 0
 var streak := 0
@@ -63,10 +64,6 @@ func start_round() -> void:
 	var deck := SSCards.build_deck()
 	SSQuestions._shuffle(deck, rng)
 	cards = deck.slice(0, cards_for_level(level))
-	# A face to remember in every round, without duplicating a card.
-	if not cards.any(func(c): return SSCards.is_face(c)):
-		var character_cards := deck.filter(func(c): return SSCards.is_face(c))
-		cards[rng.randi_range(0, cards.size() - 1)] = character_cards[0]
 	questions = SSQuestions.make_round(cards, level, rng)
 	q_index = 0
 	last_result = {}
@@ -116,6 +113,11 @@ func answer(i: int) -> Dictionary:
 			last_result = {"cleared": true, "question": q, "picked": -1}
 			earned += 50
 			history[level] = cards.duplicate(true)
+			# Level 4 and every level after it earns Nana Bea's counterweight: an extra life.
+			if level >= COUNTERWEIGHT_FROM:
+				lives += 1
+				res["counterweight"] = true
+				last_result["counterweight"] = true
 			bonus_pending = level >= 4 and level % 2 == 0 and history.has(level - 2)
 			if bonus_pending: bonus_level = level - 2
 			level += 1

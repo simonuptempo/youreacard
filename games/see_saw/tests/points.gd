@@ -26,11 +26,14 @@ func run():
  var before := g.points
  var wrong: int = (int(g.question().answer)+1)%g.question().options.size()
  var res = g.answer(wrong)
- assert(res.bonus and g.lives==3 and g.points==before and g.streak==0)
+ # Clearing level 4 earned Nana Bea's counterweight: 4 lives.
+ assert(res.bonus and g.lives==4 and g.points==before and g.streak==0)
  g.next_round();assert(g.phase=="ready" and g.level==5)
  assert(not g.restore_counterweight())
  start(g);g.answer((int(g.question().answer)+1)%g.question().options.size());g.next_round()
- assert(g.lives==2 and g.restore_counterweight() and g.points==420 and g.lives==3)
+ assert(g.lives==3 and not g.restore_counterweight())
+ g.lives=2
+ assert(g.restore_counterweight() and g.points==420 and g.lives==3)
  g.points=249;g.lives=0;g.phase="over";assert(not g.restore_counterweight())
  g.points=250;assert(g.restore_counterweight() and g.points==0 and g.lives==1 and g.phase=="ready")
  # Every subsequent even level recalls exactly two levels ago.

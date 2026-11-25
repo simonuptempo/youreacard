@@ -38,7 +38,7 @@ const PET_LOOKS := [
 ]
 
 var _slot := "you"
-var _preview: CardView
+var _preview: Control        # a CardView, or the game's own card in See Saw
 var _name_edit: LineEdit
 var _camera_btn: Button
 var _upload_btn: Button
@@ -64,7 +64,7 @@ var _look_cat := 0
 
 func _ready() -> void:
 	theme = UI.make_theme()
-	_slot = Profile.edit_slot if Profile.edit_slot in SLOTS else "you"
+	_slot = Profile.edit_slot if Profile.edit_slot in _slots() else _slots()[0]
 	var bg := ColorRect.new()
 	bg.color = UI.BG
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -79,7 +79,7 @@ func _ready() -> void:
 	add_child(back)
 	add_child(UI.label("Are you a card?  Join the crew!", Vector2(96, 28), Vector2(600, 60), 32, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
 
-	_preview = CardView.new()
+	_preview = _new_card()
 	_preview.position = Vector2(28, CARD_TOP)
 	_preview.size = CARD_SIZE
 	_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -131,14 +131,15 @@ func _ready() -> void:
 	var page := Control.new()
 	scroll.add_child(page)
 	var gap := (720.0 - 3 * GRID_CARD.x) / 4.0
-	for i in SLOTS.size():
-		var s: String = SLOTS[i]
+	var order := _slots()
+	for i in order.size():
+		var s: String = order[i]
 		var pos := Vector2(gap + (i % 3) * (GRID_CARD.x + gap), 12 + int(i / 3) * (GRID_CARD.y + 22))
 		var frame := UI.panel(pos - Vector2(7, 7), GRID_CARD + Vector2(14, 14), UI.ACCENT, 18)
 		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		page.add_child(frame)
 		_frames[s] = frame
-		var cv := CardView.new()
+		var cv := _new_card()
 		cv.position = pos
 		cv.size = GRID_CARD
 		page.add_child(cv)
@@ -152,7 +153,7 @@ func _ready() -> void:
 		page.add_child(badge)
 		_badges[s] = badge
 		_refresh_grid_card(s)
-	page.custom_minimum_size = Vector2(720, 12 + ceili(SLOTS.size() / 3.0) * (GRID_CARD.y + 22) + 40)
+	page.custom_minimum_size = Vector2(720, 12 + ceili(order.size() / 3.0) * (GRID_CARD.y + 22) + 40)
 	_select(_slot)
 
 
@@ -168,6 +169,27 @@ func _icon_button(icon: String, text: String, pos: Vector2, w: float) -> Button:
 
 
 # ------------------------------------------------------------------ which card
+
+## See Saw shows its own deck: 2 to Ace with a character on each, then Nana Bea's
+## counterweight. Every other game shows the Gem Heist crew and bills.
+func _see_saw() -> bool:
+	return Profile.voice_game == "see_saw"
+
+
+func _slots() -> Array:
+	return SSCards.slot_order() if _see_saw() else SLOTS
+
+
+func _new_card() -> Control:
+	return SSCardView.new() if _see_saw() else CardView.new()
+
+
+func _setup_card(cv: Control, slot: String, id: int) -> void:
+	if cv is CardView:
+		cv.setup({"id": id, "kind": kind_for(slot)}, Profile.slot_face(slot))
+	else:
+		cv.setup(SSCards.card_for_slot(slot), false, Profile.slot_face(slot))
+
 
 func kind_for(slot: String) -> String:
 	return Profile.slot_kind(slot)
@@ -275,18 +297,18 @@ func _card_name(slot: String, typed: String) -> String:
 
 func _refresh_preview() -> void:
 	var typed := _name_edit.text.strip_edges()
-	_preview.preview_name = _card_name(_slot, typed) if typed != "" else ""
+	_preview.preview_name = (_card_name(_slot, typed) if not _see_saw() else typed) if typed != "" else ""
 	if _slot == "you" and not Profile.is_custom("you"):
 		_preview.preview_name = ""   # the regular Wild is Nana Bea until it has your photo
-	_preview.setup({"id": 0, "kind": kind_for(_slot)}, Profile.slot_face(_slot))
-	if _preview._overlay != null and _is_pet(_slot):
+	_setup_card(_preview, _slot, 0)
+	if _preview is CardView and _preview._overlay != null and _is_pet(_slot):
 		_preview._overlay.name_text = typed
 		_preview._overlay.queue_redraw()
 
 
 func _refresh_grid_card(slot: String) -> void:
-	var cv: CardView = _grid_cards[slot]
-	cv.setup({"id": SLOTS.find(slot), "kind": kind_for(slot)}, Profile.slot_face(slot))
+	var cv: Control = _grid_cards[slot]
+	_setup_card(cv, slot, SLOTS.find(slot))
 	cv.editable = true
 
 
@@ -601,12 +623,12 @@ func _show_look() -> void:
 	dim.size = Vector2(720, 1280)
 	_sheet.add_child(dim)
 	_sheet.add_child(UI.panel(Vector2(20, 40), Vector2(680, 1200), UI.PANEL, 24))
-	var cv := CardView.new()
+	var cv := _new_card()
 	cv.position = Vector2(48, 64)
 	cv.size = Vector2(160, 224)
 	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(cv)
-	cv.setup({"id": 0, "kind": kind_for(_slot)}, Profile.slot_face(_slot))
+	_setup_card(cv, _slot, 0)
 	_sheet.add_child(UI.label("Change the look", Vector2(228, 64), Vector2(450, 50), 32, UI.ACCENT))
 	var looks := _looks()
 	var picked: Array = []
@@ -722,4 +744,8 @@ func _leave() -> void:
 		"home":
 			Profile.go("home")
 		_:
-			Profile.go("settings")
+			# A game's own menu (e.g. "res://games/see_saw/scenes/main.tscn").
+			if Profile.creator_return.begins_with("res://"):
+				get_tree().change_scene_to_file(Profile.creator_return)
+			else:
+				Profile.go("settings")

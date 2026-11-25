@@ -56,7 +56,8 @@ func _init() -> void:
 		while g.phase == "ask":
 			g.answer(g.question()["answer"])
 		g.next_round()
-	check(g.lives == 3, "perfect player lost a life")
+	# Levels 4..20 each earn Nana Bea's counterweight (+1 life).
+	check(g.lives == 3 + (20 - SeeSaw.COUNTERWEIGHT_FROM + 1), "perfect player lost a life (or missed a counterweight)")
 	print("perfect player reached level %d with %d lives" % [g.level, g.lives])
 
 	# Random player: game always ends, lives never negative.
