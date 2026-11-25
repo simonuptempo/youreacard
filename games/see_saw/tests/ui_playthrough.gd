@@ -7,6 +7,7 @@ var _f := 0
 var _games := 0
 var _target := 0          # answer right until this level, then go wrong
 var _fails := 0
+var _best_points := 0
 
 
 func _initialize() -> void:
@@ -34,7 +35,7 @@ func _process(_d: float) -> bool:
 			return true
 		var lbl: Label = cur.get_node("Best")
 		if _games > 0:
-			check(lbl.text == "Best: Level %d" % SSBest.get_best(), "menu best label: " + lbl.text)
+			check(lbl.text == "Best: %d points" % SSBest.get_best(), "menu best label: " + lbl.text)
 		change_scene_to_file("res://games/see_saw/scenes/game.tscn")
 		return false
 	var game = cur
@@ -57,8 +58,9 @@ func _process(_d: float) -> bool:
 			var right: int = q["answer"]
 			var pick: int = right if g.level < _target else (right + 1) % q["options"].size()
 			var lives := g.lives
+			var bonus := g.bonus_active
 			game._pick(pick)
-			if pick != right:
+			if pick != right and not bonus:
 				check(g.lives == lives - 1, "life not lost")
 				check(game._hearts.lives == g.lives, "hearts not updated")
 			else:
@@ -71,9 +73,11 @@ func _process(_d: float) -> bool:
 			if game._over == null:
 				game._advance()
 				check(game._over != null, "no game over screen")
-				check(g.score() == _target, "score %d, expected %d" % [g.score(), _target])
-				print("game %d: reached level %d, best %d, new best %s" % [_games + 1, g.score(), SSBest.get_best(), game.new_best])
-				check(SSBest.get_best() == [4, 7, 7][_games], "best not saved")
+				check(g.level == _target, "score %d, expected %d" % [g.score(), _target])
+				print("game %d: scored %d points, previous best %d, new best %s" % [_games + 1, g.score(), SSBest.get_best(), game.new_best])
+				SSBest.submit(g.score())
+				_best_points = maxi(_best_points, g.score())
+				check(SSBest.get_best() == _best_points, "best not saved")
 				_games += 1
 				if _games < 3 and _games % 2 == 1:
 					reload_current_scene.call_deferred()  # Play again

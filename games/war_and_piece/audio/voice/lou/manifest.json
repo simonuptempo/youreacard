@@ -1,0 +1,192 @@
+{
+  "character": "Lou",
+  "clip_count": 20,
+  "notes": [
+    "Gameplay categories assigned from supplied filenames; filenames are not verified transcripts.",
+    "Shield recordings share the reaction pool with Dev.",
+    "Playback obeys voice settings, cooldown, non-overlap and recent-clip suppression.",
+    "Speech captions follow the recording prompts; Juno travel wording confirmed by the user."
+  ],
+  "clips": [
+    {
+      "file": "lou_from_the_first_flip_to_the_final_set.mp3",
+      "event": "game_complete",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "d2ccef5cde9668f3d3919581cb921f19a9fa99f6f1e5e3d097807768d3a419bf",
+      "text": "From the first flip to the final set."
+    },
+    {
+      "file": "lou_war_won_pieces_together.mp3",
+      "event": "game_win",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "b1bd37ed3dd2eca5768940fc90f648607014ec6b4be4adc3d78fa1234c7244fd",
+      "text": "War won pieces together."
+    },
+    {
+      "file": "lou_set_collected_case_closed.mp3",
+      "event": "set_complete",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "95a6643e4923a60aabefd56408cc731406ca739ecc578c2b3beff31930e02c55",
+      "text": "Set collected case closed."
+    },
+    {
+      "file": "lou_another_piece_of_the_puzzle.mp3",
+      "event": "set_complete",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "7b1e1fa9a436a858686cda67e6f2bd1b138e65076c01d631226b974a8183ddce",
+      "text": "Another piece of the puzzle."
+    },
+    {
+      "file": "lou_all_four_together_at_last.mp3",
+      "event": "set_complete",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "1298a48c8de8c2be86eee07cba03883d3994e55db8e79a1f8eb8e6f6aac6c2de",
+      "text": "All four together at last."
+    },
+    {
+      "file": "lou_still_here_still_mine.mp3",
+      "event": "shield_block",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "3d44fea59211852c2b51ed82e37eebf73e4bbe057d130ccdc19e31052f16e322",
+      "text": "Still here still mine."
+    },
+    {
+      "file": "lou_heist_canceled_card_protected.mp3",
+      "event": "shield_block",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "f9601716e0ef92e75b6d854f0c80e6e4e00de0a684cb1fd5689e19bb8497d3aa",
+      "text": "Heist canceled card protected."
+    },
+    {
+      "file": "lou_my_shield_says_no.mp3",
+      "event": "shield_block",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "9b33237a9230ca8a8b26bca609aa786505ebba9ea8ccfc3bfa8d1da1e3329a8d",
+      "text": "My shield says no."
+    },
+    {
+      "file": "lou_i_had_my_eye_on_that_one.mp3",
+      "event": "heist_success",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "0d11691241e4351f7d6a1202d67e6807d67fabf96952b76291763270f18e5c0d",
+      "text": "I had my eye on that one."
+    },
+    {
+      "file": "lou_that_card_has_a_new_address.mp3",
+      "event": "heist_success",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "edcb65b0414468cbaa1202989663c26b79a6dffef9596315721bd06066ace33f",
+      "text": "That card has a new address."
+    },
+    {
+      "file": "lou_that_last_card_came_through.mp3",
+      "event": "war_win",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "86e281d35b7417a2872da0259a703a14836c8e7e2a33df36e77f18e20a16e8b9",
+      "text": "That last card came through."
+    },
+    {
+      "file": "lou_now_thats_a_winning_pile.mp3",
+      "event": "war_win",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "b018168f61b194ff2e6c6b116ded092292d668923b01e2d3a9d943a0492ecf89",
+      "text": "Now that's a winning pile."
+    },
+    {
+      "file": "lou_more_cards_more_suspense.mp3",
+      "event": "war_again",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "9963f8be1c66dd54f2a3c3d9959502d8c358d86aa39ae4edd45d06e696727f87",
+      "text": "More cards more suspense."
+    },
+    {
+      "file": "lou_we_really_are_evenly_matched.mp3",
+      "event": "war_again",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "4a20d78476cf5d18a71011aeba451e4201fa6f59345a2cde409b06561c0699dd",
+      "text": "We really are evenly matched."
+    },
+    {
+      "file": "lou_yet_another_war.mp3",
+      "event": "war_again",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "1c3e5a6390cda40ccb8b0f7f1ac69e94f13dbd49b1976d5838a8b96a746e177a",
+      "text": "Yet another war."
+    },
+    {
+      "file": "lou_ready_for_a_little_friendly_war.mp3",
+      "event": "war_start",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "7e0e1df5817975838ddd50f15e7256aff1f4ec5dc2536093f0a64669ba4fcca2",
+      "text": "Ready for a little friendly war."
+    },
+    {
+      "file": "lou_now_it_gets_interesting.mp3",
+      "event": "war_start",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "8e96b339e85657ccff9311ebcf424e1981efbefd5d4872b130803dce99c09fbe",
+      "text": "Now it gets interesting."
+    },
+    {
+      "file": "lou_a_tie_lets_settle_this.mp3",
+      "event": "war_start",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "c65714823f0c1b1e66b8287bc96b687d9352860568c3cf189015282c221f79db",
+      "text": "A tie let's settle this."
+    },
+    {
+      "file": "lou_i_like_the_look_of_that_flip.mp3",
+      "event": "deal_win",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "45767154d86f24128d4eefefc878000f854efd3660080b5ae4c13fb10f349ecc",
+      "text": "I like the look of that flip."
+    },
+    {
+      "file": "lou_two_for_my_collection.mp3",
+      "event": "deal_win",
+      "character": "Lou",
+      "role": "boss",
+      "status": "enabled_in_gameplay",
+      "sha256": "0bef3fd0e915c22fd35d27c9442b185abc33b6c540602b96a5060f2d5ab7b94a",
+      "text": "Two for my collection."
+    }
+  ]
+}

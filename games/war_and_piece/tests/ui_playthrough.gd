@@ -1,5 +1,5 @@
 extends SceneTree
-## Drives the real game screen from start to finish (Auto-arrange, Done, Flip / Skip).
+## Drives five real game screens through attacks, defenses, passes, and War.
 var _game
 var _frames := 0
 var _games := 0
@@ -12,8 +12,20 @@ func _new_game() -> void:
 		_game.queue_free()
 	_game = load("res://games/war_and_piece/scenes/game.tscn").instantiate()
 	root.add_child(_game)
+	_game._reduced_motion = true
 
 func _process(_d: float) -> bool:
+	if is_instance_valid(_game) and _game.get("_animating") == true:
+		if _game._main_btn.text in ["Go to war!", "Yet another war!"]:
+			_game._on_flip()
+		return false
+
+	if _game._busy or _game._bot_running: return false
+	var summary = _game.get_node_or_null("Summary")
+	if summary:
+		summary.queue_free()
+		_game._build_mode()
+		return false
 	_frames += 1
 	if _frames < 3:
 		return false
@@ -26,14 +38,12 @@ func _process(_d: float) -> bool:
 	elif g.phase() == "piece":
 		if _game._lock_btn == null or not is_instance_valid(_game._lock_btn):
 			_game._on_flip()  # "On to the Piece round"
-		else:
+		elif g.piece_actor() == 0:
 			_game._auto_arrange()
+		elif g.piece_actor() < 0:
 			_game._done_piece()
-			var s = _game.get_node_or_null("Summary")
-			if s: s.queue_free()
-			_game._build_mode()
 	else:
-		if g.total_cards() != 52:
+		if g.total_cards() != 52 or g.total_shields() != 2:
 			push_error("card count")
 		_games += 1
 		print("game %d over: winner %d round %d locked %d-%d" % [_games, g.winner, g.round_number, g.locked_count(0), g.locked_count(1)])

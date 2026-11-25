@@ -46,6 +46,9 @@ func _init() -> void:
 	# Perfect player: climbs and never loses a life.
 	var g := SeeSaw.new().setup(7)
 	while g.level <= 20:
+		if g.bonus_active:
+			g.answer(g.question()["answer"])
+			g.next_round()
 		g.start_round()
 		check(g.cards.size() == g.level, "card count")
 		check(g.questions.size() == SSQuestions.questions_for_level(g.level), "question count at level %d" % g.level)
@@ -72,7 +75,7 @@ func _init() -> void:
 			r.answer(r.rng.randi_range(0, q["options"].size() - 1))
 		check(r.phase == "over" and r.lives == 0, "random game %d didn't end" % s)
 		scores.append(r.score())
-	print("random player: avg level %.2f, max %d" % [scores.reduce(func(a, b): return a + b) / float(scores.size()), scores.max()])
+	print("random player: avg points %.2f, max %d" % [scores.reduce(func(a, b): return a + b) / float(scores.size()), scores.max()])
 
 	# Determinism
 	var a := SeeSaw.new().setup(99, 5)

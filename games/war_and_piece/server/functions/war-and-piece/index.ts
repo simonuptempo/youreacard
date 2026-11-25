@@ -49,6 +49,7 @@ function turnSeat(g: Game): number {
   const ph = g.phase();
   if (ph === "over") return -1;
   if (ph === "war") return 2;
+  if (g.pieceActor() >= 0) return g.pieceActor();
   const d = g.s.piece_done;
   return d[0] && !d[1] ? 1 : d[1] && !d[0] ? 0 : 2;
 }
@@ -80,7 +81,7 @@ async function gameView(row: Record<string, any>, seat: number, game: Game) {
     game_id: row.id,
     status: row.status,
     move_count: row.move_count,
-    my_turn: myTurn(row.status, row.current_seat, seat),
+    my_turn: myTurn(row.status, turnSeat(game), seat),
     opponent: { name: opp.display_name },
     view: game.view(seat),
   };
@@ -184,9 +185,10 @@ const actions: Record<string, (c: Ctx) => Promise<unknown>> = {
       const g = new Game(r.state);
       out.push({
         game_id: r.id, opponent: opp.display_name, status: r.status,
-        my_turn: myTurn(r.status, r.current_seat, seat),
+        my_turn: myTurn(r.status, turnSeat(g), seat),
         round: g.s.round, phase: g.phase(),
         locked: [g.lockedCount(seat), g.lockedCount(1 - seat)],
+        banked_sets: [g.sets(seat).length, g.sets(1 - seat).length],
         won: r.winner < 0 ? null : r.winner === 2 ? "draw" : r.winner === seat,
         updated_at: r.updated_at,
       });
@@ -206,6 +208,9 @@ const actions: Record<string, (c: Ctx) => Promise<unknown>> = {
     const t = String(raw.t ?? "");
     let move: Move;
     if (t === "flip" || t === "flip_all") move = { t };
+    else if (t === "heist") move = { t, p: seat, rank: raw.rank, suit: raw.suit };
+    else if (t === "defend") move = { t, p: seat, block: raw.block };
+    else if (t === "pass") move = { t, p: seat };
     else if (t === "lock" || t === "add" || t === "done") move = { t, p: seat, ids: raw.ids, set: raw.set };   // you only ever move for yourself
     else throw new Oops("That move isn't allowed right now.", 409);
     if (t === "done" || t === "lock" || t === "add") { if (move.ids === undefined) delete move.ids; if (move.set === undefined) delete move.set; }

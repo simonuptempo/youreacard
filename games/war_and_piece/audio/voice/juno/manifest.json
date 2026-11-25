@@ -1,0 +1,192 @@
+{
+  "character": "Juno",
+  "clip_count": 20,
+  "notes": [
+    "Gameplay categories assigned from supplied filenames; filenames are not verified transcripts.",
+    "Shield recordings share the reaction pool with Dev.",
+    "Playback obeys voice settings, cooldown, non-overlap and recent-clip suppression.",
+    "Speech captions follow the recording prompts; Juno travel wording confirmed by the user."
+  ],
+  "clips": [
+    {
+      "file": "juno_a_little_higher_a_little_luckier.mp3",
+      "event": "deal_win",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "c5b5574a8e78e5d674ff27f893171c5ceb7afc48f3f1f7367517e5d233687294",
+      "text": "A little higher a little luckier."
+    },
+    {
+      "file": "juno_up_you_go_winning_pile.mp3",
+      "event": "deal_win",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "062bf64f7d79a8977bb816f7faaee8f2cc933362bdd2e6dc78eba1454ab91f18",
+      "text": "Up you go winning pile."
+    },
+    {
+      "file": "juno_thats_a_good_turn_of_the_cards.mp3",
+      "event": "deal_win",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "0c02b00b172c7798233a973af5a3239ea84682339a615c395d4fe5935fe4cf51",
+      "text": "That's a good turn of the cards."
+    },
+    {
+      "file": "juno_this_means_war.mp3",
+      "event": "war_start",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "a0acbfe029d80282347c2476e772f3fa5765a40d45a62803e1c85dd7aea97a4b",
+      "text": "This means war."
+    },
+    {
+      "file": "juno_time_for_a_card_showdown.mp3",
+      "event": "war_start",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "82df9e7f3d044ce1ec5aa7f56a9e26a480a355ac29d55cb3fbfa9d41394eb0b1",
+      "text": "Time for a card showdown."
+    },
+    {
+      "file": "juno_lets_see_whats_hiding_underneath.mp3",
+      "event": "war_start",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "b407fc776ffffa887b5a20cf69e448acead079275720efb9a69ba93e19f37448",
+      "text": "Let's see whats hiding underneath."
+    },
+    {
+      "file": "juno_one_showdown_wasnt_enough.mp3",
+      "event": "war_again",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "71bf5ee5c6437b6b1a39c272896d6b76449902db90d8d0fe1333146dab9cc859",
+      "text": "One showdown wasn't enough."
+    },
+    {
+      "file": "juno_the_plot_thickens_so_does_the_pile.mp3",
+      "event": "war_again",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "9b52bfdf02637466e8d2ff38217fd2d271ea6d3076d3cd82526471626b3e2c53",
+      "text": "The plot thickens so does the pile."
+    },
+    {
+      "file": "juno_ill_need_room_for_all_of_these.mp3",
+      "event": "war_win",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "9745cac18a5b989341b9d98b79bfc521d8bace1bbb48ebd1d9fa4565a96f1723",
+      "text": "I'll need room for all of these."
+    },
+    {
+      "file": "juno_come_along_little_army_of_cards.mp3",
+      "event": "war_win",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "8895c0e42937a175f9fb22a0342ee59462536dd15582a3c53bd60510a3ce9120",
+      "text": "Come along little army of cards."
+    },
+    {
+      "file": "juno_consider_that_card_relocated.mp3",
+      "event": "heist_success",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "a0eb416bd4565fe46fe692eb6be7d42022dbe10e5879e1c100d728c468b14b27",
+      "text": "Consider that card relocated."
+    },
+    {
+      "file": "juno_a_tidy_little_heist.mp3",
+      "event": "heist_success",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "b5b29b89dbcd7f8bf5368efa99dc37cb441aacb406728d6fd97a99c2a24822cc",
+      "text": "A tidy little heist."
+    },
+    {
+      "file": "juno_a_little_borrowing_without_the_returning.mp3",
+      "event": "heist_success",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "23a82b60a5e95866791cde79d7a698d9d3cc991e3b5949f842025783a36050db",
+      "text": "A little borrowing without the returning."
+    },
+    {
+      "file": "juno_youll_have_to_admire_it_from_there.mp3",
+      "event": "shield_block",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "42e5381d1dd871ea96197af43eb7d42d5b11b5d9c252fd2922b11351a8013db3",
+      "text": "You'll have to admire it from there."
+    },
+    {
+      "file": "juno_nice_try_this_one_stays.mp3",
+      "event": "shield_block",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "ac44648a0c5c78a1537963508537b19b7a5f0d9087a363c1c62703d254038812",
+      "text": "Nice try this one stays."
+    },
+    {
+      "file": "juno_no_missing_pieces_here.mp3",
+      "event": "set_complete",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "b86ec8481ffb0b5843a6fc465fc301f82753001c311a01884194dab6ae4be124",
+      "text": "No missing pieces here."
+    },
+    {
+      "file": "juno_one_rank_every_suit_beautiful.mp3",
+      "event": "set_complete",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "e4ff5d89eda60ebac646a0a53137cd09861db210b2cb66ad0f959511ae52be8c",
+      "text": "One rank every suit beautiful."
+    },
+    {
+      "file": "juno_my_collection_takes_the_crown.mp3",
+      "event": "game_win",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "fa88a7a61857d3d6e1b4b86e6ce8c10a8db401db60062210996a1b86ec195a5d",
+      "text": "My collection takes the crown."
+    },
+    {
+      "file": "juno_a_little_luck_a_little_heist_a_lovely_win.mp3",
+      "event": "game_win",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "1c7f582627790111654c1a07886161df67a4ea5e09160d45b88ee1fcf5e9310a",
+      "text": "A little luck a little heist a lovely win."
+    },
+    {
+      "file": "juno_that_card_isnt_packed_from_there.mp3",
+      "event": "shield_block",
+      "character": "Juno",
+      "role": "trickster",
+      "status": "enabled_in_gameplay",
+      "sha256": "b1f402332d3fb67401c758b5e5eb318b35310ed3bb755c62efc1cb491696ba14",
+      "text": "That card isn't packed for travel."
+    }
+  ]
+}

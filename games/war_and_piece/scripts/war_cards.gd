@@ -7,8 +7,8 @@ const SUIT_NAMES := {"S": "Spades", "H": "Hearts", "D": "Diamonds", "C": "Clubs"
 const SUIT_SYMBOLS := {"S": "♠", "H": "♥", "D": "♦", "C": "♣"}
 const RED := ["H", "D"]
 const DECK_SIZE := 52
-const WIN_LOCKED := 30
-const MIN_SET := 3
+const TOTAL_SETS := 13
+const MIN_SET := 4
 const WAR_DOWN := 3      # a tie: 3 cards face-down, then 1 face-up (four each)
 
 ## Face cards and Aces are characters you can put your own face on.
@@ -70,28 +70,17 @@ static func is_red(c: Dictionary) -> bool:
 	return c["suit"] in RED
 
 
-## "kind" (3+ of the same rank), "run" (3+ in a row, one suit; Aces high) or "" if not a set.
+## One complete rank: exactly four cards, one of each suit.
 static func set_type(cards: Array) -> String:
-	if cards.size() < MIN_SET:
+	if cards.size() != 4:
 		return ""
-	var r: int = cards[0]["rank"]
-	var same_rank := true
+	var rank: int = cards[0]["rank"]
+	var suits: Array = []
 	for c in cards:
-		if c["rank"] != r:
-			same_rank = false
-	if same_rank:
-		return "kind"
-	var s: String = cards[0]["suit"]
-	var ranks: Array = []
-	for c in cards:
-		if c["suit"] != s:
+		if c["rank"] != rank or c["suit"] not in SUITS or c["suit"] in suits:
 			return ""
-		ranks.append(c["rank"])
-	ranks.sort()
-	for i in range(1, ranks.size()):
-		if ranks[i] != ranks[i - 1] + 1:
-			return ""
-	return "run"
+		suits.append(c["suit"])
+	return "kind"
 
 
 static func describe_set(cards: Array) -> String:

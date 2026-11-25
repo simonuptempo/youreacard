@@ -1,5 +1,5 @@
 // Scripted player B for the end-to-end test: joins Godot's invite code, then plays to the end
-// (flips now and then, locks 3-of-a-kinds, takes a moment before finishing Piece rounds).
+// (flips now and then, heists missing cards, takes a moment before finishing Piece rounds).
 import { readFileSync, existsSync } from "node:fs";
 import { signup, call, kinds } from "./api.ts";
 
@@ -25,10 +25,15 @@ for (let i = 0; i < 3000; i++) {
   if (s.view.round % 2 === 1) {
     if (i % 9 === 0) { const r = await call(tok, "act", { game_id: gid, move: { t: "flip" } }); if (r.status === 200) flips++; }
   } else if (!s.view.piece_done[0]) {
-    await sleep(rounds % 2 ? 1500 : 200);   // sometimes A finishes first and has to wait
-    for (const ids of kinds(s.view.players[0].hand)) await call(tok, "act", { game_id: gid, move: { t: "lock", ids } });
-    await call(tok, "act", { game_id: gid, move: { t: "done" } });
-    rounds++;
+    const v = s.view, pending = v.pending_heist;
+    const actor = Object.keys(pending).length ? 1 - pending.attacker : (v.heist_order[v.heist_step] ?? -1);
+    if (actor === 0) {
+      const move = Object.keys(pending).length ? {t:"defend", block:v.shields[0]>0}
+        : v.heist_options.length ? {t:"heist", ...v.heist_options[0]} : {t:"pass"};
+      await call(tok, "act", {game_id:gid, move});
+    } else if (actor < 0) {
+      await call(tok, "act", {game_id:gid, move:{t:"done"}}); rounds++;
+    }
   }
   await sleep(250);
 }

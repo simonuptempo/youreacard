@@ -21,7 +21,7 @@ func _init() -> void:
 			else:
 				WarBot.play_piece(g, 0)
 				WarBot.play_piece(g, 1)
-			if g.total_cards() != 52:
+			if g.total_cards() != 52 or g.total_shields() != 2:
 				bad += 1
 				push_error("card count %d in game %d" % [g.total_cards(), i])
 				break
@@ -33,7 +33,9 @@ func _init() -> void:
 		rounds_total += g.round_number
 		flips_total += flips
 		longest = maxi(longest, g.round_number)
-		if g.events[-1]["text"].contains("locked away") and g.events[-1]["text"].contains("!"):
+		if g.sets(0).size() + g.sets(1).size() == 13:
 			by_lock += 1
-	print("games %d  wins %s  avg rounds %.1f (max %d)  avg flips %.1f  ended by 26 locked: %d  problems: %d" % [games, wins, float(rounds_total) / games, longest, float(flips_total) / games, by_lock, bad])
-	quit(0)
+		else:
+			bad += 1
+	print("games %d  wins %s  avg rounds %.1f (max %d)  avg flips %.1f  ended with all 13 sets: %d  problems: %d" % [games, wins, float(rounds_total) / games, longest, float(flips_total) / games, by_lock, bad])
+	quit(1 if bad else 0)

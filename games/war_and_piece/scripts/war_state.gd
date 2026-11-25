@@ -1,25 +1,28 @@
 class_name WarState
 extends RefCounted
-## War and Piece rules. Odd rounds are War, even rounds are Piece.
-##
-## WAR: each player flips the top card of their stock; the higher card wins both, and
-## won cards go to that player's winnings (not back into play). A tie is a war: each
-## side puts down 3 face-down cards and 1 face-up, and the face-up cards decide who
-## takes everything. A player with more locked sets wins ties outright. The round ends
-## when either stock runs out; any cards still in a stock are kept by their owner.
-##
-## PIECE: each player sorts their winnings into sets: 3+ of a kind, or 3+ in a row of
-## one suit (Aces high). Sets are locked away for good: they can't be lost, they count
-## toward winning, and they win ties in War. A card can also be added to a locked set.
-## Whatever isn't locked is shuffled into a new stock for the next War round.
-##
-## WINNING: lock away 30 of the 52 cards. If a War round can't start because a
-## player has no loose cards left, the game ends and whoever locked more cards wins.
+## War: higher cards win; three down/one up on ties for every tie.
+## Piece: four suits bank automatically. Three heists: trailing, leading, trailing.
+## Pairs/triples may steal a missing suit; a private, single-use shield can block it.
+## Banked sets are safe. Play alternates until all 13 ranks are banked.
+## Exhausted ties return evenly to Piece hands so every set remains obtainable.
 
 const NAMES := ["You", "Computer"]
 
+var rules_version := 5
+var shields := [0, 0]
+var shield_pool := 2
+var shields_spent := 0
+var shield_draws := [[], []] # private insertion points, indexed by rank cards remaining
+var heist_order: Array = []
+var heist_step := 0
+var pending_heist: Dictionary = {}
+var _heist_options: Array = []
+var heist_used := [false, false]
+var _server_view := false
+var _allowed_heists: Array = []
 var players: Array = []      # {name, stock, won, hand, sets: [[cards]]}
 var round_number := 1        # odd = War, even = Piece
+var unclaimed: Array = []    # exhausted ties: neither player owns these cards
 var pot: Array = []          # cards on the table in the current face-off
 var last_faceoff: Dictionary = {}  # what the UI shows for the latest flip
 var piece_done := [false, false]
@@ -41,6 +44,7 @@ func setup(names: Array, seed: int) -> void:
 		players[i % 2]["stock"].append(deck[i])
 	round_number = 1
 	winner = -1
+	_place_shields()
 	_event(-1, "Round 1: War! Each of you has 26 cards.", "round")
 
 
@@ -140,6 +144,8 @@ func _shuffle(a: Array) -> void:
 ## saved, replayed, checked against the server's copy, or sent over the internet:
 ##   {"t": "flip"}                      one face-off (War)
 ##   {"t": "flip_all"}                  flip to the end of the War round
+##   {"t": "heist", "p": 0, "rank": 9, "suit": "H"} attempt a missing-card steal
+##   {"t": "pass", "p": 0}             pass this heist
 ##   {"t": "lock", "p": 0, "ids": [..]} lock a new set (Piece)
 ##   {"t": "add", "p": 0, "set": 2, "ids": [..]} add to a locked set (Piece)
 ##   {"t": "done", "p": 0}              finished arranging (Piece)
@@ -159,12 +165,18 @@ func apply(m: Dictionary) -> bool:
 			while phase() == "war":
 				flip()
 			return true
+		"heist":
+			return p in [0, 1] and heist(p, int(m.get("rank", -1)), str(m.get("suit", "")))
+		"defend":
+			return false # Shields resolve automatically with the attack.
+		"pass":
+			return p in [0, 1] and pass_heist(p)
 		"lock":
 			return p in [0, 1] and typeof(m.get("ids")) == TYPE_ARRAY and lock_set(p, _ints(m["ids"]))
 		"add":
 			return p in [0, 1] and typeof(m.get("ids")) == TYPE_ARRAY and add_to_set(p, int(m.get("set", -1)), _ints(m["ids"]))
 		"done":
-			if p not in [0, 1] or phase() != "piece" or piece_done[p]:
+			if p not in [0, 1] or phase() != "piece" or piece_done[p] or piece_actor() >= 0:
 				return false
 			finish_piece(p)
 			return true
@@ -202,7 +214,7 @@ func flip() -> Dictionary:
 	var wars := 0
 	pot.clear()
 	for p in 2:
-		var c: Dictionary = stock(p).pop_back()
+		var c: Dictionary = _draw_war_card(p)
 		pot.append(c)
 		shown[p].append(c)
 		ups[p] = c
@@ -214,25 +226,16 @@ func flip() -> Dictionary:
 		if r0 != r1:
 			w = 0 if r0 > r1 else 1
 			break
-		# A tie. More locked sets wins it outright.
-		if sets(0).size() != sets(1).size():
-			w = 0 if sets(0).size() > sets(1).size() else 1
-			reason = "sets"
-			break
-		# War: three down, one up. Short of cards? Put down what you have, last one up.
+		# Both contribute equally; the last available card is face-up.
 		if stock(0).is_empty() or stock(1).is_empty():
-			if stock(0).is_empty() and stock(1).is_empty():
-				w = -1
-				reason = "split"
-			else:
-				w = 0 if stock(1).is_empty() else 1
-				reason = "out"
+			w = -1
+			reason = "unclaimed"
 			break
 		wars += 1
+		var n := mini(WarCards.WAR_DOWN + 1, mini(stock(0).size(), stock(1).size()))
 		for p in 2:
-			var n := mini(WarCards.WAR_DOWN + 1, stock(p).size())
 			for k in n:
-				var c: Dictionary = stock(p).pop_back()
+				var c: Dictionary = _draw_war_card(p)
 				pot.append(c)
 				shown[p].append(c)
 				ups[p] = c
@@ -240,17 +243,14 @@ func flip() -> Dictionary:
 	if w >= 0:
 		players[w]["won"].append_array(pot)
 	else:
-		# Nobody can fight on: everyone keeps their own cards.
-		for p in 2:
-			players[p]["won"].append_array(shown[p])
+		# Keep the cards accounted for, but out of both players' winnings.
+		unclaimed.append_array(pot)
 	var n := pot.size()
 	var say := func(v: int) -> String:
 		var mine := WarCards.card_name(ups[v])
 		var theirs := WarCards.card_name(ups[1 - v])
 		if w < 0:
-			return "%s vs %s: a tie, and nobody had cards left for a war. Everyone keeps their own." % [mine, theirs]
-		if reason == "sets":
-			return "%s vs %s: a tie! %s more locked sets, so %s %d cards." % [mine, theirs, _sv(w, v, "have", "has"), _svl(w, v, "take", "takes"), n]
+			return "Still tied! %d cards set aside to split in Piece. On to the Piece round." % n
 		if wars > 0:
 			return "War%s! %s vs %s. %s %d cards." % ["" if wars == 1 else " x%d" % wars, mine, theirs, _sv(w, v, "win", "wins"), n]
 		if reason == "out":
@@ -265,17 +265,205 @@ func flip() -> Dictionary:
 
 
 func _end_war_round() -> void:
+	# Undrawn shields stay in the deck; held/spent shields never return to it.
+	for p in 2:
+		shield_pool += shield_draws[p].size()
+		shield_draws[p] = []
 	for p in 2:
 		players[p]["hand"] = players[p]["won"] + players[p]["stock"]
 		players[p]["won"] = []
 		players[p]["stock"] = []
 	round_number += 1
+	_return_unclaimed()
 	piece_done = [false, false]
+	heist_used = [false, false]
 	_locked_before = locked_count(0) + locked_count(1)
-	_event(-1, func(v): return "Round %d: Piece! You won %d cards and %s won %d. Lock them away in sets." % [round_number, hand(v).size(), nm(1 - v), hand(1 - v).size()], "round")
+	_event(-1, "Round %d: Piece! Bank complete ranks, then take turns heisting." % round_number, "round")
+	for p in 2:
+		auto_bank(p)
+	_plan_heists()
 
 
 # ------------------------------------------------------------------ Piece
+
+## Complete ranks are banked as soon as the Piece round begins, or after a heist.
+func auto_bank(p: int) -> void:
+	if phase() != "piece":
+		return
+	for rank in range(2, 15):
+		var group: Array = hand(p).filter(func(c): return int(c["rank"]) == rank)
+		if WarCards.set_type(group) != "":
+			lock_set(p, group.map(func(c): return int(c["id"])))
+
+
+## Shields are secretly interleaved among rank-card draws, never exposed in public counts.
+func _return_unclaimed() -> void:
+	if unclaimed.is_empty(): return
+	var count := unclaimed.size()
+	_shuffle(unclaimed)
+	var first := 0 if hand(0).size() <= hand(1).size() else 1
+	for i in unclaimed.size(): hand((first + i) % 2).append(unclaimed[i])
+	unclaimed = []
+	_event(-1, "%d tied cards split evenly into Piece hands. Every set stays in play." % count, "reclaim")
+
+
+func _place_shields() -> void:
+	var total := stock(0).size() + stock(1).size()
+	if total == 0: return
+	while shield_pool > 0:
+		var slot := int(_rand() * total)
+		var p := 0 if slot < stock(0).size() else 1
+		var position := slot + 1 if p == 0 else slot - stock(0).size() + 1
+		shield_draws[p].append(position)
+		shield_pool -= 1
+
+
+func _draw_war_card(p: int) -> Dictionary:
+	var remaining := stock(p).size()
+	while remaining in shield_draws[p]:
+		shield_draws[p].erase(remaining)
+		shields[p] += 1
+	return stock(p).pop_back()
+
+
+func total_shields() -> int:
+	return shields[0] + shields[1] + shield_pool + shields_spent + shield_draws[0].size() + shield_draws[1].size()
+
+
+func _plan_heists() -> void:
+	if check_complete(): return
+	var first := (int(round_number / 2) - 1) % 2
+	if sets(0).size() != sets(1).size():
+		first = 0 if sets(0).size() < sets(1).size() else 1
+	heist_order = [first, 1 - first, first]
+	heist_step = 0
+	pending_heist = {}
+
+
+func piece_actor() -> int:
+	if phase() != "piece": return -1
+	if not pending_heist.is_empty(): return 1 - int(pending_heist["attacker"])
+	return int(heist_order[heist_step]) if heist_step < heist_order.size() else -1
+
+
+func heist_options(p: int, rank := -1) -> Array:
+	if p not in [0, 1] or piece_actor() != p or not pending_heist.is_empty(): return []
+	if _server_view:
+		return _heist_options.filter(func(o): return rank < 0 or int(o["rank"]) == rank) if p == 0 else []
+	var options: Array = []
+	for r in range(2, 15):
+		if rank >= 0 and rank != r: continue
+		var group := hand(p).filter(func(c): return int(c["rank"]) == r)
+		if group.size() not in [1, 2, 3]: continue
+		for suit in WarCards.SUITS:
+			if hand(opp(p)).any(func(c): return int(c["rank"]) == r and c["suit"] == suit):
+				options.append({"rank": r, "suit": suit})
+	return options
+
+
+func can_heist(p: int, rank: int) -> bool:
+	return not heist_options(p, rank).is_empty()
+
+
+func heist(p: int, rank: int, suit := "") -> bool:
+	if _server_view: return false
+	var options := heist_options(p, rank)
+	if suit != "": options = options.filter(func(o): return o["suit"] == suit)
+	if options.is_empty(): return false
+	pending_heist = {"attacker": p, "rank": rank, "suit": options[0]["suit"]}
+	var card := WarCards.card_name(pending_heist)
+	_event(p, func(v): return "%s to steal the %s." % [_sv(p, v, "try", "tries"), card], "heist_start")
+	return _resolve_heist()
+
+
+func _resolve_heist() -> bool:
+	if _server_view or pending_heist.is_empty(): return false
+	var p := 1 - int(pending_heist["attacker"])
+	var block: bool = shields[p] > 0
+	var attacker := int(pending_heist["attacker"])
+	var rank := int(pending_heist["rank"])
+	var suit := str(pending_heist["suit"])
+	var card_name := WarCards.card_name(pending_heist)
+	if block:
+		shields[p] -= 1
+		shields_spent += 1
+		_event(p, func(v): return "%s the heist with a shield!" % _sv(p, v, "block", "blocks"), "shield")
+	else:
+		for card in hand(p).duplicate():
+			if int(card["rank"]) == rank and card["suit"] == suit:
+				hand(p).erase(card)
+				hand(attacker).append(card)
+				break
+		_event(attacker, func(v): return "%s the %s." % [_sv(attacker, v, "stole", "stole"), card_name], "heist")
+		auto_bank(attacker)
+	heist_used[attacker] = true
+	pending_heist = {}
+	heist_step += 1
+	return true
+
+
+func pass_heist(p: int) -> bool:
+	if piece_actor() != p or not pending_heist.is_empty(): return false
+	heist_used[p] = true
+	heist_step += 1
+	_event(p, func(v): return "%s this heist." % _sv(p, v, "pass", "passes"), "pass")
+	return true
+
+
+## Keep existing saves playable: incomplete legacy sets return to their owner's cards.
+func _upgrade_four_suits() -> void:
+	if rules_version >= 2:
+		return
+	rules_version = 2
+	heist_used = [false, false]
+	if winner >= 0:
+		return
+	for p in 2:
+		var kept: Array = []
+		for st in sets(p):
+			if WarCards.set_type(st) != "":
+				kept.append(st)
+			else:
+				players[p]["hand" if phase() == "piece" else "stock"].append_array(st)
+		players[p]["sets"] = kept
+	_locked_before = locked_count(0) + locked_count(1)
+	quiet_pieces = 0
+	_event(-1, "New Piece rules: four suits make a set. Incomplete banked groups return to their owner's cards.", "rules")
+	if phase() == "piece":
+		piece_done = [false, false]
+		for p in 2:
+			auto_bank(p)
+
+
+func upgrade_rules() -> void:
+	if rules_version >= 5: return
+	var previous := rules_version
+	_upgrade_shields()
+	rules_version = 5
+	if winner < 0:
+		if previous < 4: _event(-1, "Keep playing War and Piece until all 13 sets are complete.", "rules")
+		if not pending_heist.is_empty(): _resolve_heist()
+		_event(-1, "Shields now block heists automatically.", "rules")
+
+
+func _upgrade_shields() -> void:
+	if rules_version >= 3: return
+	_upgrade_four_suits()
+	rules_version = 3
+	shields = [0, 0]
+	shield_pool = 2
+	shields_spent = 0
+	shield_draws = [[], []]
+	if winner >= 0: return
+	if phase() == "war":
+		_place_shields()
+	else:
+		_plan_heists()
+		for p in 2:
+			if heist_used[p]: heist_order.erase(p)
+		piece_done = [false, false]
+	_event(-1, "Piece now uses three heist turns. Two secret shields can be found during War.", "rules")
+
 
 ## Lock a new set from your hand. Returns false if those cards aren't a set.
 func lock_set(p: int, ids: Array) -> bool:
@@ -287,7 +475,8 @@ func lock_set(p: int, ids: Array) -> bool:
 	_take_from_hand(p, ids, true)
 	sets(p).append(WarCards.sort_hand(cards))
 	var what := WarCards.describe_set(cards)
-	_event(p, func(v): return "%s locked away %s." % [_who(p, v), what], "lock")
+	_event(p, func(v): return "%s banked %s." % [_who(p, v), what], "lock")
+	check_complete()
 	return true
 
 
@@ -332,7 +521,7 @@ func _take_from_hand(p: int, ids: Array, remove: bool) -> Array:
 ## Finish your Piece round. When both are done, the game checks for a winner and
 ## starts the next War round with everyone's loose cards.
 func finish_piece(p: int) -> void:
-	if phase() != "piece":
+	if phase() != "piece" or piece_actor() >= 0:
 		return
 	piece_done[p] = true
 	if piece_done[0] and piece_done[1]:
@@ -340,60 +529,112 @@ func finish_piece(p: int) -> void:
 
 
 func _start_war_round() -> void:
-	var best := 0 if locked_count(0) >= locked_count(1) else 1
-	if locked_count(best) >= WarCards.WIN_LOCKED:
-		if locked_count(0) == locked_count(1):
-			_end_game(2, "You both locked away %d cards!" % locked_count(0))
-		else:
-			var lc := locked_count(best)
-			_end_game(best, func(v): return "%s locked away %d cards!" % [_who(best, v), lc])
+	# Also reclaim reserves carried by older saved games.
+	_return_unclaimed()
+	for p in 2: auto_bank(p)
+	if sets(0).size() + sets(1).size() == 13:
+		var a := sets(0).size()
+		var b := sets(1).size()
+		_end_game(0 if a > b else (1 if b > a else 2), "All 13 sets are complete!")
 		return
-	quiet_pieces = quiet_pieces + 1 if locked_count(0) + locked_count(1) == _locked_before else 0
-	if quiet_pieces >= 2:
-		var a0 := locked_count(0)
-		var b0 := locked_count(1)
-		_end_game(0 if a0 > b0 else (1 if b0 > a0 else 2), "No new sets for two Piece rounds in a row, so the game ends.")
+	if sets(0).size() + sets(1).size() == 12:
+		_final_showdown()
 		return
+	quiet_pieces = 0
+	# A fresh deal of loose cards keeps both players in War if one deck is empty.
 	if hand(0).is_empty() or hand(1).is_empty():
-		var a := locked_count(0)
-		var b := locked_count(1)
-		var w := 0 if a > b else (1 if b > a else 2)
-		var empty := 0 if hand(0).is_empty() else 1
-		_end_game(w, func(v): return "%s no loose cards left for a War round." % _sv(empty, v, "have", "has"))
-		return
+		var loose: Array = hand(0) + hand(1)
+		_shuffle(loose)
+		players[0]["hand"] = []
+		players[1]["hand"] = []
+		for i in loose.size(): hand(i % 2).append(loose[i])
+		_event(-1, "The remaining loose cards are dealt evenly for the next War.", "redeal")
 	round_number += 1
 	for p in 2:
 		var s: Array = hand(p).duplicate()
 		_shuffle(s)
 		players[p]["stock"] = s
 		players[p]["hand"] = []
+	_place_shields()
 	_event(-1, func(v): return "Round %d: War! You have %d loose cards and %s has %d." % [round_number, stock(v).size(), nm(1 - v), stock(1 - v).size()], "round")
+
+
+func _final_showdown() -> void:
+	var deck := WarCards.build_deck()
+	_shuffle(deck)
+	var draws: Array = [[], []]
+	var w := -1
+	var totals := [0, 0]
+	while w < 0:
+		for i in 5:
+			if deck.size() < 2:
+				deck = WarCards.build_deck()
+				_shuffle(deck)
+			for p in 2:
+				var card: Dictionary = deck.pop_back()
+				draws[p].append(card)
+				totals[p] += int(card.rank)
+		if totals[0] != totals[1]: w = 0 if totals[0] > totals[1] else 1
+	var final_set: Array = hand(0) + hand(1)
+	players[0]["hand"] = []
+	players[1]["hand"] = []
+	sets(w).append(WarCards.sort_hand(final_set))
+	last_faceoff = {"cards": draws, "ups": [draws[0][-1], draws[1][-1]], "winner": w, "wars": int(draws[0].size() / 5) - 1, "reason": "final_showdown", "pot": 4}
+	_event(w, func(v): return "%s the final showdown and completed the last set!" % _sv(w, v, "win", "wins"), "showdown")
+	_end_game(0 if sets(0).size() > sets(1).size() else 1, "All 13 sets are complete!")
+
+
+func check_complete() -> bool:
+	if winner >= 0: return true
+	if sets(0).size() + sets(1).size() != 13: return false
+	heist_order = []
+	pending_heist = {}
+	_end_game(0 if sets(0).size() > sets(1).size() else 1, "All 13 sets are complete!")
+	return true
 
 
 func _end_game(w: int, why) -> void:
 	winner = w
-	var a := locked_count(0)
-	var b := locked_count(1)
+	var a := sets(0).size()
+	var b := sets(1).size()
 	var reason := func(v: int) -> String: return why.call(v) if why is Callable else str(why)
 	if w == 2:
-		_event(-1, func(v): return "%s It's a draw: %d locked cards each." % [reason.call(v), a], "over")
+		_event(-1, func(v): return "%s It's a draw: %d banked sets each." % [reason.call(v), a], "over")
 	else:
 		var mine := a if w == 0 else b
 		var theirs := b if w == 0 else a
-		_event(w, func(v): return "%s %s with %d locked cards to %d." % [reason.call(v), _sv(w, v, "win", "wins"), mine, theirs], "over")
+		_event(w, func(v): return "%s %s with %d banked sets to %d." % [reason.call(v), _sv(w, v, "win", "wins"), mine, theirs], "over")
 
 
 # ------------------------------------------------------------------ saving
 
 func to_dict() -> Dictionary:
-	return {"players": players.duplicate(true), "round": round_number, "piece_done": piece_done.duplicate(),
+	return {"shields": shields.duplicate(), "shield_pool": shield_pool, "shields_spent": shields_spent,
+		"shield_draws": shield_draws.duplicate(true), "heist_order": heist_order.duplicate(), "heist_step": heist_step,
+		"pending_heist": pending_heist.duplicate(true), "rules_version": rules_version, "heist_used": heist_used.duplicate(), "players": players.duplicate(true), "round": round_number, "piece_done": piece_done.duplicate(),
 		"winner": winner, "quiet": quiet_pieces, "locked_before": _locked_before, "events": events.duplicate(true), "rng": rng,
-		"last_faceoff": last_faceoff.duplicate(true)}
+		"last_faceoff": last_faceoff.duplicate(true), "unclaimed": unclaimed.duplicate(true)}
 
 
 static func from_dict(d: Dictionary) -> WarState:
 	var g := WarState.new()
 	g.players = d["players"].duplicate(true)
+	g.rules_version = int(d.get("rules_version", 1))
+	g.shields = d.get("shields", [0, 0]).map(func(x): return int(x))
+	g.shield_pool = int(d.get("shield_pool", 0))
+	g.shields_spent = int(d.get("shields_spent", 0))
+	g.shield_draws = d.get("shield_draws", [[], []]).map(func(a): return a.map(func(x): return int(x)))
+	g.heist_order = d.get("heist_order", []).map(func(x): return int(x))
+	g.heist_step = int(d.get("heist_step", 0))
+	g.pending_heist = d.get("pending_heist", {}).duplicate(true)
+	if not g.pending_heist.is_empty():
+		g.pending_heist["attacker"] = int(g.pending_heist["attacker"])
+		g.pending_heist["rank"] = int(g.pending_heist["rank"])
+	g._heist_options = d.get("heist_options", []).duplicate(true)
+	g.heist_used = d.get("heist_used", [false, false]).map(func(x): return bool(x))
+	g._server_view = d.has("allowed_heists")
+	g._allowed_heists = d.get("allowed_heists", []).map(func(x): return int(x))
+	g.unclaimed = d.get("unclaimed", []).map(_card)
 	g.round_number = int(d["round"])
 	g.piece_done = d["piece_done"].duplicate()
 	g.winner = int(d["winner"])
@@ -417,6 +658,7 @@ static func from_dict(d: Dictionary) -> WarState:
 	if typeof(lf) == TYPE_DICTIONARY and lf.has("ups"):
 		g.last_faceoff = {"cards": lf["cards"].map(func(a): return a.map(_card)), "ups": lf["ups"].map(func(c): return null if c == null else _card(c)),
 			"winner": int(lf["winner"]), "wars": int(lf["wars"]), "reason": str(lf["reason"]), "pot": int(lf["pot"])}
+	g.upgrade_rules()
 	return g
 
 
@@ -425,7 +667,7 @@ static func _card(c) -> Dictionary:
 
 
 func total_cards() -> int:
-	var n := pot.size()
+	var n := pot.size() + unclaimed.size()
 	for p in 2:
 		n += loose_count(p) + locked_count(p)
 	return n

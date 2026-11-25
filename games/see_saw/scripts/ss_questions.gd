@@ -320,7 +320,7 @@ static func _extreme(cards: Array, rng: RandomNumberGenerator) -> Dictionary:
 			opts.append(x)
 	if opts.size() < 2:
 		return {}
-	var text := "What was the highest card? (Aces are high)" if high else "What was the lowest card?"
+	var text := "What was the highest card?" if high else "What was the lowest card?"
 	var labels: Array = opts.map(func(v): return SSCards.rank_name(v))
 	return _q(text, "rank", opts, 0, {"high": high}, labels)
 

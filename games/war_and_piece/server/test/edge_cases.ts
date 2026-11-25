@@ -1,9 +1,10 @@
 // The war-and-piece function against the in-memory stand-in: invites, hidden cards,
-// who may move, simultaneous Piece rounds, a whole game to the end, matchmaking, resign.
+// who may move, ordered attacks and defenses, a whole game to the end, matchmaking, resign.
 // Run: node --experimental-strip-types run_server.ts & then node --experimental-strip-types edge_cases.ts
 import { signup, call, kinds } from "./api.ts";
 
 let fails = 0;
+let heists = 0;
 const check = (ok: boolean, what: string) => { console.log((ok ? "ok   " : "FAIL ") + what); if (!ok) fails++; };
 
 const ana = await signup("Ana", "ana@example.com");
@@ -44,34 +45,44 @@ check((await call(ana, "act", { game_id: gid, move: { t: "done" } })).status ===
 r = await call(ben, "act", { game_id: gid, move: { t: "flip_all" } });
 check(r.data.view.round === 2, "flip to the end of the War round");
 
-// ---- Piece: simultaneous; you only move for yourself
+// ---- Piece: only the authenticated attacker/defender may act.
 a = (await call(ana, "state", { game_id: gid })).data;
 b = (await call(ben, "state", { game_id: gid })).data;
-check(a.view.players[1].hand.every((c: any) => c.id === 0) && a.view.players[0].hand.every((c: any) => c.id > 0), "your winnings are visible to you, theirs aren't");
-const benHandIds = b.view.players[0].hand.map((c: any) => c.id);
-const sneaky = await call(ana, "act", { game_id: gid, move: { t: "lock", p: 1, ids: benHandIds.slice(0, 3) } });
-check(sneaky.status === 409, "can't lock the other player's cards (p is ignored)");
-for (const ids of kinds(a.view.players[0].hand)) await call(ana, "act", { game_id: gid, move: { t: "lock", ids } });
-r = await call(ana, "act", { game_id: gid, move: { t: "done" } });
-check(r.data.view.piece_done[0] === true && r.data.my_turn === false, "Ana done: now waiting for Ben");
-check((await call(ben, "state", { game_id: gid })).data.my_turn === true, "Ben still arranging");
-r = await call(ben, "act", { game_id: gid, move: { t: "done" } });
-check(r.data.view.round === 3 || r.data.status === "finished", "both done: next War round");
-
-// ---- play the rest out
-let safety = 0;
-while (safety++ < 400) {
-  const s = (await call(ana, "state", { game_id: gid })).data;
-  if (s.status !== "active") break;
-  const round = s.view.round;
-  if (round % 2 === 1) { await call(safety % 2 ? ana : ben, "act", { game_id: gid, move: { t: safety % 3 ? "flip" : "flip_all" } }); continue; }
-  for (const tok of [ben, ana]) {
-    const me = (await call(tok, "state", { game_id: gid })).data;
-    if (me.view.round !== round || me.view.piece_done[0]) continue;
-    for (const ids of kinds(me.view.players[0].hand)) await call(tok, "act", { game_id: gid, move: { t: "lock", ids } });
-    await call(tok, "act", { game_id: gid, move: { t: "done" } });
+check(a.my_turn !== b.my_turn, "Piece has exactly one active player");
+check(a.view.players[1].hand.every((c: any) => c.id === 0), "opponent hand is hidden");
+check(a.view.shields[1] === -1 && b.view.shields[1] === -1, "opponent shields are hidden");
+check(!("shield_draws" in a.view) && !("shield_pool" in a.view), "private shield metadata is absent");
+check((await call(ana, "act", {game_id:gid, move:{t:"done"}})).status === 409, "cannot skip unfinished heist turns");
+let safety = 0, defenses = 0;
+while (safety++ < 500) {
+  const state = (await call(ana, "state", {game_id:gid})).data;
+  if (state.status !== "active") break;
+  if (state.view.round % 2) {
+    await call(ana, "act", {game_id:gid, move:{t:"flip_all"}}); continue;
+  }
+  for (const [tok, other] of [[ana,ben],[ben,ana]]) {
+    const me = (await call(tok,"state",{game_id:gid})).data;
+    if (me.status !== "active" || me.view.round % 2 || me.view.piece_done[0]) continue;
+    const v = me.view, pending = v.pending_heist;
+    const actor = Object.keys(pending).length ? 1-pending.attacker : (v.heist_order[v.heist_step] ?? -1);
+    if (actor > 0) continue;
+    let move: any;
+    if (Object.keys(pending).length) {
+      check((await call(other,"act",{game_id:gid,move:{t:"defend",p:1,block:false}})).status === 409, "attacker cannot impersonate defender");
+      if (!v.shields[0]) check((await call(tok,"act",{game_id:gid,move:{t:"defend",block:true}})).status === 409, "cannot block without a shield");
+      move={t:"defend",block:v.shields[0]>0}; defenses++;
+    } else if (actor < 0) move={t:"done"};
+    else {
+      check((await call(other,"act",{game_id:gid,move:{t:"pass",p:1}})).status === 409, "cannot impersonate attacker");
+      move=v.heist_options.length ? {t:"heist",...v.heist_options[0]} : {t:"pass"};
+      if(move.t === "heist") heists++;
+    }
+    const result=await call(tok,"act",{game_id:gid,move:{...move,p:1}});
+    check(result.status === 200, "authenticated " + move.t + " (spoofed seat ignored)");
+    if(move.t==="heist") check(Object.keys(result.data.view.pending_heist).length===0,"heist resolves atomically");
   }
 }
+check(defenses === 0, "shields resolve without a defense turn");
 a = (await call(ana, "state", { game_id: gid })).data;
 b = (await call(ben, "state", { game_id: gid })).data;
 check(a.status === "finished" && [0, 1, 2].includes(a.view.winner), "game finished: " + a.view.events.at(-1).text);
@@ -90,5 +101,6 @@ await call(cy, "resign", { game_id: m.data.game_id });
 const after = (await call(dee, "state", { game_id: m.data.game_id })).data;
 check(after.status === "finished" && after.view.winner === 0 && after.view.events.at(-1).text === "Cy left the game.", "resign: the other player wins");
 
+check(heists > 0, "played authenticated heist moves");
 console.log(fails ? `${fails} FAILED` : "ALL OK");
 process.exit(fails ? 1 : 0);

@@ -12,6 +12,8 @@ static var resume_next := false
 
 static func save(g: WarState) -> void:
 	if g.winner >= 0:
+		if g.winner == 0:
+			preload("res://games/war_and_piece/scripts/war_opponents.gd").record_win(g.nm(1))
 		clear()
 		return
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
@@ -33,6 +35,13 @@ static func load_game() -> WarState:
 	var g := WarState.from_dict(data["state"])
 	if g.winner >= 0 or g.total_cards() != WarCards.DECK_SIZE:
 		return null
+	var old_name := g.nm(1)
+	var new_name: String = preload("res://games/war_and_piece/scripts/war_opponents.gd").display_name(old_name)
+	if old_name != new_name:
+		g.players[1]["name"] = new_name
+		for event in g.events:
+			for key in ["text", "text1"]:
+				event[key] = str(event.get(key, "")).replace(old_name, new_name)
 	return g
 
 
@@ -45,6 +54,6 @@ static func clear() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
 
 
-## One line for the Continue button: "Round 5 · War · locked 12 to 9".
+## One line for the Continue button: "Round 5 · War · sets 3 to 2".
 static func describe(g: WarState) -> String:
-	return "Round %d · %s · locked %d to %d" % [g.round_number, "War" if g.phase() == "war" else "Piece", g.locked_count(0), g.locked_count(1)]
+	return "Round %d · %s · sets %d to %d" % [g.round_number, "War" if g.phase() == "war" else "Piece", g.sets(0).size(), g.sets(1).size()]

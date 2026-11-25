@@ -11,7 +11,9 @@ const TAG_H := 30.0                            # space for the 1st/2nd/3rd tag u
 var g: SeeSaw
 var _layer: Control        # everything that changes between steps
 var _level_lbl: Label
-var _hearts: Hearts
+var _hearts: BalanceMeter
+var _score_lbl: Label
+var _answer_locked := false
 var _bar_bg: Panel
 var _bar: Panel
 var _secs: Label
@@ -34,20 +36,24 @@ func _ready() -> void:
 	var lv := OS.get_environment("SEESAW_LEVEL")
 	g.setup(int(s) if s != "" else randi(), int(lv) if lv != "" else 1)
 	var back := UI.button("‹", Vector2(16, 36), Vector2(64, 64), DARK, 40)
-	back.pressed.connect(func(): get_tree().change_scene_to_file("res://games/see_saw/scenes/main.tscn"))
+	back.pressed.connect(func():
+		SSBest.submit(g.score())
+		get_tree().change_scene_to_file("res://games/see_saw/scenes/main.tscn"))
 	add_child(back)
 	_level_lbl = UI.label("", Vector2(100, 36), Vector2(360, 64), 38, UI.ACCENT)
 	_level_lbl.add_theme_font_override("font", UI.font(900))
 	add_child(_level_lbl)
-	_hearts = Hearts.new()
-	_hearts.position = Vector2(500, 36)
-	_hearts.size = Vector2(204, 64)
+	_hearts = BalanceMeter.new()
+	_hearts.position = Vector2(490, 12)
+	_hearts.size = Vector2(214, 104)
 	add_child(_hearts)
-	_bar_bg = UI.panel(Vector2(24, 124), Vector2(600, 18), Color(0, 0, 0, 0.3), 9)
+	_score_lbl = UI.label("", Vector2(100, 95), Vector2(390, 40), 23, UI.TEXT)
+	add_child(_score_lbl)
+	_bar_bg = UI.panel(Vector2(24, 156), Vector2(600, 18), Color(0, 0, 0, 0.3), 9)
 	add_child(_bar_bg)
-	_bar = UI.panel(Vector2(24, 124), Vector2(600, 18), UI.ACCENT, 9)
+	_bar = UI.panel(Vector2(24, 156), Vector2(600, 18), UI.ACCENT, 9)
 	add_child(_bar)
-	_secs = UI.label("", Vector2(632, 108), Vector2(72, 50), 30, UI.ACCENT, HORIZONTAL_ALIGNMENT_RIGHT)
+	_secs = UI.label("", Vector2(632, 140), Vector2(72, 50), 30, UI.ACCENT, HORIZONTAL_ALIGNMENT_RIGHT)
 	_secs.add_theme_font_override("font", UI.font(900))
 	add_child(_secs)
 	_build_ready()
@@ -65,7 +71,9 @@ func _process(delta: float) -> void:
 
 
 func _sync_top() -> void:
-	_level_lbl.text = "Level %d" % g.level
+	_level_lbl.text = "Memory bonus" if g.bonus_active else "Level %d" % g.level
+	_level_lbl.add_theme_font_size_override("font_size", 32)
+	_score_lbl.text = "%d points · Streak %d" % [g.points, g.streak]
 	_hearts.lives = g.lives
 	var showing := g.phase == "show"
 	_bar_bg.visible = showing
@@ -127,6 +135,12 @@ func _build_ready() -> void:
 	_txt(tip, Vector2(40, 930), Vector2(640, 50), 28, UI.TEXT, 700)
 	var go := _btn("Go!", Vector2(160, 1020), Vector2(400, 110), UI.ACCENT, 44)
 	go.pressed.connect(_go)
+	if g.lives < SeeSaw.START_LIVES:
+		var restore := _btn("Restore a weight · 250 points", Vector2(100, 1150), Vector2(520, 72), DARK, 25)
+		restore.add_theme_color_override("font_color", UI.TEXT)
+		restore.disabled = not g.can_restore()
+		restore.pressed.connect(func():
+			if g.restore_counterweight(): _build_ready())
 
 
 ## Flip the cards face up and start the clock.
@@ -152,13 +166,18 @@ func _time_up() -> void:
 
 
 func _build_question() -> void:
+	_answer_locked = false
 	_new_layer()
 	_sync_top()
 	_lay_out(g.cards, ASK_RECT, true, true)
 	var q := g.question()
-	var count := "Question %d of %d" % [g.q_index + 1, g.questions.size()]
+	if q["style"] == "character":
+		q["labels"] = q["options"].map(func(rank): return Profile.face_name(SSCards.CHARACTERS[rank]["role"]))
+	var count := "Remember Level %d? +50 · No weight at risk" % g.bonus_level if g.bonus_active else "Question %d of %d" % [g.q_index + 1, g.questions.size()]
 	_txt(count, Vector2(20, 512), Vector2(680, 40), 24, UI.MUTED, 700)
-	_txt(q["text"], Vector2(30, 552), Vector2(660, 110), 38, UI.TEXT, 900)
+	_txt(q["text"], Vector2(30, 552), Vector2(660, 96 if q.has("high") else 110), 38, UI.TEXT, 900)
+	if q.has("high"):
+		_txt("Ace is highest", Vector2(30, 652), Vector2(660, 30), 22, UI.MUTED, 700)
 	_build_options(q)
 
 
@@ -215,15 +234,26 @@ func _dress_option(b: Button, q: Dictionary, i: int) -> void:
 			b.add_child(icon)
 			_on_button(b, lab, Vector2(0, sz.y - 70), Vector2(sz.x, 56), 30)
 		"character":
-			var tr := TextureRect.new()
-			tr.texture = SSCardView.art(SSCards.CHARACTERS[val]["role"])
-			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			tr.position = Vector2(sz.x / 2 - 70, 12)
-			tr.size = Vector2(140, 140)
-			tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			b.add_child(tr)
-			_on_button(b, lab, Vector2(0, sz.y - 62), Vector2(sz.x, 52), 32)
+			var role: String = SSCards.CHARACTERS[val]["role"]
+			var face: Dictionary = Profile.slot_face(role)
+			var portrait: Control
+			if face.is_empty():
+				var tr := TextureRect.new()
+				tr.texture = SSCardView.art(role)
+				tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				portrait = tr
+			else:
+				var avatar := AvatarView.new()
+				avatar.role = role
+				avatar.data = face
+				portrait = avatar
+			portrait.position = Vector2(sz.x / 2 - 70, 12)
+			portrait.size = Vector2(140, 140)
+			portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(portrait)
+			_on_button(b, Profile.face_name(role), Vector2(0, sz.y - 62), Vector2(sz.x, 52), 28)
+
 		"color":
 			var icon := SuitIcon.new()
 			icon.pair = ["H", "D"] if val == "red" else ["S", "C"]
@@ -242,19 +272,27 @@ func _on_button(b: Button, text: String, pos: Vector2, sz: Vector2, fs: int) -> 
 
 
 func _pick(i: int) -> void:
-	if g.phase != "ask":
+	if g.phase != "ask" or _answer_locked:
 		return
+	_answer_locked = true
 	var q := g.question()
 	var res := g.answer(i)
 	_token += 1
 	_mark(i, int(res["answer"]))
-	_hearts.lives = g.lives
+	_sync_top()
 	Sfx.play("set_complete" if res["cleared"] else ("tap" if res["correct"] else "lose"))
-	if res["correct"] and not res["round_over"]:
-		_txt("Right!", Vector2(20, 1170), Vector2(680, 60), 40, GREEN, 900)
+	if res.get("bonus", false):
+		for v in _views:
+			v.face_down = false
+			v.queue_redraw()
+		_txt(("Bonus! +%d points" % res["points"]) if res["correct"] else "No points this time. Your weights are safe!", Vector2(20, 1132), Vector2(680, 50), 27, GREEN if res["correct"] else UI.TEXT)
+		var next := _btn("On to Level %d" % g.level, Vector2(160, 1186), Vector2(400, 80), UI.ACCENT, 30)
+		next.pressed.connect(_advance)
+	elif res["correct"] and not res["round_over"]:
+		_txt("+%d points%s" % [res["points"], " · Streak bonus!" if res["streak_bonus"] else ""], Vector2(20, 1170), Vector2(680, 60), 40, GREEN, 900)
 		_later(0.7, _build_question)
 	elif res["cleared"]:
-		_txt("Level %d cleared!" % (g.level - 1), Vector2(20, 1170), Vector2(680, 60), 40, GREEN, 900)
+		_txt("Level cleared! +%d points" % res["points"], Vector2(20, 1170), Vector2(680, 60), 40, GREEN, 900)
 		_later(1.1, _advance)
 	else:
 		# Wrong: show the cards again so you can see what you missed.
@@ -268,7 +306,7 @@ func _pick(i: int) -> void:
 				if SSCards.same(v.card, q["card"]):
 					v.glow = true
 		_txt("Not quite. " + SSQuestions.reveal(q), Vector2(20, 1132), Vector2(680, 50), 28, WRONG, 800)
-		var label := "See your score" if res["game_over"] else "Try Level %d again" % g.level
+		var label := "You landed · Continue" if res["game_over"] else "Try Level %d again" % g.level
 		var b := _btn(label, Vector2(160, 1186), Vector2(400, 80), UI.ACCENT, 30)
 		b.pressed.connect(_advance)
 
@@ -279,7 +317,8 @@ func _advance() -> void:
 		_game_over()
 	elif g.phase == "between":
 		g.next_round()
-		_build_ready()
+		if g.bonus_active: _build_question()
+		else: _build_ready()
 
 
 func _mark(picked: int, right: int) -> void:
@@ -355,14 +394,14 @@ func _game_over() -> void:
 	_new_layer()
 	_sync_top()
 	var score := g.score()
-	new_best = SSBest.submit(score)
+	new_best = score > SSBest.get_best()
 	var best := SSBest.get_best()
 	_over = _layer
 	_layer.add_child(UI.panel(Vector2(40, 220), Vector2(640, 840), UI.PANEL, 24))
-	_txt("Game over", Vector2(40, 260), Vector2(640, 80), 56, UI.ACCENT, 900)
-	_txt("You reached", Vector2(40, 380), Vector2(640, 50), 32, UI.MUTED, 700)
-	_txt("Level %d" % score, Vector2(40, 430), Vector2(640, 130), 96, UI.TEXT, 900)
-	var cleared := score - 1
+	_txt("You landed!", Vector2(40, 260), Vector2(640, 80), 56, UI.ACCENT, 900)
+	_txt("Your score", Vector2(40, 380), Vector2(640, 50), 32, UI.MUTED, 700)
+	_txt("%d" % score, Vector2(40, 430), Vector2(640, 130), 96, UI.TEXT, 900)
+	var cleared := g.level - 1
 	_txt("%d level%s cleared" % [cleared, "" if cleared == 1 else "s"], Vector2(40, 560), Vector2(640, 44), 28, UI.MUTED, 700)
 	if new_best:
 		Sfx.play("grand")
@@ -371,31 +410,63 @@ func _game_over() -> void:
 	if new_best:
 		_txt("New best!", Vector2(40, 640), Vector2(640, 70), 46, GREEN, 900)
 	else:
-		_txt("Best: Level %d" % best, Vector2(40, 640), Vector2(640, 70), 36, UI.ACCENT, 800)
-	var again := _btn("Play again", Vector2(160, 790), Vector2(400, 104), UI.ACCENT, 38)
-	again.pressed.connect(func(): get_tree().reload_current_scene())
-	var menu := _btn("Menu", Vector2(160, 920), Vector2(400, 84), DARK, 32)
+		_txt("Best: %d points" % maxi(best, score), Vector2(40, 640), Vector2(640, 70), 36, UI.ACCENT, 800)
+	if g.can_restore():
+		var restore := _btn("Back up! · Spend 250 points", Vector2(80, 790), Vector2(560, 84), GREEN, 28)
+		restore.pressed.connect(func():
+			if g.restore_counterweight():
+				_over = null
+				_build_ready())
+	var again := _btn("Play again", Vector2(160, 900), Vector2(400, 104), UI.ACCENT, 38)
+	again.pressed.connect(func():
+		SSBest.submit(g.score())
+		get_tree().reload_current_scene())
+	var menu := _btn("Menu", Vector2(160, 1020), Vector2(400, 84), DARK, 32)
 	menu.add_theme_color_override("font_color", Color.WHITE)
-	menu.pressed.connect(func(): get_tree().change_scene_to_file("res://games/see_saw/scenes/main.tscn"))
+	menu.pressed.connect(func():
+		SSBest.submit(g.score())
+		get_tree().change_scene_to_file("res://games/see_saw/scenes/main.tscn"))
 
 
 # ------------------------------------------------------------------ little drawings
 
-## Lives as hearts: full ones red, lost ones as outlines.
-class Hearts extends Control:
+## Counterweights keep the player's side of the seesaw in the air.
+class BalanceMeter extends Control:
+	var displayed := 3.0
+	var avatar: AvatarView
+	var motion: Tween
 	var lives := 3:
 		set(v):
 			lives = v
-			queue_redraw()
+			if not is_inside_tree(): return
+			if motion: motion.kill()
+			motion = create_tween()
+			motion.tween_method(_set_balance, displayed, float(v), 0.45).set_trans(Tween.TRANS_SINE)
 
-	func _init() -> void:
+	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		avatar = AvatarView.new()
+		avatar.role = Profile.me_slot
+		avatar.data = Profile.face_or_default(Profile.me_slot)
+		avatar.size = Vector2(34, 34)
+		avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(avatar)
+		_set_balance(float(lives))
+
+	func _set_balance(value: float) -> void:
+		displayed = value
+		if is_instance_valid(avatar): avatar.position = Vector2(12, 61 - (displayed - 1.5) * 15 - 34)
+		queue_redraw()
 
 	func _draw() -> void:
-		for i in SeeSaw.START_LIVES:
-			var c := Vector2(size.x - 34 - (SeeSaw.START_LIVES - 1 - i) * 64, size.y / 2 + 2)
-			var full := i < lives
-			SSCardView.suit_on(self, "H", c, 24, Color("#e0525d") if full else Color(1, 1, 1, 0.16))
+		var tilt := (displayed - 1.5) * 15
+		draw_line(Vector2(4, 92), Vector2(210, 92), Color("#778294"), 2)
+		draw_colored_polygon(PackedVector2Array([Vector2(107, 57), Vector2(87, 91), Vector2(127, 91)]), Color("#3fb56b"))
+		draw_line(Vector2(24, 61 - tilt), Vector2(190, 61 + tilt), Color("#7cdbca"), 7, true)
+		for i in lives:
+			var x := 151 + i * 15
+			var y := 61 + tilt * (float(x - 107) / 83.0) - 13
+			draw_style_box(UI.box(UI.ACCENT, 3), Rect2(x, y, 12, 12))
 
 
 ## A big suit shape (or a red/black pair) for option buttons.

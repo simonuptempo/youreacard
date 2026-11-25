@@ -51,6 +51,7 @@ func _ready() -> void:
 	var edit := UI.button("My Cards", Vector2(332, 316), Vector2(344, 72), UI.ACCENT, 28)
 	edit.pressed.connect(func():
 		Profile.edit_slot = Profile.me_slot
+		Profile.voice_game = "gem_heist"
 		Profile.creator_return = "settings"
 		Profile.go("my_cards"))
 	add_child(edit)

@@ -14,7 +14,11 @@ const GOLD := Color("#ffc83d")
 static var _art := {}
 
 var card: Dictionary = {}
-var face_down := false
+var face_down := false:
+	set(v):
+		face_down = v
+		_sync_avatar()
+		queue_redraw()
 var selected := false:
 	set(v):
 		selected = v
@@ -80,7 +84,7 @@ func shown_name() -> String:
 
 func _portrait_box() -> Rect2:
 	var w := size.x
-	return Rect2(w * 0.25, size.y * 0.12, w * 0.5, w * 0.5)
+	return Rect2(w * 0.13, size.y * 0.23, w * 0.74, w * 0.74)
 
 
 ## Custom faces are drawn by an AvatarView (a cartoon from a photo, or one you built).
@@ -159,13 +163,7 @@ func _draw_back(r: Rect2, rad: int) -> void:
 			x += step
 		y += step * 0.5
 		row += 1
-	if r.size.x >= 90:
-		var f := UI.font(900)
-		var fs := int(r.size.x * 0.2)
-		var cen := r.get_center()
-		draw_circle(cen, r.size.x * 0.26, BACK)
-		draw_arc(cen, r.size.x * 0.26, 0, TAU, 48, GOLD, maxf(2, r.size.x * 0.02), true)
-		draw_string(f, Vector2(r.position.x, cen.y + fs * 0.36), "W&P", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fs, GOLD)
+	CardGameEmblem.draw_mark(self, Rect2(r.size.x * 0.08, r.size.y * 0.24, r.size.x * 0.84, r.size.y * 0.52), "war_and_piece")
 
 
 func _draw_face(r: Rect2, rad: int) -> void:
@@ -208,9 +206,6 @@ func _draw_face(r: Rect2, rad: int) -> void:
 	if who.length() > 9:
 		ns = int(ns * 9.0 / who.length())
 	draw_string(UI.font(900), Vector2(0, box.end.y + w * 0.05 + int(w * 0.11)), who, HORIZONTAL_ALIGNMENT_CENTER, w, ns, col)
-	if w >= 160:
-		var ts := int(w * 0.06)
-		draw_string(UI.font(700), Vector2(w * 0.1, box.end.y + w * 0.08 + int(w * 0.11) + ts * 1.1), ch["title"], HORIZONTAL_ALIGNMENT_CENTER, w * 0.8, ts, Color(col, 0.75))
 
 
 func _draw_pips(r: Rect2, col: Color) -> void:

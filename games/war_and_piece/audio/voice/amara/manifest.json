@@ -1,0 +1,192 @@
+{
+  "character": "Amara",
+  "clip_count": 20,
+  "notes": [
+    "Gameplay categories assigned from supplied filenames; filenames are not verified transcripts.",
+    "Shield recordings share the reaction pool with Dev.",
+    "Playback obeys voice settings, cooldown, non-overlap and recent-clip suppression.",
+    "Speech captions follow the recording prompts; Juno travel wording confirmed by the user."
+  ],
+  "clips": [
+    {
+      "file": "amara_just_enough_to_take_the_pair.mp3",
+      "event": "deal_win",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "2d1745e842aeefb0e6fe0a30005c29228fa7164777920a082ec1d1782e3aeb1a",
+      "text": "Just enough to take the pair."
+    },
+    {
+      "file": "amara_come_on_over_cards.mp3",
+      "event": "deal_win",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "b884bc3df6924b2e4b9384d7dd79ad9358332bbdcf291a27adca1bb9a6905797",
+      "text": "Come on over cards."
+    },
+    {
+      "file": "amara_oh_weve_got_a_battle_brewing.mp3",
+      "event": "war_start",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "39ade66ef96a966f2e0d7b1aaea13cc09ff050782dbc1ec465318aeb5519dec6",
+      "text": "Oh we've got a battle brewing."
+    },
+    {
+      "file": "amara_same_rank_bigger_stakes.mp3",
+      "event": "war_start",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "2239deb0aa5ccbedfb926af23c00fbab3f844f7efb2de1d82e4d343aeb25ea5a",
+      "text": "Same rank bigger stakes."
+    },
+    {
+      "file": "amara_hold_on_theres_another_chapter.mp3",
+      "event": "war_again",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "5074ba52d4d879017afa24b170ae239e5d50c00bb93181a085a1704ac2a65bc3",
+      "text": "Hold on there's another chapter."
+    },
+    {
+      "file": "amara_again_these_cards_are_stubborn.mp3",
+      "event": "war_again",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "8e730cb73ce50938a10e9c3e8ef71d70e286cf2ccec018cdc9f8e03f32fc3749",
+      "text": "Again these cards are stubborn."
+    },
+    {
+      "file": "amara_whew_i_can_breathe_again.mp3",
+      "event": "war_win",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "21b6dfdaedd19867f6e76ed32912677c6e50258a7f6413b5f2e1f14938345f68",
+      "text": "Whew I can breathe again."
+    },
+    {
+      "file": "amara_that_whole_pile_lovely.mp3",
+      "event": "war_win",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "6807a17f60040cf9d91ddaacd08632cdfc6f73ca97018915d974ea3d8ba51531",
+      "text": "That whole pile lovely."
+    },
+    {
+      "file": "amara_i_hope_you_brought_extra_luck.mp3",
+      "event": "game_start",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "252a3bc676bb23030a5ce8e1aae61d7935f958d8fc602d972e7b0f6762bcbe52",
+      "text": "I hope you brought extra luck."
+    },
+    {
+      "file": "amara_special_delivery_straight_to_me.mp3",
+      "event": "heist_success",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "74dc2a996562c4ad4d73a7d515893401ede09ec7c27158aa09ef4a3aed1c27f3",
+      "text": "Special delivery straight to me."
+    },
+    {
+      "file": "amara_come_meet_your_new_neighbors.mp3",
+      "event": "heist_success",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "6726391d85602313eae894e2392e1d921ddb50f3b7cc19fdb0922862212b44a0",
+      "text": "Come meet your new neighbors."
+    },
+    {
+      "file": "amara_a_grand_entrance_for_my_collection.mp3",
+      "event": "heist_success",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "024a35510f657f065b5843632bb885cfa1b8e110a36ab63b8861b4613eb53558",
+      "text": "A grand entrance for my collection."
+    },
+    {
+      "file": "amara_a_little_shield_a_big_save.mp3",
+      "event": "shield_block",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "6cb83506a236c1f9f32172d998c9b9b641911bc9e2604959810bbb03b24f33d1",
+      "text": "A little shield a big save."
+    },
+    {
+      "file": "amara_not_so_fast_card_collector.mp3",
+      "event": "shield_block",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "09c5964a4fe77f685a07e15f2a8c023b9346a1a03c15e5032df053c13534f2d8",
+      "text": "Not so fast card collector."
+    },
+    {
+      "file": "amara_everybodys_here_into_the_collection.mp3",
+      "event": "set_complete",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "72517605ad4f04ad01f996321210d5a5f3512bd0acfe8fcd883d2b100ba15c5f",
+      "text": "Everybody's here into the collection."
+    },
+    {
+      "file": "amara_that_little_family_is_complete.mp3",
+      "event": "set_complete",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "fe073c1145991850d4f95697f9e336738746879d971990debd191f6824091153",
+      "text": "That little family is complete."
+    },
+    {
+      "file": "amara_four_suites_one_happy_collector.mp3",
+      "event": "set_complete",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "7e488f4f608f8a292c56de953567114a31695682e3a831edde3a8fd148267ec0",
+      "text": "Four suits one happy collector."
+    },
+    {
+      "file": "amara_victory_looks_good_in_all_four_suits.mp3",
+      "event": "game_win",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "f937a5c0ec5c375b68138c40000961d24a3a9a66574ef01578b6dc5a0a0a8fe1",
+      "text": "Victory looks good in all four suits."
+    },
+    {
+      "file": "amara_that_was_a_game_worth_playing.mp3",
+      "event": "game_complete",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "eecf97fa39999ffde53f67f72c272c8d702ccdb92aa283b75f9da84a02778aa4",
+      "text": "That was a game worth playing."
+    },
+    {
+      "file": "amara_all_the_pieces_one_great_game.mp3",
+      "event": "game_complete",
+      "character": "Amara",
+      "role": "mastermind",
+      "status": "enabled_in_gameplay",
+      "sha256": "b69784509cc50f0d9558b5ce6fe81466555326b343b683e6093f43c23b9f4984",
+      "text": "All the pieces one great game."
+    }
+  ]
+}

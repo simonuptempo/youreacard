@@ -511,5 +511,6 @@ func _wild() -> void:
 func _edit_wild() -> void:
 	_stop_animations()
 	Profile.edit_slot = Profile.me_slot
+	Profile.voice_game = "gem_heist"
 	Profile.creator_return = "explainer"
 	Profile.go("my_cards")

@@ -8,9 +8,9 @@ export async function call(token: string, action: string, body: Record<string, u
   const r = await fetch(BASE + "/functions/v1/war-and-piece", { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, action }) });
   return { status: r.status, data: await r.json() as any };
 }
-// Everything a seat could lock in its hand: 3+ of a kind (good enough for tests).
+// Everything a seat could lock in its hand: four of a kind.
 export function kinds(hand: { id: number; rank: number }[]): number[][] {
   const by: Record<number, number[]> = {};
   for (const c of hand) (by[c.rank] ??= []).push(c.id);
-  return Object.values(by).filter((ids) => ids.length >= 3);
+  return Object.values(by).filter((ids) => ids.length === 4);
 }

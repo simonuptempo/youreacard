@@ -1,0 +1,192 @@
+{
+  "character": "Pip",
+  "clip_count": 20,
+  "notes": [
+    "Gameplay categories assigned from supplied filenames; filenames are not verified transcripts.",
+    "Shield recordings share the reaction pool with Dev.",
+    "Playback obeys voice settings, cooldown, non-overlap and recent-clip suppression.",
+    "Speech captions follow the recording prompts; Juno travel wording confirmed by the user."
+  ],
+  "clips": [
+    {
+      "file": "pip_good_game_shall_we_shuffle_again.mp3",
+      "event": "game_complete",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "045de7df73d7f715796279ae5935efd4c40584842970ba243d8581ced80a69d1",
+      "text": "Good game shall we shuffle again."
+    },
+    {
+      "file": "pip_the_cards_have_spoken_im_celebrating.mp3",
+      "event": "game_win",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "c3a6b65d1a1a6671a776bfcf5e85098e144bb85f4251f7be70b6b3791e0584c9",
+      "text": "The cards have spoken I'm celebrating."
+    },
+    {
+      "file": "pip_what_a_collection_what_a_finish.mp3",
+      "event": "game_win",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "de9b620188656698040519a8d6e1f0f0dbd22025aad9ae44d6719f83cbe35051",
+      "text": "What a collection what a finish."
+    },
+    {
+      "file": "pip_a_perfect_quartet.mp3",
+      "event": "set_complete",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "9b37832101b19d6101c97397599237b5a0ad2dd294892bec9b0ca9fd26b80278",
+      "text": "A perfect quartet."
+    },
+    {
+      "file": "pip_four_of_a_kind_safely_tucked_away.mp3",
+      "event": "set_complete",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "03fd5adedac4b696f7e6bfa2041022dd97516e166c0a870f6a2d89b75d3ed86f",
+      "text": "Four of a kind safely tucked away."
+    },
+    {
+      "file": "pip_good_timing_trusty_shield.mp3",
+      "event": "shield_block",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "9675f6e30c03847ebae410ebaf34cc8f1b2a0328d1c464338b147f2723cbb922",
+      "text": "Good timing trusty shield."
+    },
+    {
+      "file": "pip_well_that_shield_came_in_handy.mp3",
+      "event": "shield_block",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "dea0698d37faad50e5020591cfd758460dfdecc8ec91258d7238a59bb5f3b583",
+      "text": "Well that shield came in handy."
+    },
+    {
+      "file": "pip_oh_youll_fit_right_in.mp3",
+      "event": "heist_success",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "15bd967cec4f0d1ebe5cccc7c2c60f175f808c9e24863e0adb6d62c3a406f006",
+      "text": "Oh you'll fit right in."
+    },
+    {
+      "file": "pip_one_card_closer.mp3",
+      "event": "heist_success",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "155d668cfbe115c0b7d0ec494e7b1ec7a73f0d1a2ebf5a0f729d1325adca3417",
+      "text": "One card closer."
+    },
+    {
+      "file": "pip_just_the_card_i_was_looking_for.mp3",
+      "event": "heist_success",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "a10cf536de0ad67cb81a5a13373ccc4e360e624e2632fabd9f06077f98fadacc",
+      "text": "Just the card I was looking for."
+    },
+    {
+      "file": "pip_victory_with_a_few_extra_cards.mp3",
+      "event": "war_win",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "51dbde4f8962f761aaac6dc878de2f46526ea15dda3fbba9f199d8babe690fa2",
+      "text": "Victory with a few extra cards."
+    },
+    {
+      "file": "pip_a_battle_worth_waiting_for.mp3",
+      "event": "war_win",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "cae637d22be2afb79d2e1e7379ba75be1ada32c57e2dfb16ec0c6bd2fc38d205",
+      "text": "A battle worth waiting for."
+    },
+    {
+      "file": "pip_worth_the_suspense.mp3",
+      "event": "war_win",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "5002ac0a73ef0c35b453531b5e2723c58f332b18455d9c8eda59c1c2e6bb2a9b",
+      "text": "Worth the suspense."
+    },
+    {
+      "file": "pip_that_pile_just_got_more_interesting.mp3",
+      "event": "war_again",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "3bb06a61e099b7b48c8209e5b210bcd9ae9794529025368959eebff3e2a66822",
+      "text": "That pile just got more interesting."
+    },
+    {
+      "file": "pip_neither_side_is_budging.mp3",
+      "event": "war_again",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "052d3072122ba0d81df6449d55c6254708ffebfc0ce77304affd5706e6d0be26",
+      "text": "Neither side is budging."
+    },
+    {
+      "file": "pip_those_cards_arent_going_quietly.mp3",
+      "event": "war_start",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "1633e5f553950c955f4faf135953595793297d4dc7268638d5f4437d1916b0d2",
+      "text": "Those cards aren't going quietly."
+    },
+    {
+      "file": "pip_well_matched_shall_we.mp3",
+      "event": "war_start",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "8823cc32fc552ad765c64d58b67b77e6c319a1b4a3fa13c81417919bab7bbe4b",
+      "text": "Well matched shall we."
+    },
+    {
+      "file": "pip_a_small_victory_ill_take_it.mp3",
+      "event": "deal_win",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "077720889ab6e7af95a080ab8f6a39c711a422110de6ac49ed25ad66aacef11a",
+      "text": "A small victory, I'll take it."
+    },
+    {
+      "file": "pip_well_that_worked_out_nicely.mp3",
+      "event": "deal_win",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "409048463361e6226ea56eb9c1463a2758c54a87877193e54b6add49ae956a01",
+      "text": "Well that worked out nicely."
+    },
+    {
+      "file": "pip_high_card_takes_it.mp3",
+      "event": "deal_win",
+      "character": "Pip",
+      "role": "pickpocket",
+      "status": "enabled_in_gameplay",
+      "sha256": "638354ced01c4cbea84e8f6d0013f79471f1c944908b5acb94ca6c3a49df10eb",
+      "text": "High card takes it."
+    }
+  ]
+}

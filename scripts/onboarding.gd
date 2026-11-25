@@ -161,6 +161,7 @@ func _name_next() -> void:
 
 func _edit(slot: String) -> void:
 	Profile.edit_slot = slot
+	Profile.voice_game = "gem_heist"
 	Profile.creator_return = "onboarding"
 	Profile.go("my_cards")
 

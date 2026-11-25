@@ -102,6 +102,7 @@ func _ready() -> void:
 		pulse.tween_property(card, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_SINE)
 	card.tapped.connect(func(_v):
 		Profile.edit_slot = Profile.me_slot
+		Profile.voice_game = "gem_heist"
 		Profile.creator_return = "main"
 		Profile.go("my_cards"))
 

@@ -10,6 +10,28 @@ const MAX_SECONDS := 3.0
 const BUS := "VoiceRecord"
 
 var slot := "you"
+var game := "gem_heist"
+const WAR_CATALOG = preload("res://games/war_and_piece/scripts/war_voice_catalog.gd")
+
+static func prompts(s: String, context: String) -> Array:
+	if context == "see_saw": return []
+	if context == "war_and_piece" and s != "bouncer":
+		return WAR_CATALOG.CLIPS.filter(func(c): return c.role == s)
+	return Sfx.LINES.get(s, [])
+
+static func recording_path(s: String, i: int, context: String) -> String:
+	if context == "war_and_piece" and s != "bouncer":
+		return "user://voices/war_and_piece/" + str(prompts(s, context)[i].path).get_file().get_basename() + ".wav"
+	return path_for(s, i)
+
+static func count_for(s: String, context: String) -> int:
+	var count := 0
+	for i in prompts(s, context).size():
+		if FileAccess.file_exists(recording_path(s, i, context)): count += 1
+	return count
+
+func _limit() -> float:
+	return 8.0 if game == "war_and_piece" else MAX_SECONDS
 var _rec: AudioEffectRecord
 var _mic: AudioStreamPlayer
 var _player: AudioStreamPlayer
@@ -66,9 +88,9 @@ func _ready() -> void:
 	add_child(UI.panel(Vector2(30, 150), Vector2(660, 980), UI.PANEL, 24))
 	var who := Profile.face_name(slot)
 	add_child(UI.label("Your voice", Vector2(30, 176), Vector2(660, 54), 40, UI.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
-	add_child(UI.label("%s says one of these when the card is played. Read them with lots of character! Skip any you like." % who,
+	add_child(UI.label("%s says one of these during the game. Read them with lots of character! Skip any you like." % who,
 		Vector2(60, 232), Vector2(600, 84), 20, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	var lines: Array = Sfx.LINES[slot]
+	var lines: Array = prompts(slot, game)
 	var scroll := ScrollContainer.new()
 	scroll.position = Vector2(50, 326)
 	scroll.size = Vector2(620, 524)
@@ -83,7 +105,7 @@ func _ready() -> void:
 		row.custom_minimum_size = Vector2(600, 150)
 		list.add_child(row)
 		row.add_child(UI.panel(Vector2(0, 0), Vector2(600, 150), Color("#1d2547"), 18))
-		row.add_child(UI.label("%d.  “%s”" % [i + 1, lines[i]], Vector2(16, 8), Vector2(568, 44), 25, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+		row.add_child(UI.label("%d.  “%s”" % [i + 1, lines[i].text if lines[i] is Dictionary else lines[i]], Vector2(16, 8), Vector2(568, 44), 21, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 		var status := UI.label("", Vector2(16, 50), Vector2(568, 28), 17, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 		row.add_child(status)
 		var rec := UI.button("● Record", Vector2(30, 84), Vector2(260, 54), Color("#c0392b"), 21)
@@ -95,12 +117,12 @@ func _ready() -> void:
 		_rows.append({"status": status, "rec": rec, "play": play})
 	# Without your own recordings, the card can use the character's other voice instead.
 	var regular: String = Sfx.VOICE.get(slot, "")
-	if Sfx.ALT_VOICE.has(regular):
+	if game == "gem_heist" and Sfx.ALT_VOICE.has(regular):
 		_alt_btn = UI.button("", Vector2(60, 860), Vector2(600, 56), Color("#2f3866"), 20)
 		_alt_btn.pressed.connect(_toggle_alt)
 		add_child(_alt_btn)
 		_update_alt()
-	_note = UI.label("Your recordings stay on this phone. Online opponents hear the regular voices.", Vector2(60, 924), Vector2(600, 56), 17, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	_note = UI.label("Your recordings stay on this device. Skipped lines use the regular voice.", Vector2(60, 924), Vector2(600, 56), 17, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	add_child(_note)
 	var reset := UI.button("Use the regular voice", Vector2(60, 990), Vector2(290, 70), Color("#3a4166"), 20)
 	reset.pressed.connect(_use_default)
@@ -146,12 +168,12 @@ func _setup_audio() -> void:
 func _refresh() -> void:
 	for i in _rows.size():
 		var r: Dictionary = _rows[i]
-		var have := FileAccess.file_exists(path_for(slot, i))
+		var have := FileAccess.file_exists(recording_path(slot, i, game))
 		var rec: Button = r["rec"]
 		var play: Button = r["play"]
 		if _recording == i:
 			rec.text = "■ Stop"
-			r["status"].text = "Recording… %.1f s" % maxf(0.0, MAX_SECONDS - _elapsed)
+			r["status"].text = "Recording… %.1f s" % maxf(0.0, _limit() - _elapsed)
 		else:
 			rec.text = "● Record again" if have else "● Record"
 			r["status"].text = "Recorded ✓" if have else "Not recorded yet"
@@ -176,7 +198,7 @@ func _process(delta: float) -> void:
 	if _recording < 0:
 		return
 	_elapsed += delta
-	if _elapsed >= MAX_SECONDS:
+	if _elapsed >= _limit():
 		_stop()
 	else:
 		_refresh()
@@ -189,12 +211,12 @@ func _stop() -> void:
 	var wav: AudioStreamWAV = _rec.get_recording()
 	_mic.stop()
 	if wav == null or wav.data.size() < 4000 or not _clean(wav):
-		_note.text = "Didn't hear anything. Check that Gem Heist is allowed to use the microphone, then try again."
+		_note.text = "Didn't hear anything. Check that You're a Card is allowed to use the microphone, then try again."
 		_note.add_theme_color_override("font_color", Color("#ff9f8f"))
 		_refresh()
 		return
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://voices"))
-	wav.save_to_wav(path_for(slot, i))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(recording_path(slot, i, game).get_base_dir()))
+	wav.save_to_wav(recording_path(slot, i, game))
 	_new_lines += 1
 	_refresh()
 	_play(i)
@@ -233,14 +255,16 @@ func _clean(wav: AudioStreamWAV) -> bool:
 
 
 func _play(i: int) -> void:
-	var s := AudioStreamWAV.load_from_file(path_for(slot, i))
+	var s := AudioStreamWAV.load_from_file(recording_path(slot, i, game))
 	if s:
 		_player.stream = s
 		_player.play()
 
 
 func _use_default() -> void:
-	clear_voice(slot)
+	for i in prompts(slot, game).size():
+		var path := recording_path(slot, i, game)
+		if FileAccess.file_exists(path): DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	_note.text = "Back to the regular voice."
 	_refresh()
 
@@ -304,7 +328,7 @@ func _show_unmute_reminder() -> void:
 	if vol >= 0.0 and vol < 0.05:
 		msg = "Your volume is turned all the way down. Turn it up so you can hear your voice when %s's card is played." % Profile.face_name(slot)
 	else:
-		msg = "Gem Heist stays quiet when your iPhone's ring/silent switch is set to silent. Flip it back (and turn the volume up) to hear your voice when %s's card is played." % Profile.face_name(slot)
+		msg = "You're a Card stays quiet when your iPhone's ring/silent switch is set to silent. Flip it back (and turn the volume up) to hear your voice when %s's card is played." % Profile.face_name(slot)
 	var body := UI.label(msg, Vector2(110, 500), Vector2(500, 230), 23, UI.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	cover.add_child(body)
