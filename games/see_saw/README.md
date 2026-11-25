@@ -40,3 +40,6 @@ OUT=/tmp/shots godot --path . -s games/see_saw/tests/shots.gd      # screenshots
 ## Next
 Gimmicks, your own face on the characters (via Profile), friends and leaderboards.
 Online play will get its own Supabase edge function (not Gem Heist's).
+
+## Age screen (shared)
+Anything that sends data off the phone (online play, photo-to-cartoon) must go through `AgeGate.require(...)` in `scripts/age_gate.gd`. The birthday is asked once for the whole app and kept in Profile, so a player who answered in another game is never asked again. Under 13: nothing leaves the phone (Online._http also refuses as a backstop).

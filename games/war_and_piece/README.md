@@ -43,3 +43,6 @@ From the project folder (`godot` = Godot 4.7.1):
 - Parity: `.../tests/parity_dump.gd`, then `node --experimental-strip-types games/war_and_piece/server/test/parity.ts`
 - Server: `node --experimental-strip-types run_server.ts &` then `edge_cases.ts` (in `server/test`)
 - Online end to end: `games/war_and_piece/server/test/run_e2e.sh` (Godot client vs. a scripted player)
+
+## Age screen (shared)
+Anything that sends data off the phone (online play, photo-to-cartoon) must go through `AgeGate.require(...)` in `scripts/age_gate.gd`. The birthday is asked once for the whole app and kept in Profile, so a player who answered in another game is never asked again. Under 13: nothing leaves the phone (Online._http also refuses as a backstop).

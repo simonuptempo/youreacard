@@ -272,6 +272,12 @@ func _use_original() -> void:
 func _make_cartoon() -> void:
 	if _original == null or _cartoon_busy:
 		return
+	if not AgeGate.ok():
+		# The photo stays on the phone: use it as it is.
+		AgeGate.require(self, "Turning photos into cartoons", _make_cartoon, func():
+			_cartoon_note = "original"
+			_use_photo(_original))
+		return
 	_cartoon_busy = true
 	_render_mode()
 	var r: Dictionary = await Online.cartoonize(_original, _kind, slot if Sfx.LINES.has(slot) else "")

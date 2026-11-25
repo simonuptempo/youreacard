@@ -22,7 +22,7 @@ func _ready() -> void:
 		Profile.launch_checked = true
 		var online: Dictionary = Profile.saved_game(Profile.ONLINE_SAVE)
 		var local: Dictionary = Profile.saved_game()
-		if online.has("online") and Online.signed_in():
+		if online.has("online") and Online.signed_in() and AgeGate.ok():
 			Online.game_id = str(online["online"])
 			Profile.go.call_deferred("game")
 			return

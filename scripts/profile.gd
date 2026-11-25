@@ -16,6 +16,8 @@ var voices := "sometimes"     # how often characters speak: often | sometimes | 
 var voice_alt := {}           # slot -> true: your card speaks in the character's other voice
 var onboarded := false
 var display_name := ""
+var birth_year := 0              # asked once by AgeGate (stays on this phone); 0 = not asked
+var birth_month := 0
 var me_slot := "you"            # the card you are: the Wild by default, or any crew card or bill
 var beaten: Array = []           # names of characters you have beaten (cycles you through the cast)
 
@@ -164,7 +166,8 @@ func save_profile() -> void:
 		return
 	f.store_string(JSON.stringify({"slots": slots, "plays_v3": plays_per_turn,
 		"onboarded": onboarded, "display_name": display_name, "beaten": beaten, "sound_on": sound_on,
-		"voices": voices, "voice_alt": voice_alt, "me_slot": me_slot}))
+		"voices": voices, "voice_alt": voice_alt, "me_slot": me_slot,
+		"birth_year": birth_year, "birth_month": birth_month}))
 
 
 func load_profile() -> void:
@@ -189,6 +192,8 @@ func load_profile() -> void:
 	onboarded = bool(data.get("onboarded", false))
 	display_name = str(data.get("display_name", ""))
 	me_slot = str(data.get("me_slot", "you"))
+	birth_year = int(data.get("birth_year", 0))
+	birth_month = int(data.get("birth_month", 0))
 	if not me_slot in SLOTS:
 		me_slot = "you"
 	sound_on = bool(data.get("sound_on", true))

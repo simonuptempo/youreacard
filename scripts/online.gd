@@ -40,6 +40,9 @@ func name_or(fallback: String) -> String:
 # ------------------------------------------------------------------ HTTP
 
 func _http(method: int, path: String, body: Variant = null, use_session := true) -> Dictionary:
+	# Nothing leaves the phone for players under 13 (or who haven't answered the age screen).
+	if not AgeGate.ok():
+		return {"ok": false, "status": 0, "data": null, "error": "Online play isn't available on this device."}
 	var req := HTTPRequest.new()
 	req.timeout = 20.0
 	add_child(req)
@@ -130,6 +133,8 @@ func device_id() -> String:
 
 
 func _cartoon_request(photo: Image, extra: Dictionary) -> Dictionary:
+	if not AgeGate.ok():
+		return {"ok": false, "image": null, "error": "Cartoons from photos aren't available on this device."}
 	var img := photo.duplicate() as Image
 	var longest := maxi(img.get_width(), img.get_height())
 	if longest > 1024:

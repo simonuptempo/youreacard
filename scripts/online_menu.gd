@@ -22,6 +22,10 @@ func _ready() -> void:
 	bg.color = UI.BG
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	# The shared age screen comes first (asked once for all the games).
+	if not AgeGate.ok():
+		AgeGate.require(self, "Online play", func(): get_tree().reload_current_scene(), func(): Profile.go("main"))
+		return
 	var back := Button.new()
 	back.position = Vector2(20, 24)
 	back.size = Vector2(68, 68)

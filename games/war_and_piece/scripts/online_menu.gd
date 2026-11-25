@@ -23,6 +23,10 @@ func _ready() -> void:
 	bg.color = UI.BG
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	# The shared age screen comes first (asked once for all the games).
+	if not AgeGate.ok():
+		AgeGate.require(self, "Online play", func(): get_tree().reload_current_scene(), func(): get_tree().change_scene_to_file("res://games/war_and_piece/scenes/main.tscn"))
+		return
 	var back := Button.new()
 	back.position = Vector2(20, 24)
 	back.size = Vector2(68, 68)

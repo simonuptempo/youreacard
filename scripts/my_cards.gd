@@ -456,6 +456,14 @@ func _got_photo(image: Image) -> void:
 func _cartoon(slot: String, image: Image, edits: Dictionary) -> void:
 	if _busy_slot != "":
 		return
+	if not AgeGate.ok():
+		# The photo stays on the phone: a photo goes on the card as it is.
+		AgeGate.require(self, "Turning photos into cartoons", _cartoon.bind(slot, image, edits), func():
+			if edits.is_empty():
+				_put_on_card(slot, image)
+				_say("Using your photo as it is.", false)
+			_refresh())
+		return
 	_busy_slot = slot
 	_refresh()
 	var what := "Making your cartoon" if edits.is_empty() else "Changing the look"
