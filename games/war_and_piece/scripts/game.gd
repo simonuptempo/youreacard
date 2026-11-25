@@ -49,6 +49,15 @@ var _pile_top := {}
 var _last_shield_voice := -15000
 var _inactive_portrait_material: ShaderMaterial
 var _resumed := false        # this game was picked up from the save
+# Hold Deal! for 3 seconds to fast-forward the rest of the War round.
+const HOLD_SECONDS := 3.0
+const FAST_ROUND_SECONDS := 10.0  # about how long a fast-forwarded round takes
+var _holding := false
+var _hold_t := 0.0
+var _hold_fill: Control
+var _fast := false
+var _fast_factor := 1.0
+var _skip_release := false   # the release that ends a completed hold isn't also a tap
 
 # Online games
 const POLL := 4.0
@@ -445,6 +454,20 @@ func _build_war() -> void:
 	_resumed = false
 	_main_btn = _btn("Deal!", Vector2(36, 1126), Vector2(648, 112), UI.ACCENT, 40)
 	_main_btn.pressed.connect(_on_flip)
+	# Holding fills the button left to right; full after 3 seconds = fast-forward.
+	_hold_fill = UI.panel(Vector2.ZERO, Vector2(0, 112), Color(1, 1, 1, 0.38), 18)
+	_hold_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_main_btn.add_child(_hold_fill)
+	_main_btn.button_down.connect(func():
+		if g.phase() == "war" and not _animating and not _busy and not _fast:
+			_holding = true
+			_hold_t = 0.0)
+	_main_btn.button_up.connect(func():
+		_holding = false
+		if not _fast and is_instance_valid(_hold_fill): _hold_fill.size.x = 0)
+	var hold_tip := UI.label("Tip: hold Deal! to fast-forward the round", Vector2(20, 1241), Vector2(680, 30), 18, UI.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	hold_tip.name = "HoldTip"
+	_layer.add_child(hold_tip)
 	_side_btn = null
 	for p in 2:
 		var yy := OPP_Y - 38 if p == BOT else MY_Y - 38
@@ -520,6 +543,11 @@ func _sync_piles() -> void:
 
 
 func _on_flip() -> void:
+	if _skip_release:
+		_skip_release = false
+		return
+	if _fast:
+		return
 	if _animating:
 		if _main_btn.text in ["Go to war!", "Yet another war!"]:
 			_war_continue = true
@@ -548,6 +576,45 @@ func _on_flip() -> void:
 		_round_over_war()
 
 
+## Held Deal! for 3 seconds: deal out the rest of this War round in fast motion
+## (about 10 seconds), wars included, without stopping for "Go to war!".
+func _fast_forward() -> void:
+	if g.phase() != "war" or _fast:
+		return
+	_fast = true
+	_abort_war_quotes()
+	# Each face-off uses at least one card per side; spread the round over ~10 seconds.
+	var left := mini(g.stock(0).size(), g.stock(1).size())
+	_fast_factor = clampf(left * 1.45 / FAST_ROUND_SECONDS, 2.5, 12.0)
+	_main_btn.disabled = true
+	_main_btn.text = "Fast-forwarding…"
+	var tip: Label = _layer.get_node_or_null("HoldTip")
+	if tip: tip.text = ""
+	while g.phase() == "war" and is_inside_tree():
+		_clear_battle(false)
+		if _online:
+			if not await _online_move({"t": "flip"}):
+				break
+		elif not _do({"t": "flip"}):
+			break
+		await _animate_faceoff(g.last_faceoff)
+		_sync_piles()
+		_sync_panels()
+		if is_instance_valid(_hold_fill) and _hold_fill.is_inside_tree():
+			_hold_fill.size.x = _main_btn.size.x  # stays full while it runs
+	_fast = false
+	_fast_factor = 1.0
+	if not is_inside_tree():
+		return
+	if is_instance_valid(_hold_fill): _hold_fill.size.x = 0
+	if is_instance_valid(_main_btn):
+		_main_btn.disabled = false
+		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT): _skip_release = false
+		_main_btn.text = "Deal!"
+	if g.phase() != "war":
+		_round_over_war()
+
+
 ## The rules resolve atomically for saves/networking; this replays each visible stage.
 func _animate_faceoff(r: Dictionary) -> void:
 	_animating = true
@@ -569,15 +636,16 @@ func _animate_faceoff(r: Dictionary) -> void:
 				if card is WarCardView and not card.face_down:
 					var role := WarCards.role_for_rank(int(card.card.get("rank", 0)))
 					if role != "" and role not in tie_roles: tie_roles.append(role)
-			if not tie_roles.is_empty(): _voices.react("war_start" if i == 1 else "war_again", tie_roles)
+			if not tie_roles.is_empty() and not _fast: _voices.react("war_start" if i == 1 else "war_again", tie_roles)
 			_event.text = "Tie! %d cards at stake. Both add %d." % [i * 2, mini(4, n - i)]
-			_main_btn.text = "Go to war!" if i == 1 else "Yet another war!"
-			_main_btn.disabled = false
-			_war_continue = false
-			while not _war_continue:
-				await get_tree().process_frame
-			_main_btn.disabled = true
-			_main_btn.text = "Dealing…"
+			if not _fast:   # fast-forward goes straight into the war
+				_main_btn.text = "Go to war!" if i == 1 else "Yet another war!"
+				_main_btn.disabled = false
+				_war_continue = false
+				while not _war_continue:
+					await get_tree().process_frame
+				_main_btn.disabled = true
+				_main_btn.text = "Dealing…"
 		else:
 			_event.text = "Flipping…" if up else "War · %d cards at stake" % ((i + 1) * 2)
 		var newest: Array = []
@@ -627,7 +695,7 @@ func _animate_faceoff(r: Dictionary) -> void:
 		leader.glow = true
 		_layer.move_child(leader, -1)
 	if w >= 0: _pile_top.erase(w)
-	_speak(r)
+	if not _fast: _speak(r)
 	if is_instance_valid(_speaking_card) and _speaking_card in _battle:
 		_layer.move_child(_speaking_card, -1)
 		_pile_top[w] = _speaking_card.card.duplicate()
@@ -654,7 +722,7 @@ func _animate_faceoff(r: Dictionary) -> void:
 
 
 func _duration(seconds: float) -> float:
-	return 0.05 if _reduced_motion else seconds / 1.55
+	return 0.05 if _reduced_motion else seconds / 1.55 / (_fast_factor if _fast else 1.0)
 
 
 ## Sends a flip (or Done) and takes the server's answer. False if it didn't happen.
@@ -751,6 +819,17 @@ func _abort_war_quotes() -> void:
 
 
 func _process(_delta: float) -> void:
+	if _holding:
+		if g.phase() != "war" or _animating or _busy or not is_instance_valid(_main_btn):
+			_holding = false
+		else:
+			_hold_t += _delta
+			if is_instance_valid(_hold_fill):
+				_hold_fill.size.x = _main_btn.size.x * minf(_hold_t / HOLD_SECONDS, 1.0)
+			if _hold_t >= HOLD_SECONDS:
+				_holding = false
+				_skip_release = true
+				_fast_forward()
 	if not is_instance_valid(_speech_bubble): return
 	var tail: Polygon2D = _speech_bubble.get_node("Tail")
 	tail.visible = is_instance_valid(_speaking_card)
