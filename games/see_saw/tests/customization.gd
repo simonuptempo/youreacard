@@ -27,7 +27,7 @@ func run():
  root.add_child(screen)
  screen.g.phase="ask"
  screen.g.cards=[{"id":1,"rank":11,"suit":"H"}]
- screen.g.questions=[{"kind":"character","style":"character","text":"Who was on the card?","pos":0,"options":[11,12,13,14],"labels":["Pip","Juno","Lou","Amara"],"answer":0}]
+ screen.g.questions=[{"kind":"character","style":"character","text":"Who was on the card?","pos":0,"options":[11,12,13,14],"labels":["Pip","Nana Bea","Dev","Amara"],"answer":0}]
  screen.g.q_index=0
  screen._build_question()
  assert(screen.g.question().labels[0]=="Mochi")

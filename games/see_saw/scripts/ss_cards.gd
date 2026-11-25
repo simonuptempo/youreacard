@@ -16,13 +16,13 @@ const CHARACTERS := {
 	4: {"name": "Fox", "role": "bill3"},
 	5: {"name": "Owl", "role": "bill4"},
 	6: {"name": "Magpie", "role": "bill5"},
-	7: {"name": "Dev", "role": "bouncer"},
+	7: {"name": "Juno", "role": "trickster"},
 	8: {"name": "Mei", "role": "illusionist"},
 	9: {"name": "Rosa", "role": "trapper"},
 	10: {"name": "Kodi", "role": "locksmith"},
 	11: {"name": "Pip", "title": "the Jack of all Trades", "role": "pickpocket"},
-	12: {"name": "Juno", "title": "the Queen of Hearts", "role": "trickster"},
-	13: {"name": "Nana Bea", "title": "the King of the Hill", "role": "you"},
+	12: {"name": "Nana Bea", "title": "the Queen of Hearts", "role": "you"},
+	13: {"name": "Dev", "title": "the King of the Hill", "role": "bouncer"},
 	14: {"name": "Amara", "title": "the Ace in the Hole", "role": "mastermind"},
 }
 ## The 14th card: Lou's counterweight. You earn one for clearing level 4 and every
