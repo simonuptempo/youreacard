@@ -57,9 +57,9 @@ var _photo_slot := ""        # the card a photo was asked for
 var _originals := {}         # slot -> the photo as taken (this visit only), to remake the cartoon
 var _picker_pending := false
 var _selfie := false         # the photo being taken is a selfie: that card becomes yours
+const LookStudio = preload("res://scripts/look_studio.gd")
+var _pending_me_slot := ""
 var _sheet: Control
-var _edits := {}             # pending look changes
-var _look_cat := 0
 
 
 func _ready() -> void:
@@ -113,7 +113,7 @@ func _ready() -> void:
 	_voice_btn.pressed.connect(_record_voice)
 	_voice_btn.add_child(Icon.make("mic", Vector2(14, 10), Vector2(36, 36)))
 	add_child(_voice_btn)
-	_look_btn = UI.button("     Change the look", Vector2(28, 0), Vector2(326, 52), Color("#7a4fd6"), 21)
+	_look_btn = UI.button("     Try on a look", Vector2(28, 0), Vector2(326, 52), Color("#7a4fd6"), 21)
 	_look_btn.pressed.connect(_open_look)
 	_look_btn.add_child(Icon.make("wand", Vector2(14, 10), Vector2(36, 36)))
 	add_child(_look_btn)
@@ -474,8 +474,7 @@ func _got_photo(image: Image) -> void:
 		var k := 2048.0 / maxi(image.get_width(), image.get_height())
 		image.resize(maxi(1, int(image.get_width() * k)), maxi(1, int(image.get_height() * k)), Image.INTERPOLATE_LANCZOS)
 	_originals[slot] = image
-	if _selfie and slot != Profile.me_slot:
-		_make_me(slot)
+	_pending_me_slot = slot if _selfie and slot != Profile.me_slot else ""
 	_selfie = false
 	_cartoon(slot, image, {})
 
@@ -488,33 +487,36 @@ func _cartoon(slot: String, image: Image, edits: Dictionary) -> void:
 		# The photo stays on the phone: a photo goes on the card as it is.
 		AgeGate.require(self, "Turning photos into cartoons", _cartoon.bind(slot, image, edits), func():
 			if edits.is_empty():
-				_put_on_card(slot, image)
-				_say("Using your photo as it is.", false)
+				_review_portrait(slot, image, image)
 			_refresh())
 		return
 	_busy_slot = slot
+	if is_instance_valid(_sheet): _sheet.set_busy(true)
 	_refresh()
 	var what := "Making your cartoon" if edits.is_empty() else "Changing the look"
 	_say("%s… about 10 seconds." % what, false, true)
 	var kind := "pet" if _is_pet(slot) else "me"
-	var r: Dictionary
-	if edits.is_empty():
-		r = await Online.cartoonize(image, kind, slot if Sfx.LINES.has(slot) else "")
-	else:
-		r = await Online.cartoon_edit(image, kind, edits)
+	var r: Dictionary = await _request_cartoon(image,kind,slot,edits)
 	if not is_inside_tree():
 		return
 	_busy_slot = ""
 	if r["ok"]:
-		_put_on_card(slot, r["image"])
-		_say("Done! Tap Change the look to swap hair, hats, outfits and more.", false)
+		_review_portrait(slot, image, r["image"])
+		_say("Preview ready. Choose whether to keep it.", false)
 	else:
 		_say(str(r["error"]), true)
+		if is_instance_valid(_sheet): _sheet.show_error(str(r["error"]))
 	_refresh()
 
 
+func _request_cartoon(image: Image, kind: String, slot: String, edits: Dictionary) -> Dictionary:
+	if edits.is_empty():
+		return await Online.cartoonize(image, kind, slot if Sfx.LINES.has(slot) else "")
+	return await Online.cartoon_edit(image, kind, edits)
+
+
 ## Saves a square picture for a card (512 px) and shows it.
-func _put_on_card(slot: String, image: Image) -> void:
+func _put_on_card(slot: String, image: Image) -> bool:
 	var img := image.duplicate() as Image
 	var edge := mini(img.get_width(), img.get_height())
 	img = img.get_region(Rect2i((img.get_width() - edge) / 2, (img.get_height() - edge) / 2, edge, edge))
@@ -523,7 +525,7 @@ func _put_on_card(slot: String, image: Image) -> void:
 	var path := "user://portraits/%s_%d.png" % [slot, Time.get_ticks_usec()]
 	if img.save_png(path) != OK:
 		_say("Couldn't save the picture. Please try again.", true)
-		return
+		return false
 	AvatarView.portrait_cache[path] = ImageTexture.create_from_image(img)
 	var old := str(Profile.slot_face(slot).get("portrait_path", ""))
 	var label := str(Profile.slots.get(slot, {}).get("name", ""))
@@ -536,6 +538,7 @@ func _put_on_card(slot: String, image: Image) -> void:
 		DirAccess.remove_absolute(old)
 		AvatarView.portrait_cache.erase(old)
 	_refresh_grid_card(slot)
+	return true
 
 
 func _say(text: String, error: bool, pulse := false) -> void:
@@ -607,124 +610,59 @@ func _looks() -> Array:
 
 
 func _open_look() -> void:
-	_edits = {}
-	_look_cat = 0
-	_show_look()
+	var texture := AvatarView.portrait_texture(str(Profile.slot_face(_slot).get("portrait_path", "")))
+	if texture == null:
+		_say("Take or upload a photo first.", true)
+		return
+	_open_studio(_slot, texture)
 
 
-func _show_look() -> void:
+func _open_studio(slot: String, texture: Texture2D) -> void:
 	_close_look()
-	_sheet = Control.new()
-	_sheet.position = Vector2.ZERO
-	_sheet.size = Vector2(720, 1280)
-	add_child(_sheet)
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.8)
-	dim.size = Vector2(720, 1280)
-	_sheet.add_child(dim)
-	_sheet.add_child(UI.panel(Vector2(20, 40), Vector2(680, 1200), UI.PANEL, 24))
-	var cv := _new_card()
-	cv.position = Vector2(48, 64)
-	cv.size = Vector2(160, 224)
-	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_sheet.add_child(cv)
-	_setup_card(cv, _slot, 0)
-	_sheet.add_child(UI.label("Change the look", Vector2(228, 64), Vector2(450, 50), 32, UI.ACCENT))
-	var looks := _looks()
-	var picked: Array = []
-	for l in looks:
-		if _edits.has(l[0]):
-			picked.append("%s: %s" % [l[1], _edits[l[0]]])
-	var summary := "Pick anything you'd like to change, then tap Apply. Your cartoon is redrawn with the changes." if picked.is_empty() else "Changes: " + ", ".join(picked)
-	_sheet.add_child(UI.label(summary, Vector2(228, 118), Vector2(450, 170), 19, UI.TEXT if not picked.is_empty() else UI.MUTED))
+	var studio := LookStudio.new()
+	studio.original = texture
+	studio.looks = PET_LOOKS if _is_pet(slot) else PERSON_LOOKS
+	studio.pet = _is_pet(slot)
+	studio.card_factory = func(path: String) -> Control:
+		var card := _new_card()
+		card.size = Vector2(250,350)
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var face := {"portrait_path":path}
+		if card is CardView:
+			card.setup({"id":0,"kind":kind_for(slot)},face)
+		else:
+			card.setup(SSCards.card_for_slot(slot),false,face)
+		return card
+	studio.generate_requested.connect(func(changes: Dictionary):
+		_cartoon(slot,studio.original.get_image(),changes))
+	studio.accepted.connect(func(picture: Image):
+		if _put_on_card(slot,picture):
+			if _pending_me_slot == slot: _make_me(slot)
+			_pending_me_slot = ""
+			_close_look()
+			_refresh()
+			_say("Your new look is saved!",false)
+		else:
+			studio.show_error("Couldn't save. Your previous look is safe. Please try again."))
+	studio.closed.connect(func():
+		_pending_me_slot = ""
+		_close_look()
+		_say("Kept your saved look.",false))
+	_sheet = studio
+	add_child(studio)
 
-	# Categories: a scrolling row of tabs.
-	var tabs := ScrollContainer.new()
-	tabs.position = Vector2(40, 306)
-	tabs.size = Vector2(640, 70)
-	tabs.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_sheet.add_child(tabs)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	tabs.add_child(row)
-	for i in looks.size():
-		var on := i == _look_cat
-		var t := Button.new()
-		t.text = "  %s%s  " % [looks[i][1], " ✓" if _edits.has(looks[i][0]) else ""]
-		t.custom_minimum_size = Vector2(0, 56)
-		t.add_theme_font_size_override("font_size", 19)
-		t.add_theme_stylebox_override("normal", UI.box(UI.ACCENT if on else Color("#2f3866"), 12))
-		t.add_theme_stylebox_override("hover", UI.box(UI.ACCENT if on else Color("#3a4580"), 12))
-		t.add_theme_stylebox_override("pressed", UI.box(UI.ACCENT, 12))
-		t.add_theme_color_override("font_color", UI.BG if on else UI.TEXT)
-		t.add_theme_color_override("font_hover_color", UI.BG if on else UI.TEXT)
-		t.pressed.connect(func(): _look_cat = i; _show_look())
-		row.add_child(t)
-	# Options for the chosen category.
-	var look: Array = looks[_look_cat]
-	var key: String = look[0]
-	var options: Array = ["Keep as is"] + Array(look[2])
-	var list := ScrollContainer.new()
-	list.position = Vector2(40, 390)
-	list.size = Vector2(640, 640)
-	list.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_sheet.add_child(list)
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	list.add_child(grid)
-	for i in options.size():
-		var value := str(options[i])
-		var on := (i == 0 and not _edits.has(key)) or (str(_edits.get(key, "")) == value)
-		var b := Button.new()
-		b.text = ("Add " + value.to_lower()) if key == "details" and i > 0 else value
-		b.custom_minimum_size = Vector2(206, 70)
-		b.add_theme_font_size_override("font_size", 19)
-		b.add_theme_stylebox_override("normal", UI.box(Color("#efe7d7") if on else Color("#1d2547"), 12, UI.ACCENT, 3 if on else 0))
-		b.add_theme_stylebox_override("hover", UI.box(Color("#efe7d7") if on else Color("#283260"), 12, UI.ACCENT, 3 if on else 0))
-		b.add_theme_stylebox_override("pressed", UI.box(Color("#efe7d7"), 12, UI.ACCENT, 3))
-		b.add_theme_color_override("font_color", UI.BG if on else UI.TEXT)
-		b.add_theme_color_override("font_hover_color", UI.BG if on else UI.TEXT)
-		b.pressed.connect(func():
-			if i == 0:
-				_edits.erase(key)
-			else:
-				_edits[key] = value
-			_show_look())
-		grid.add_child(b)
-	# Bottom rows.
-	if _originals.has(_slot):
-		var again := UI.button("New cartoon from my photo", Vector2(40, 1046), Vector2(312, 56), Color("#3a4166"), 18)
-		again.pressed.connect(func(): _close_look(); _cartoon(_slot, _originals[_slot], {}))
-		_sheet.add_child(again)
-		var plain := UI.button("Use my original photo", Vector2(368, 1046), Vector2(312, 56), Color("#3a4166"), 18)
-		plain.pressed.connect(func(): _close_look(); _put_on_card(_slot, _originals[_slot]); _refresh())
-		_sheet.add_child(plain)
-	var cancel := UI.button("Cancel", Vector2(40, 1116), Vector2(240, 74), Color("#3a4166"), 24)
-	cancel.pressed.connect(_close_look)
-	_sheet.add_child(cancel)
-	var apply := UI.button("Apply changes" if not _edits.is_empty() else "Pick a change first", Vector2(296, 1116), Vector2(384, 74), UI.ACCENT.darkened(0.02), 24)
-	apply.disabled = _edits.is_empty()
-	apply.pressed.connect(_apply_look)
-	_sheet.add_child(apply)
+
+func _review_portrait(slot: String, before: Image, after: Image) -> void:
+	if not is_instance_valid(_sheet):
+		_open_studio(slot,ImageTexture.create_from_image(before))
+	_sheet.show_result(after)
 
 
 func _close_look() -> void:
 	if is_instance_valid(_sheet):
+		remove_child(_sheet)
 		_sheet.queue_free()
 	_sheet = null
-
-
-func _apply_look() -> void:
-	var tex := AvatarView.portrait_texture(str(Profile.slot_face(_slot).get("portrait_path", "")))
-	if tex == null:
-		_close_look()
-		_say("Couldn't find this card's picture. Take or upload a photo first.", true)
-		return
-	var edits := _edits.duplicate()
-	_close_look()
-	_cartoon(_slot, tex.get_image(), edits)
 
 
 # ------------------------------------------------------------------ leaving
